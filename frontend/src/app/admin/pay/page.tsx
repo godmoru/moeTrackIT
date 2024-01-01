@@ -33,7 +33,7 @@ interface Assessment {
 function PayPageContent() {
   const searchParams = useSearchParams();
   const assessmentIdParam = searchParams.get("assessmentId");
-  
+
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -221,7 +221,7 @@ function PayPageContent() {
           if (!window.RmPaymentEngine) {
             const script = document.createElement('script');
             // Using the modern demo domain
-            script.src = "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
+            script.src = "https://login.remita.net/payment/v1/remita-pay-inline.bundle.js";
             script.async = true;
             document.body.appendChild(script);
 

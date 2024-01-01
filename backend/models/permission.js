@@ -16,7 +16,10 @@ module.exports = (sequelize, DataTypes) => {
   Permission.init(
     {
       name: DataTypes.STRING,
-      code: DataTypes.STRING,
+      code: {
+        type: DataTypes.STRING,
+        unique: true,
+      },
       module: DataTypes.STRING,
       description: DataTypes.TEXT,
     },

@@ -13,7 +13,7 @@ async function testMerchantInBody() {
         .update(`${merchantId}${serviceTypeId}${orderId}${amount}${apiKey}`)
         .digest('hex');
 
-    const url = 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
+    const url = 'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
 
     const payload = {
         merchantId: merchantId,

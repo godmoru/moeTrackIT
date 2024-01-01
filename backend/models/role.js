@@ -22,7 +22,10 @@ module.exports = (sequelize, DataTypes) => {
   Role.init(
     {
       name: DataTypes.STRING,
-      slug: DataTypes.STRING,
+      slug: {
+        type: DataTypes.STRING,
+        unique: true,
+      },
       description: DataTypes.TEXT,
       isSystem: DataTypes.BOOLEAN,
     },

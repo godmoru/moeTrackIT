@@ -11,8 +11,8 @@ const axios = require('axios');
 const REMITA_MERCHANT_ID = process.env.REMITA_MERCHANT_ID;
 const REMITA_API_KEY = process.env.REMITA_API_KEY;
 const REMITA_SERVICE_TYPE_ID = process.env.REMITA_SERVICE_TYPE_ID;
-const REMITA_BASE_URL = process.env.REMITA_BASE_URL || 'https://demo.remita.net'; // Demo URL default
-const REMITA_INVOICE_URL = 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
+const REMITA_BASE_URL = process.env.REMITA_BASE_URL || 'https://login.remita.net'; // Demo URL default
+const REMITA_INVOICE_URL = 'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
 
 /**
  * Generate Remita Hash
@@ -45,7 +45,7 @@ async function initializePayment({ payerName, payerEmail, payerPhone, descriptio
     const apiKey = process.env.REMITA_API_KEY;
     const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID;
     const publicKey = process.env.REMITA_PUBLIC_KEY;
-    const baseUrl = process.env.REMITA_BASE_URL || 'https://demo.remita.net';
+    const baseUrl = process.env.REMITA_BASE_URL || 'https://login.remita.net';
 
     if (!merchantId || !apiKey || !serviceTypeId || !publicKey) {
         throw new Error('Remita configuration is incomplete (MerchantID, APIKey, ServiceTypeID, or PublicKey missing)');
@@ -78,7 +78,7 @@ async function initializePayment({ payerName, payerEmail, payerPhone, descriptio
         console.log(`Generating Remita RRR Invoice for Order: ${orderId}`);
         const url = process.env.NODE_ENV === 'production'
             ? 'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit'
-            : 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
+            : 'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
 
         const jsonpStr = await axios.post(url, payload, { headers }).then(res => res.data);
 

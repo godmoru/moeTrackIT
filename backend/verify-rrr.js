@@ -7,7 +7,7 @@ async function testRRRGeneration() {
     const apiKey = process.env.REMITA_API_KEY;
     const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID;
     const publicKey = process.env.REMITA_PUBLIC_KEY;
-    const baseUrl = process.env.REMITA_BASE_URL || 'https://api-demo.remita.net';
+    const baseUrl = process.env.REMITA_BASE_URL || 'https://login.remita.net';
 
     console.log('--- Remita RRR Generation Test ---');
     console.log('Merchant ID:', merchantId);

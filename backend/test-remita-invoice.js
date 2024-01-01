@@ -29,7 +29,7 @@ const headers = {
 };
 
 // Trying the standard /echannelsvc/merchant/api/paymentinit endpoint
-const url = "https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit";
+const url = "https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit";
 
 async function testInvoice() {
     console.log("Testing POST to", url);

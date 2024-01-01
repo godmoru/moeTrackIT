@@ -34,7 +34,7 @@ async function testDirect() {
         .update(`${merchantId}${serviceTypeId}${orderId}${amount}${apiKey}`)
         .digest('hex');
 
-    const url = 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
+    const url = 'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
 
     // Attempt 1: Just top-level payerPaysFee if it exists (hypothetical)
     // Attempt 2: Minimal lineItems with valid-looking account
