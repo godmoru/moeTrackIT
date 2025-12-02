@@ -8,7 +8,7 @@ const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", title: "Overview for all admin roles" },
   { href: "/admin/assessments", label: "Assessments", title: "Assessments management (Admin / Officer)" },
   { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources (Admin)" },
-  { href: "/admin/entities", label: "Institutions", title: "Institution directory and profiles" },
+  { href: "/admin/institutions", label: "Institutions", title: "Institution directory and profiles" },
   { href: "/admin/revenue", label: "Revenue & Collections", title: "Revenue summary and collections (Admin)" },
   { href: "/admin/payments", label: "Payments", title: "Payments list and invoices" },
   { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas overview" },
@@ -52,7 +52,7 @@ function NavIcon({ href }: { href: string }) {
     );
   }
 
-  if (href.startsWith("/admin/entities")) {
+  if (href.startsWith("/admin/institutions")) {
     return (
       <svg {...baseProps}>
         <path d="M4 21V9l8-4 8 4v12M9 21v-6h6v6" />
@@ -117,14 +117,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("authToken");
     if (!token) {
       router.replace("/login");
+      return;
+    }
+
+    // Decode JWT payload to extract role for UI gating (Control Panel visibility)
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload && typeof payload.role === "string") {
+          setUserRole(payload.role);
+        }
+      }
+    } catch {
+      // If decoding fails, keep userRole as null and rely on backend auth for protection
     }
   }, [router]);
+
+  function canSeeNavItem(href: string): boolean {
+    if (!userRole) return true;
+    if (href.startsWith("/admin/control-panel")) {
+      return userRole === "super_admin" || userRole === "admin";
+    }
+    return true;
+  }
 
   async function handleLogout() {
     if (typeof window !== "undefined") {
@@ -148,7 +171,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1">
-          {navItems.map((item) => {
+          {navItems.filter((item) => canSeeNavItem(item.href)).map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link
@@ -203,7 +226,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           {mobileNavOpen && (
             <nav className="mt-3 space-y-1 border-t pt-3 text-xs md:hidden">
-              {navItems.map((item) => {
+              {navItems.filter((item) => canSeeNavItem(item.href)).map((item) => {
                 const active = pathname.startsWith(item.href);
                 return (
                   <Link

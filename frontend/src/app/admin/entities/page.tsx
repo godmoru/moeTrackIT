@@ -80,16 +80,76 @@ export default function EntitiesPage() {
     load();
   }, []);
 
+  async function handleDownload(path: string, filename: string) {
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      if (!token) {
+        throw new Error("You are not authenticated. Please log in again.");
+      }
+
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to download export");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert((err as any).message || "Failed to download export");
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <h1 className="text-lg font-semibold text-gray-900">Institutions</h1>
-        <Link
-          href="/admin/entities/new"
-          className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800"
-        >
-          New Institution
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700">
+            <span className="font-semibold text-gray-600">Export:</span>
+            <button
+              type="button"
+              onClick={() => handleDownload("/entities/export.csv", "institutions.csv")}
+              className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
+            >
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDownload("/entities/export.xlsx", "institutions.xlsx")}
+              className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
+            >
+              Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDownload("/entities/export.pdf", "institutions.pdf")}
+              className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
+            >
+              PDF
+            </button>
+          </div>
+          <Link
+            href="/admin/entities/new"
+            className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800"
+          >
+            New Institution
+          </Link>
+        </div>
       </div>
       {loading && <p className="text-sm text-gray-600">Loading institution...</p>}
       {error && (

@@ -10,6 +10,7 @@ interface RoleRow {
   slug: string;
   description?: string | null;
   isSystem?: boolean;
+  permissions?: { id: number }[];
 }
 
 export default function RolesPage() {
@@ -121,6 +122,7 @@ export default function RolesPage() {
                   <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500">Name</th>
                   <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500">Slug</th>
                   <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500">Description</th>
+                  <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500">Permissions</th>
                   <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500">System</th>
                 </tr>
               </thead>
@@ -138,6 +140,9 @@ export default function RolesPage() {
                       <td className="px-3 py-2 text-[11px] text-gray-700">{role.slug}</td>
                       <td className="px-3 py-2 text-[11px] text-gray-700">
                         {role.description || "-"}
+                      </td>
+                      <td className="px-3 py-2 text-[11px] text-gray-700">
+                        {role.permissions ? role.permissions.length : 0}
                       </td>
                       <td className="px-3 py-2 text-[11px] text-gray-700">
                         {role.isSystem ? "Yes" : "No"}
