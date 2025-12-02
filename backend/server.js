@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 // Health check
 app.get('/api/v1/health', (_, res) => {
   res.json({ 
-    status: 'The moeTrackIT backend is running healthy and ready!🚀', 
+    status: 'The moeTrackIT Revenue Monitoring backend is running healthy and ready!🚀', 
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',

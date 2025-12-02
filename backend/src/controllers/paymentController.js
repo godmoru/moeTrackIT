@@ -1,7 +1,7 @@
 "use strict";
 
 const path = require("path");
-const { Payment, Assessment, Entity, IncomeSource, User, sequelize } = require("../../models");
+const { Payment, Assessment, Entity, IncomeSource, User, Setting, sequelize } = require("../../models");
 const PDFDocument = require('pdfkit');
 
 async function listPayments(req, res) {
@@ -241,13 +241,21 @@ async function paymentInvoice(req, res) {
     }
 
     // Footer note (reset styling, directly under amount line)
+    let invoiceFooterText =
+      'This receipt is only valid if generated from the official MOETrackIT platform.';
+    try {
+      const settingRow = await Setting.findOne();
+      if (settingRow && settingRow.invoiceFooter) {
+        invoiceFooterText = settingRow.invoiceFooter;
+      }
+    } catch (e) {
+      // If settings cannot be loaded, fall back to default text silently
+    }
+
     doc.font("Helvetica");
     doc.fontSize(9);
     doc.fillColor("#000000");
-    doc.text(
-      'This invoice serves as an internal record of payment for the Ministry of Education.',
-      { width: 500 },
-    );
+    doc.text(invoiceFooterText, { width: 500 });
 
     doc.end();
   } catch (err) {

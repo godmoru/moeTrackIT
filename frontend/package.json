@@ -6,7 +6,8 @@
     "name": "Umoru Godfrey",
     "email": "godfrey.umoru@gesusoft.com",
     "url": "https://gesusoft.com",
-    "phone_number": "+234-816-5420-728"
+    "phone_number": "+234-816-5420-728",
+    "date": "01-12-2025"
   },
   "scripts": {
     "dev": "next dev",

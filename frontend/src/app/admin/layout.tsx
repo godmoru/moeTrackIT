@@ -5,16 +5,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/assessments", label: "Assessments" },
-  { href: "/admin/income-sources", label: "Income Sources" },
-  { href: "/admin/entities", label: "Institutions" },
-  { href: "/admin/revenue", label: "Revenue & Collections" },
-  { href: "/admin/payments", label: "Payments" },
-  { href: "/admin/lgas", label: "LGAs" },
-  { href: "/admin/reports", label: "Report" },
-  { href: "/admin/settings", label: "Settings" },
-
+  { href: "/admin/dashboard", label: "Dashboard", title: "Overview for all admin roles" },
+  { href: "/admin/assessments", label: "Assessments", title: "Assessments management (Admin / Officer)" },
+  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources (Admin)" },
+  { href: "/admin/entities", label: "Institutions", title: "Institution directory and profiles" },
+  { href: "/admin/revenue", label: "Revenue & Collections", title: "Revenue summary and collections (Admin)" },
+  { href: "/admin/payments", label: "Payments", title: "Payments list and invoices" },
+  { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas overview" },
+  { href: "/admin/reports", label: "Reports", title: "Reporting and analytics (Admin)" },
+  { href: "/admin/control-panel", label: "Control Panel", title: "Roles, permissions, users and system preferences (Super Admin)" },
 ];
 
 function NavIcon({ href }: { href: string }) {
@@ -87,6 +86,26 @@ function NavIcon({ href }: { href: string }) {
     );
   }
 
+  if (href.startsWith("/admin/reports")) {
+    return (
+      <svg {...baseProps}>
+        <path d="M4 19h16" />
+        <path d="M7 16v-6" />
+        <path d="M12 16V8" />
+        <path d="M17 16v-4" />
+      </svg>
+    );
+  }
+
+  if (href.startsWith("/admin/control-panel")) {
+    return (
+      <svg {...baseProps}>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.1V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-.33-1.1 1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15 1.65 1.65 0 0 0 4 14a1.65 1.65 0 0 0-1.1-.33H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.2 9a1.65 1.65 0 0 0 .4-1 1.65 1.65 0 0 0-.6-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 4a1.65 1.65 0 0 0 .33-1.1V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 14.8 4.2 1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1 .4 1.65 1.65 0 0 0 1.82-.6l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9 1.65 1.65 0 0 0 20 10c0 .37.13.73.33 1.02.2.3.47.53.77.69" />
+      </svg>
+    );
+  }
+
   return (
     <svg {...baseProps}>
       <circle cx="12" cy="12" r="4" />
@@ -135,6 +154,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
+                title={item.title}
                 className={`block rounded-md px-3 py-2 text-xs font-medium transition-colors ${
                   active ? "bg-green-700 text-white" : "text-green-100 hover:bg-green-700/60"
                 }`}
@@ -195,6 +215,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         : "text-gray-700 hover:bg-gray-50"
                     }`}
                     onClick={() => setMobileNavOpen(false)}
+                    title={item.title}
                   >
                     <span className="flex items-center gap-2">
                       <NavIcon href={item.href} />

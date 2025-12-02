@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "MOETrackIT - Revenue Monitor",
   description: "Developed by GESUSoft Technology Ltd",
+  icons: {
+    icon: "/benue.png",
+  },
 };
 
 export default function RootLayout({

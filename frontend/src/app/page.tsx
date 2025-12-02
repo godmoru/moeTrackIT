@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             {/* <div className="h-8 w-8 rounded-full bg-green-700" /> */}
             <img className="h-15 w-15 rounded-full" src="/benue.png" alt="" />
