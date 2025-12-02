@@ -1,31 +1,46 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { YearlyRevenueBar } from "@/components/Charts";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
-interface IncomeSourceDetail {
+interface EntityType {
+  name: string;
+}
+
+interface EntityOwnership {
+  name: string;
+}
+
+interface EntityDetail {
   id: number;
   name: string;
-  code: string;
-  description?: string | null;
-  category: string;
-  recurrence: string;
-  defaultAmount: string | number;
-  active: boolean;
+  code: string | null;
+  type: string | null;
+  subType: string | null;
+  ownership: string | null;
+  state: string | null;
+  lga: string | null;
+  status: string;
+  category: string | null;
+  address: string | null;
+  contactPerson: string | null;
+  contactPhone: string | null;
+  contactEmail?: string | null;
+  entityType?: EntityType;
+  ownershipType?: EntityOwnership;
 }
 
 interface AssessmentLite {
   id: number;
   entityId: number;
-  incomeSourceId: number;
   assessmentPeriod?: string | null;
+  incomeSourceId?: number | null;
+  IncomeSource?: { name: string } | null;
   status?: string | null;
-  entity?: { name: string } | null;
 }
 
 interface PaymentLite {
@@ -38,24 +53,51 @@ interface PaymentLite {
   status?: string | null;
 }
 
-export default function IncomeSourceProfilePage() {
+export default function EntityProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id as string | undefined;
-  const incomeSourceIdNum = id ? Number(id) : NaN;
+  const entityIdNum = id ? Number(id) : NaN;
 
-  const [source, setSource] = useState<IncomeSourceDetail | null>(null);
+  const [entity, setEntity] = useState<EntityDetail | null>(null);
   const [assessments, setAssessments] = useState<AssessmentLite[]>([]);
   const [payments, setPayments] = useState<PaymentLite[]>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "assessments" | "revenue">(
     "overview",
   );
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  async function handleDownloadCsv(path: string, filename: string) {
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) {
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+    }
+  }
+
   useEffect(() => {
-    if (!id || Number.isNaN(incomeSourceIdNum)) {
-      setError("Invalid income source id");
+    if (!id || Number.isNaN(entityIdNum)) {
+      setError("Invalid institution id");
       setLoading(false);
       return;
     }
@@ -67,8 +109,8 @@ export default function IncomeSourceProfilePage() {
         const token =
           typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 
-        const [sourcesRes, assessmentsRes, paymentsRes] = await Promise.all([
-          fetch(`${API_BASE}/income-sources`, {
+        const [entityRes, assessmentsRes, paymentsRes] = await Promise.all([
+          fetch(`${API_BASE}/entities/${id}`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -88,52 +130,49 @@ export default function IncomeSourceProfilePage() {
           }),
         ]);
 
-        if (!sourcesRes.ok || !assessmentsRes.ok || !paymentsRes.ok) {
-          const body = await sourcesRes.json().catch(() => ({}));
-          throw new Error(body.message || "Failed to load income source profile data");
+        if (!entityRes.ok || !assessmentsRes.ok || !paymentsRes.ok) {
+          const body = await entityRes.json().catch(() => ({}));
+          throw new Error(body.message || "Failed to load institution profile data");
         }
 
-        const sourcesBody: IncomeSourceDetail[] = await sourcesRes.json();
-        const target = sourcesBody.find((s) => s.id === incomeSourceIdNum) || null;
+        const entityBody: EntityDetail = await entityRes.json();
         const assessmentsBody: AssessmentLite[] = await assessmentsRes.json();
         const paymentsBody: PaymentLite[] = await paymentsRes.json();
 
-        setSource(target);
+        setEntity(entityBody);
         setAssessments(assessmentsBody);
         setPayments(paymentsBody);
       } catch (err: any) {
-        setError(err.message || "Failed to load income source profile data");
+        setError(err.message || "Failed to load institution profile data");
       } finally {
         setLoading(false);
       }
     }
 
     load();
-  }, [id, incomeSourceIdNum]);
+  }, [id, entityIdNum]);
 
-  if (!id || Number.isNaN(incomeSourceIdNum)) {
+  if (!id || Number.isNaN(entityIdNum)) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-red-600">Invalid income source ID.</p>
+        <p className="text-sm text-red-600">Invalid institution id.</p>
       </div>
     );
   }
 
-  const sourceAssessments = assessments.filter(
-    (a) => a.incomeSourceId === incomeSourceIdNum,
-  );
-  const assessmentIds = new Set(sourceAssessments.map((a) => a.id));
-  const sourcePayments = payments.filter((p) => assessmentIds.has(p.assessmentId));
+  const entityAssessments = assessments.filter((a) => a.entityId === entityIdNum);
+  const entityAssessmentIds = new Set(entityAssessments.map((a) => a.id));
+  const entityPayments = payments.filter((p) => entityAssessmentIds.has(p.assessmentId));
 
-  const totalRevenue = sourcePayments.reduce(
+  const totalRevenue = entityPayments.reduce(
     (sum, p) => sum + Number(p.amountPaid || 0),
     0,
   );
 
   const yearlyRevenueMap = new Map<string, number>();
-  sourceAssessments.forEach((a) => {
+  entityAssessments.forEach((a) => {
     const year = (a.assessmentPeriod || "").toString() || "Unknown";
-    const relatedPayments = sourcePayments.filter((p) => p.assessmentId === a.id);
+    const relatedPayments = entityPayments.filter((p) => p.assessmentId === a.id);
     const sumForAssessment = relatedPayments.reduce(
       (s, p) => s + Number(p.amountPaid || 0),
       0,
@@ -150,19 +189,29 @@ export default function IncomeSourceProfilePage() {
 
   const availableYears = Array.from(
     new Set(
-      sourceAssessments
+      entityAssessments
         .map((a) => (a.assessmentPeriod || "").toString())
         .filter((y) => y && y.trim().length > 0),
     ),
   ).sort();
 
-  const filteredAssessments = sourceAssessments.filter((a) => {
+  const availableSources = Array.from(
+    new Set(
+      entityAssessments
+        .map((a) => a.IncomeSource?.name || "")
+        .filter((n) => n && n.trim().length > 0),
+    ),
+  ).sort();
+
+  const filteredAssessments = entityAssessments.filter((a) => {
     const year = (a.assessmentPeriod || "").toString();
+    const sourceName = a.IncomeSource?.name || "";
     if (yearFilter !== "all" && year !== yearFilter) return false;
+    if (sourceFilter !== "all" && sourceName !== sourceFilter) return false;
     return true;
   });
 
-  const recentPayments = [...sourcePayments]
+  const recentPayments = [...entityPayments]
     .sort((a, b) => {
       const dateA = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
       const dateB = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
@@ -196,26 +245,26 @@ export default function IncomeSourceProfilePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">
-            {source ? source.name : "Income Source"}
+            {entity ? entity.name : "Institution"}
           </h1>
-          {source?.code && (
-            <p className="text-xs text-gray-500">Code: {source.code}</p>
+          {entity?.code && (
+            <p className="text-xs text-gray-500">Code: {entity.code}</p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {source && (
+          {entity && (
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${
-                source.active
+                entity.status === "active"
                   ? "bg-green-100 text-green-800"
                   : "bg-yellow-100 text-yellow-800"
               }`}
             >
-              {source.active ? "active" : "inactive"}
+              {entity.status}
             </span>
           )}
           <Link
-            href="/admin/income-sources"
+            href="/admin/entities"
             className="rounded-md bg-gray-100 px-3 py-1 font-medium text-gray-700 hover:bg-gray-200"
           >
             Back to list
@@ -223,52 +272,43 @@ export default function IncomeSourceProfilePage() {
         </div>
       </div>
 
-      {loading && (
-        <p className="text-sm text-gray-600">Loading income source profile...</p>
-      )}
-      {error && (
-        <p className="text-sm text-red-600" role="alert">
-          {error}
-        </p>
-      )}
-
-      {!loading && !error && source && (
-        <div className="space-y-4">
-          <div className="flex gap-2 border-b border-gray-200 text-xs">
-            <button
-              type="button"
-              onClick={() => setActiveTab("overview")}
-              className={`border-b-2 px-3 py-2 font-medium ${
-                activeTab === "overview"
-                  ? "border-green-700 text-green-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("assessments")}
-              className={`border-b-2 px-3 py-2 font-medium ${
-                activeTab === "assessments"
-                  ? "border-green-700 text-green-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Assessments
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("revenue")}
-              className={`border-b-2 px-3 py-2 font-medium ${
-                activeTab === "revenue"
-                  ? "border-green-700 text-green-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Revenue
-            </button>
-          </div>
+    {!loading && !error && entity && (
+      <div className="space-y-4">
+        <div className="flex gap-2 border-b border-gray-200 text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("overview")}
+            className={`border-b-2 px-3 py-2 font-medium ${
+              activeTab === "overview"
+                ? "border-green-700 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("assessments")}
+            className={`border-b-2 px-3 py-2 font-medium ${
+              activeTab === "assessments"
+                ? "border-green-700 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Assessments
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("revenue")}
+            className={`border-b-2 px-3 py-2 font-medium ${
+              activeTab === "revenue"
+                ? "border-green-700 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Revenue
+          </button>
+        </div>
 
           {activeTab === "overview" && (
             <div className="space-y-4">
@@ -280,42 +320,77 @@ export default function IncomeSourceProfilePage() {
                   <dl className="grid gap-3 text-xs md:grid-cols-2">
                     <div>
                       <dt className="font-medium text-gray-700">Name</dt>
-                      <dd className="text-gray-900">{source.name}</dd>
+                      <dd className="text-gray-900">{entity.name}</dd>
                     </div>
                     <div>
                       <dt className="font-medium text-gray-700">Code</dt>
-                      <dd className="text-gray-900">{source.code || "-"}</dd>
+                      <dd className="text-gray-900">{entity.code || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-gray-700">Type</dt>
+                      <dd className="text-gray-900">
+                        {entity.entityType?.name || entity.subType || entity.type || "-"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-gray-700">Ownership</dt>
+                      <dd className="text-gray-900">
+                        {entity.ownershipType?.name || entity.ownership || "-"}
+                      </dd>
                     </div>
                     <div>
                       <dt className="font-medium text-gray-700">Category</dt>
-                      <dd className="capitalize text-gray-900">{source.category}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-gray-700">Recurrence</dt>
-                      <dd className="capitalize text-gray-900">{source.recurrence}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-gray-700">Default Amount (NGN)</dt>
-                      <dd className="text-gray-900">
-                        ₦{Number(source.defaultAmount || 0).toLocaleString("en-NG")}
-                      </dd>
+                      <dd className="text-gray-900">{entity.category || "-"}</dd>
                     </div>
                     <div>
                       <dt className="font-medium text-gray-700">Status</dt>
-                      <dd className="capitalize text-gray-900">
-                        {source.active ? "active" : "inactive"}
-                      </dd>
+                      <dd className="capitalize text-gray-900">{entity.status}</dd>
                     </div>
                   </dl>
                 </div>
 
                 <div className="rounded-lg bg-white p-4 shadow-sm">
                   <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    Description
+                    Location
                   </h2>
-                  <p className="text-xs text-gray-900">
-                    {source.description || "No description provided."}
-                  </p>
+                  <dl className="space-y-2 text-xs">
+                    <div>
+                      <dt className="font-medium text-gray-700">State</dt>
+                      <dd className="text-gray-900">{entity.state || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-gray-700">LGA</dt>
+                      <dd className="text-gray-900">{entity.lga || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-gray-700">Address</dt>
+                      <dd className="text-gray-900">{entity.address || "-"}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg bg-white p-4 shadow-sm">
+                  <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Contact
+                  </h2>
+                  <dl className="space-y-2 text-xs">
+                    <div>
+                      <dt className="font-medium text-gray-700">Contact Person</dt>
+                      <dd className="text-gray-900">{entity.contactPerson || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-gray-700">Phone</dt>
+                      <dd className="text-gray-900">{entity.contactPhone || "-"}</dd>
+                    </div>
+                    {entity.contactEmail !== undefined && (
+                      <div>
+                        <dt className="font-medium text-gray-700">Email</dt>
+                        <dd className="text-gray-900">{entity.contactEmail || "-"}</dd>
+                      </div>
+                    )}
+                  </dl>
                 </div>
               </div>
             </div>
@@ -323,7 +398,7 @@ export default function IncomeSourceProfilePage() {
 
           {activeTab === "assessments" && (
             <div className="mt-4 overflow-x-auto rounded-lg bg-white shadow-sm">
-              <div className="space-y-3 p-4">
+              <div className="p-4 space-y-3">
                 <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Assessments
                 </h2>
@@ -344,15 +419,43 @@ export default function IncomeSourceProfilePage() {
                         ))}
                       </select>
                     </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-gray-600">Income Source:</span>
+                      <select
+                        value={sourceFilter}
+                        onChange={(e) => setSourceFilter(e.target.value)}
+                        className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="all">All</option>
+                        {availableSources.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDownloadCsv(
+                          `/reports/entities/${id}/assessments.csv`,
+                          `institution-${id}-assessments.csv`,
+                        )
+                      }
+                      className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Export CSV
+                    </button>
                   </div>
                 </div>
-
                 <table className="min-w-full text-left text-xs">
                   <thead className="bg-gray-50 text-gray-600">
                     <tr>
                       <th className="px-3 py-2 font-medium">S/N</th>
                       <th className="px-3 py-2 font-medium">Year</th>
-                      <th className="px-3 py-2 font-medium">Entity</th>
+                      <th className="px-3 py-2 font-medium">Income Source</th>
                       <th className="px-3 py-2 font-medium">Status</th>
                       <th className="px-3 py-2 font-medium text-right">Total Paid (NGN)</th>
                     </tr>
@@ -361,12 +464,12 @@ export default function IncomeSourceProfilePage() {
                     {filteredAssessments.length === 0 && (
                       <tr>
                         <td className="px-3 py-2 text-xs text-gray-500" colSpan={5}>
-                          No assessments recorded for this income source yet.
+                          No assessments recorded for this institution yet.
                         </td>
                       </tr>
                     )}
                     {filteredAssessments.map((a, index) => {
-                      const relatedPayments = sourcePayments.filter(
+                      const relatedPayments = entityPayments.filter(
                         (p) => p.assessmentId === a.id,
                       );
                       const sumForAssessment = relatedPayments.reduce(
@@ -380,7 +483,9 @@ export default function IncomeSourceProfilePage() {
                         <tr key={a.id} className="border-t text-gray-800">
                           <td className="px-3 py-2 text-xs">{index + 1}</td>
                           <td className="px-3 py-2 text-xs">{year}</td>
-                          <td className="px-3 py-2 text-xs">{a.entity?.name || "-"}</td>
+                          <td className="px-3 py-2 text-xs">
+                            {a.IncomeSource?.name || "-"}
+                          </td>
                           <td className="px-3 py-2 text-xs capitalize">{status}</td>
                           <td className="px-3 py-2 text-right text-xs">
                             {sumForAssessment
@@ -402,7 +507,7 @@ export default function IncomeSourceProfilePage() {
             <div className="space-y-4">
               <div className="mt-4 grid gap-4 md:grid-cols-3">
                 <div className="rounded-lg bg-white p-4 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                     Total Revenue (NGN)
                   </div>
                   <div className="mt-2 text-2xl font-semibold text-green-700">
@@ -411,20 +516,20 @@ export default function IncomeSourceProfilePage() {
                 </div>
 
                 <div className="rounded-lg bg-white p-4 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                     Total Assessments
                   </div>
                   <div className="mt-2 text-2xl font-semibold text-gray-900">
-                    {sourceAssessments.length}
+                    {entityAssessments.length}
                   </div>
                 </div>
 
                 <div className="rounded-lg bg-white p-4 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                     Total Payments
                   </div>
                   <div className="mt-2 text-2xl font-semibold text-gray-900">
-                    {sourcePayments.length}
+                    {entityPayments.length}
                   </div>
                 </div>
               </div>
@@ -440,13 +545,27 @@ export default function IncomeSourceProfilePage() {
                   <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Recent Payments
                   </h2>
+                  <div className="mb-3 flex justify-end text-xs">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDownloadCsv(
+                          `/reports/entities/${id}/payments.csv`,
+                          `institution-${id}-payments.csv`,
+                        )
+                      }
+                      className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
                   <table className="min-w-full text-left text-xs">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
                         <th className="px-3 py-2 font-medium">S/N</th>
                         <th className="px-3 py-2 font-medium">Date</th>
-                        <th className="px-3 py-2 font-medium">Entity</th>
-                        <th className="px-3 py-2 font-medium">Method</th>
+                        <th className="px-3 py-2 font-medium">Payment Type</th>
+                        <th className="px-3 py-2 font-medium">Payment Purpose</th>
                         <th className="px-3 py-2 font-medium text-right">Amount (NGN)</th>
                         <th className="px-3 py-2 font-medium">Status</th>
                         <th className="px-3 py-2 font-medium text-right">Action</th>
@@ -456,7 +575,7 @@ export default function IncomeSourceProfilePage() {
                       {recentPayments.length === 0 && (
                         <tr>
                           <td className="px-3 py-2 text-xs text-gray-500" colSpan={7}>
-                            No payments recorded for this income source yet.
+                            No payments recorded for this institution yet.
                           </td>
                         </tr>
                       )}
@@ -464,26 +583,23 @@ export default function IncomeSourceProfilePage() {
                         const dateLabel = p.paymentDate
                           ? new Date(p.paymentDate).toLocaleDateString("en-NG")
                           : "-";
+                        const paymentType = p.method || "-";
+                        const paymentPurpose = p.reference || "-";
                         const status = p.status || "-";
-
-                        const relatedAssessment = sourceAssessments.find(
-                          (a) => a.id === p.assessmentId,
-                        );
-
                         return (
                           <tr key={p.id} className="border-t text-gray-800">
                             <td className="px-3 py-2 text-xs">{index + 1}</td>
                             <td className="px-3 py-2 text-xs">{dateLabel}</td>
-                            <td className="px-3 py-2 text-xs">
-                              {relatedAssessment?.entity?.name || "-"}
-                            </td>
-                            <td className="px-3 py-2 text-xs">{p.method || "-"}</td>
+                            <td className="px-3 py-2 text-xs">{paymentType}</td>
+                            <td className="px-3 py-2 text-xs">{paymentPurpose}</td>
                             <td className="px-3 py-2 text-right text-xs">
                               ₦{Number(p.amountPaid || 0).toLocaleString("en-NG", {
                                 maximumFractionDigits: 2,
                               })}
                             </td>
-                            <td className="px-3 py-2 text-xs capitalize">{status}</td>
+                            <td className="px-3 py-2 text-xs capitalize">
+                              {status}
+                            </td>
                             <td className="px-3 py-2 text-right text-xs">
                               <button
                                 type="button"

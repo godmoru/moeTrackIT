@@ -34,6 +34,8 @@ export default function Home() {
               className="rounded-full bg-green-700 px-4 py-2 text-white hover:bg-green-800"
             >
               Admin Login
+              {/* Ifalreay logged in, change to Admin Area */}
+
             </Link>
           </nav>
         </div>

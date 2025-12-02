@@ -12,6 +12,9 @@ const navItems = [
   { href: "/admin/revenue", label: "Revenue & Collections" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/lgas", label: "LGAs" },
+  { href: "/admin/reports", label: "Report" },
+  { href: "/admin/settings", label: "Settings" },
+
 ];
 
 function NavIcon({ href }: { href: string }) {
