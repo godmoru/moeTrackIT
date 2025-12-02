@@ -1,0 +1,21 @@
+'use strict';
+
+const express = require('express');
+const authController = require('../controllers/authController');
+const { authMiddleware, requireRole } = require('../middleware/auth');
+
+const router = express.Router();
+
+// Public login
+router.post('/login', authController.login);
+
+// Authenticated logout (stateless)
+router.post('/logout', authMiddleware, authController.logout);
+
+// Admin-only reset password by email
+router.post('/reset-password', authMiddleware, requireRole('super_admin'), authController.resetPassword);
+
+// Authenticated user changes own password
+router.post('/change-password', authMiddleware, authController.changePassword);
+
+module.exports = router;
