@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const { Entity, EntityType, EntityOwnership, Assessment, Payment, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
@@ -50,7 +51,7 @@ async function getEntityTypes(req, res){
   try {
     const entitieTypes = await EntityType.findAll({
       include: [
-        // { model: Entity, as: 'entityType' },
+        { model: Entity, as: 'entityType' },
         // { model: EntityOwnership, as: 'ownershipType' },
       ],
       order: [['name', 'ASC']],
@@ -67,7 +68,7 @@ async function getEntityOwnership(req, res){
   try {
     const entitieOwnership = await EntityOwnership.findAll({
       include: [
-        // { model: Entity, as: 'entityType' },
+        { model: Entity, as: 'entityType' },
         // { model: EntityOwnership, as: 'ownershipType' },
       ],
       order: [['name', 'ASC']],
@@ -347,6 +348,35 @@ async function exportEntitiesPdf(req, res) {
       order: [['name', 'ASC']],
     });
 
+    const currentYear = new Date().getFullYear();
+    const years = [
+      currentYear,
+      currentYear - 1,
+      currentYear - 2,
+      currentYear - 3,
+      currentYear - 4,
+    ];
+
+    const payments = await Payment.findAll({
+      where: {
+        paymentDate: {
+          [Op.gte]: new Date(currentYear - 4, 0, 1),
+          [Op.lt]: new Date(currentYear + 1, 0, 1),
+        },
+      },
+      include: [
+        {
+          model: Assessment,
+          as: 'assessment',
+          attributes: ['entityId'],
+        },
+      ],
+      attributes: ['amountPaid', 'paymentDate'],
+      raw: true,
+    });
+
+    const totalsMap = buildPaymentTotalsByEntityAndYearMap(payments, years);
+
     const doc = new PDFDocument({ margin: 40, size: 'A4', layout: 'landscape' });
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -357,20 +387,85 @@ async function exportEntitiesPdf(req, res) {
 
     doc.pipe(res);
 
-    doc.font('Helvetica-Bold').fontSize(16).text('Institutions Summary', { align: 'left' });
-    doc.moveDown(0.5);
-    doc.font('Helvetica').fontSize(10).text(`Total institutions: ${entities.length}`);
+    // Header with logo and ministry details
+    const logoPath = path.join(__dirname, '../../../frontend/public/benue.png');
+    try {
+      doc.image(logoPath, 40, 40, { width: 50 });
+    } catch (e) {
+      // If the logo file is not found, continue without breaking the export
+    }
+
+    const headerX = 40;
+    const headerWidth = 800 - headerX * 2;
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(14)
+      .text('Benue State Ministry of Education & Knowledge Management', headerX, 40, {
+        width: headerWidth,
+        align: 'center',
+      })
+      .moveDown(0.2)
+      .font('Helvetica')
+      .fontSize(11)
+      .text('Education Revenue Management System', headerX, 58, {
+        width: headerWidth,
+        align: 'center',
+      })
+      .moveDown(0.5)
+      .font('Helvetica-Bold')
+      .fontSize(16)
+      .text('Institutions 5-Year Payment Summary', headerX, 80, {
+        width: headerWidth,
+        align: 'center',
+      });
+
+    // Horizontal rule under header
+    doc.moveTo(40, 110).lineTo(800, 110).stroke();
     doc.moveDown(1);
 
-    const startY = doc.y;
-    const columnWidths = [40, 180, 120, 120];
+    doc.font('Helvetica').fontSize(10).text(`Total institutions: ${entities.length}`);
+    doc.moveDown(0.5);
 
-    const headers = ['ID', 'Name', 'Type', 'LGA'];
-    const xPositions = [40, 40 + columnWidths[0], 40 + columnWidths[0] + columnWidths[1], 40 + columnWidths[0] + columnWidths[1] + columnWidths[2]];
+    const startY = doc.y;
+    // Use most of the landscape width for the table, with clear separation between last year and total columns
+    // const columnWidths = [40, 260, 70, 70, 70, 70, 90];
+
+    // 8 columns: ID, Name, 5 years, Total
+    const columnWidths = [40, 220, 70, 70, 70, 70, 70, 80];
+
+
+    const headers = [
+      'S/No.',
+      'Name',
+      ...years.map((y) => String(y)),
+      'Total 5 yrs',
+    ];
+    // Manually position columns to avoid visual merging at the right edge
+    // const xPositions = [
+    //   40,              // ID
+    //   40 + 40,         // Name
+    //   40 + 40 + 260,   // Year 1
+    //   40 + 40 + 260 + 70,  // Year 2
+    //   40 + 40 + 260 + 70 * 2, // Year 3
+    //   40 + 40 + 260 + 70 * 3, // Year 4
+    //   40 + 40 + 260 + 70 * 4 + 20, // Total (extra gap before total)
+    // ];
+    // Compute x positions cumulatively
+    const xPositions = [];
+    let currentX = 40; // left margin
+    for (let i = 0; i < columnWidths.length; i++) {
+      xPositions.push(currentX);
+      currentX += columnWidths[i];
+    }
 
     doc.font('Helvetica-Bold');
     headers.forEach((h, idx) => {
-      doc.text(h, xPositions[idx], startY, { width: columnWidths[idx], underline: true });
+      doc.text(h, xPositions[idx], startY, {
+        width: columnWidths[idx],
+        underline: true,
+        align: 'left',
+      });
     });
 
     doc.moveDown(1.2);
@@ -379,22 +474,96 @@ async function exportEntitiesPdf(req, res) {
     let y = startY + 16;
     const lineHeight = 14;
 
-    entities.forEach((e) => {
+    const yearTotals = years.map(() => 0);
+    let grandTotal = 0;
+
+    entities.forEach((e, index) => {
       if (y > doc.page.height - 60) {
         doc.addPage();
         y = 60;
       }
 
-      const typeLabel = (e.entityType && e.entityType.name) || e.type || '';
-      const lgaLabel = e.lga || '';
+      const key = `${e.id}`;
+      const entry = totalsMap.get(key) || {};
+      const yearValues = years.map((yr) => Number(entry[yr] || 0));
+      const totalFiveYears = yearValues.reduce((sum, v) => sum + v, 0);
 
-      doc.text(String(e.id), xPositions[0], y, { width: columnWidths[0] });
-      doc.text(e.name || '', xPositions[1], y, { width: columnWidths[1] });
-      doc.text(typeLabel, xPositions[2], y, { width: columnWidths[2] });
-      doc.text(lgaLabel, xPositions[3], y, { width: columnWidths[3] });
+      doc.text(String(index + 1), xPositions[0], y, {
+        width: columnWidths[0],
+        align: 'left',
+      });
+      doc.text(e.name || '', xPositions[1], y, {
+        width: columnWidths[1],
+      });
+
+      yearValues.forEach((val, idx) => {
+        // Always show a number (0 when there is no data)
+        doc.text(String(val), xPositions[2 + idx], y, {
+          width: columnWidths[2 + idx],
+          align: 'left',
+        });
+        yearTotals[idx] += val;
+        grandTotal += val;
+      });
+
+      doc.text(String(totalFiveYears), xPositions[headers.length - 1], y, {
+        width: columnWidths[columnWidths.length - 1],
+        align: 'left',
+      });
 
       y += lineHeight;
     });
+
+    // Totals row
+    if (y > doc.page.height - 60) {
+      doc.addPage();
+      y = 60;
+    }
+
+    // Visual separation before totals row
+    doc.moveTo(40, y - 4).lineTo(800, y - 4).stroke();
+
+    doc.font('Helvetica-Bold');
+    doc.text('TOTAL', xPositions[0], y, { width: columnWidths[0] });
+    yearTotals.forEach((val, idx) => {
+      doc.text(String(val), xPositions[2 + idx], y, {
+        width: columnWidths[2 + idx],
+        align: 'left',
+      });
+    });
+    doc.text(String(grandTotal), xPositions[headers.length - 1], y, {
+      width: columnWidths[columnWidths.length - 1],
+      align: 'left',
+    });
+
+    // Signature section at bottom of last page
+    // y += lineHeight * 2;
+    // if (y > doc.page.height - 80) {
+    //   doc.addPage();
+    //   y = 80;
+    // }
+
+    // doc.moveTo(80, y).lineTo(260, y).stroke();
+    // doc.text('Prepared by', 80, y + 4, { width: 180 });
+
+    // doc.moveTo(320, y).lineTo(500, y).stroke();
+    // doc.text('Reviewed by', 320, y + 4, { width: 180 });
+
+    // doc.moveTo(560, y).lineTo(740, y).stroke();
+    // doc.text('Approved by', 560, y + 4, { width: 180 });
+
+    // Signature section on separate footer page
+    // doc.addPage();
+    let footerY = doc.page.height - 140; // near bottom with margin
+
+    doc.moveTo(80, footerY).lineTo(260, footerY).stroke();
+    doc.text('Prepared by', 80, footerY + 4, { width: 180 });
+
+    doc.moveTo(320, footerY).lineTo(500, footerY).stroke();
+    doc.text('Reviewed by', 320, footerY + 4, { width: 180 });
+
+    doc.moveTo(560, footerY).lineTo(740, footerY).stroke();
+    doc.text('Approved by', 560, footerY + 4, { width: 180 });
 
     doc.end();
   } catch (err) {
