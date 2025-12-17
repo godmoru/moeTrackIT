@@ -42,6 +42,10 @@ export function useApi<T = any>() {
           body: body ? JSON.stringify(body) : undefined,
         });
 
+        if (response instanceof Error) {
+          throw response;
+        }
+
         setData(response);
         onSuccess?.(response);
         return response;

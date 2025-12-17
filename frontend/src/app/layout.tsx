@@ -1,4 +1,4 @@
-'use client';
+// 'use client';
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -25,11 +25,18 @@ const geistMono = Geist_Mono({
 //   },
 // };
 
-const metadata: Metadata = {
+export const metadata: Metadata = {
   title: "MOETrackIT - Revenue Monitor",
   description: "Developed by GESUSoft Technology Ltd",
   icons: {
-    icon: "/benue.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/benue.png", sizes: "32x32", type: "image/png" }
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/benue.png", sizes: "180x180", type: "image/png" }
+    ],
   },
 };
 

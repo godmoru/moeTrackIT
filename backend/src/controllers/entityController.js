@@ -1,10 +1,31 @@
 'use strict';
 
 const path = require('path');
-const { Entity, EntityType, EntityOwnership, Assessment, Payment, sequelize } = require('../../models');
+const bcrypt = require('bcryptjs');
+const { Entity, EntityType, EntityOwnership, Assessment, Payment, User, Role, UserRole, sequelize } = require('../../models');
 const { Op } = require('sequelize');
 const PDFDocument = require('pdfkit');
 const { getEntityScopeWhere } = require('../middleware/scope');
+
+// Helper function to generate password from contact person information
+function generatePasswordFromContactInfo(name, email, phone) {
+  // Extract first name and take first 3 characters
+  const firstName = name?.split(' ')[0] || '';
+  const namePart = firstName.substring(0, 3).toLowerCase();
+  
+  // Extract domain from email (remove @ and .)
+  const emailDomain = email?.split('@')[1] || '';
+  const emailPart = emailDomain.replace(/[.@]/g, '').substring(0, 3).toLowerCase();
+  
+  // Extract last 4 digits of phone number
+  const phoneDigits = phone?.replace(/\D/g, '').slice(-4) || '1234';
+  
+  // Combine parts: namePart + emailPart + phoneDigits
+  const password = `${namePart}${emailPart}${phoneDigits}`;
+  
+  // Ensure password is at least 8 characters
+  return password.length >= 8 ? password : `${password}2024`;
+}
 
 function formatAmount(value) {
   const num = Number(value || 0);
@@ -35,11 +56,72 @@ async function listEntities(req, res) {
 }
 
 async function createEntity(req, res) {
+  const t = await sequelize.transaction();
   try {
     const data = req.body;
-    const entity = await Entity.create(data);
+    const entity = await Entity.create(data, { transaction: t });
+
+    // Auto-create principal user account if contact person information is provided
+    if (data.contactPerson && data.contactEmail && data.contactPhone) {
+      // Check if user with this email already exists
+      const existingUser = await User.findOne({ 
+        where: { email: data.contactEmail }, 
+        transaction: t 
+      });
+      
+      if (!existingUser) {
+        // Generate password from contact information
+        const generatedPassword = generatePasswordFromContactInfo(
+          data.contactPerson,
+          data.contactEmail,
+          data.contactPhone
+        );
+        
+        // Hash the password
+        const passwordHash = await bcrypt.hash(generatedPassword, 10);
+        
+        // Create the principal user
+        const principalUser = await User.create({
+          name: data.contactPerson,
+          email: data.contactEmail,
+          passwordHash,
+          role: 'principal',
+          status: 'active',
+          entityId: entity.id, // Link to the created entity
+        }, { transaction: t });
+
+        // Assign principal role in UserRole table
+        try {
+          const principalRole = await Role.findOne({ 
+            where: { slug: 'principal' }, 
+            transaction: t 
+          });
+          
+          if (principalRole) {
+            const now = new Date();
+            await UserRole.create({
+              userId: principalUser.id,
+              roleId: principalRole.id,
+              createdAt: now,
+              updatedAt: now,
+            }, { transaction: t });
+          }
+        } catch (roleErr) {
+          console.error('Failed to assign principal role:', roleErr);
+          // Don't fail the transaction if role assignment fails
+        }
+
+        // Log the generated password (in production, you might want to send this via email)
+        console.log(`Principal user account created for ${entity.name}:`);
+        console.log(`Email: ${data.contactEmail}`);
+        console.log(`Password: ${generatedPassword}`);
+      }
+    }
+
+    await t.commit();
     res.status(201).json(entity);
   } catch (err) {
+    await t.rollback();
     console.error(err);
     res.status(500).json({ message: 'Failed to create entity' });
   }

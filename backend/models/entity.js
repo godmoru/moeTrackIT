@@ -24,6 +24,7 @@ module.exports = (sequelize, DataTypes) => {
     entityOwnershipId: DataTypes.INTEGER,
     state: DataTypes.STRING,
     lga: DataTypes.STRING,
+    lgaId: DataTypes.INTEGER,
     contactPerson: DataTypes.STRING,
     contactPhone: DataTypes.STRING,
     contactEmail: DataTypes.STRING,

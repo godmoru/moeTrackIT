@@ -50,10 +50,11 @@ const userSchema = yup.object().shape({
         .oneOf([yup.ref('password')], 'Passwords must match'),
     otherwise: (schema) => schema.notRequired(),
   }),
-  lgaIds: yup.array().of(yup.string()).when('role', {
-    is: 'area_education_officer',
-    then: (schema) => schema.min(1, 'At least one LGA must be selected'),
-    otherwise: (schema) => schema.notRequired()
+  lgaId: yup.string().when(['role', '$isNewUser'], ([role, isNewUser], schema) => {
+    if (role === 'area_education_officer' && isNewUser) {
+      return schema.required('LGA is required');
+    }
+    return schema.notRequired();
   }),
   institutionId: yup.string().when('role', {
     is: 'principal',
@@ -81,6 +82,7 @@ export function UserForm({ user, onSubmit, isSubmitting, onCancel }: UserFormPro
     watch,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<CreateUserData & { confirmPassword?: string }>({
     resolver: yupResolver(userSchema as any),
     context: { isNewUser: !user },
@@ -92,8 +94,7 @@ export function UserForm({ user, onSubmit, isSubmitting, onCancel }: UserFormPro
       role: user?.role || 'officer',
       status: user?.status || 'active',
       institutionId: user?.institutionId || '',
-      // For AEOs, ensure lgaIds is an array
-      lgaIds: user?.role === 'area_education_officer' ? user.assignedLgas?.map(l => l.id) || [] : [],
+      lgaId: user?.role === 'area_education_officer' ? user.assignedLgas?.[0]?.id || '' : '',
     },
   });
 
@@ -107,7 +108,7 @@ export function UserForm({ user, onSubmit, isSubmitting, onCancel }: UserFormPro
         phone: user.phone || '',
         role: user.role,
         status: user.status || 'active',
-        lgaIds: user.role === 'area_education_officer' ? user.assignedLgas?.map((lga) => lga.id) || [] : [],
+        lgaId: user.role === 'area_education_officer' ? user.assignedLgas?.[0]?.id || '' : '',
         institutionId: user.institutionId || '',
       });
     } else {
@@ -117,13 +118,19 @@ export function UserForm({ user, onSubmit, isSubmitting, onCancel }: UserFormPro
         phone: '',
         role: 'officer',
         status: 'active',
-        lgaIds: [],
+        lgaId: '',
         institutionId: '',
         password: undefined,
         confirmPassword: undefined,
       } as any);
     }
   }, [user, reset]);
+
+  useEffect(() => {
+    if (selectedRole !== 'area_education_officer') {
+      setValue('lgaId', '', { shouldValidate: false });
+    }
+  }, [selectedRole, setValue]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -159,198 +166,180 @@ export function UserForm({ user, onSubmit, isSubmitting, onCancel }: UserFormPro
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-        <div className="sm:col-span-3">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-3 text-xs">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1">
+          <label htmlFor="name" className="block text-[11px] font-medium text-gray-700">
             Full Name *
           </label>
-          <div className="mt-1">
-            <input
-              type="text"
-              id="name"
-              {...register('name')}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            />
-            {errors.name && (
-              <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-            )}
-          </div>
+          <input
+            type="text"
+            id="name"
+            {...register('name')}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            placeholder="Full name"
+          />
+          {errors.name && (
+            <p className="text-[11px] text-red-600">{errors.name.message}</p>
+          )}
         </div>
 
-        <div className="sm:col-span-3">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-1">
+          <label htmlFor="email" className="block text-[11px] font-medium text-gray-700">
             Email *
           </label>
-          <div className="mt-1">
-            <input
-              type="email"
-              id="email"
-              {...register('email')}
-              disabled={!!user}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 sm:text-sm"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-            )}
-          </div>
+          <input
+            type="email"
+            id="email"
+            {...register('email')}
+            disabled={!!user}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+            placeholder="name@domain.com"
+          />
+          {errors.email && (
+            <p className="text-[11px] text-red-600">{errors.email.message}</p>
+          )}
         </div>
 
-        <div className="sm:col-span-3">
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-1">
+          <label htmlFor="phone" className="block text-[11px] font-medium text-gray-700">
             Phone
           </label>
-          <div className="mt-1">
-            <input
-              type="tel"
-              id="phone"
-              {...register('phone')}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            />
-            {errors.phone && (
-              <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-            )}
-          </div>
+          <input
+            type="tel"
+            id="phone"
+            {...register('phone')}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            placeholder="Phone number (optional)"
+          />
+          {errors.phone && (
+            <p className="text-[11px] text-red-600">{errors.phone.message}</p>
+          )}
         </div>
 
-        <div className="sm:col-span-3">
-          <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+        <div className="space-y-1">
+          <label htmlFor="role" className="block text-[11px] font-medium text-gray-700">
             Role *
           </label>
-          <div className="mt-1">
-            <select
-              id="role"
-              {...register('role')}
-              disabled={!!user}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 sm:text-sm"
-            >
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {role
-                    .split('_')
-                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' ')}
-                </option>
-              ))}
-            </select>
-            {errors.role && (
-              <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
-            )}
-          </div>
+          <select
+            id="role"
+            {...register('role')}
+            disabled={!!user}
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+          >
+            {roleOptions.map((role) => (
+              <option key={role} value={role}>
+                {role
+                  .split('_')
+                  .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ')}
+              </option>
+            ))}
+          </select>
+          {errors.role && (
+            <p className="text-[11px] text-red-600">{errors.role.message}</p>
+          )}
         </div>
-        <div className="sm:col-span-3">
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+
+        <div className="space-y-1">
+          <label htmlFor="status" className="block text-[11px] font-medium text-gray-700">
             Status *
           </label>
-          <div className="mt-1">
-            <select
-              id="status"
-              {...register('status')}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status === 'active' ? 'Active' : 'Disabled'}
-                </option>
-              ))}
-            </select>
-            {errors.status && (
-              <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>
-            )}
-          </div>
+          <select
+            id="status"
+            {...register('status')}
+            className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+          >
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status === 'active' ? 'Active' : 'Disabled'}
+              </option>
+            ))}
+          </select>
+          {errors.status && (
+            <p className="text-[11px] text-red-600">{errors.status.message}</p>
+          )}
         </div>
 
         {selectedRole === 'area_education_officer' && (
-          <div className="sm:col-span-6">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Assigned LGAs *
+          <div className="space-y-1 md:col-span-2">
+            <label htmlFor="lgaId" className="block text-[11px] font-medium text-gray-700">
+              LGA {!user ? '*' : ''}
             </label>
-            {isLoading ? (
-              <p>Loading LGAs...</p>
-            ) : (
-              <div className="space-y-2">
-                {lgas.map((lga) => (
-                  <div key={lga.id} className="flex items-center">
-                    <input
-                      id={`lga-${lga.id}`}
-                      type="checkbox"
-                      value={lga.id}
-                      {...register('lgaIds')}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <label htmlFor={`lga-${lga.id}`} className="ml-2 block text-sm text-gray-700">
-                      {lga.name}
-                    </label>
-                  </div>
-                ))}
-                {errors.lgaIds && (
-                  <p className="mt-1 text-sm text-red-600">{(errors.lgaIds as any)?.message}</p>
-                )}
-              </div>
-            )}
+            <select
+              id="lgaId"
+              {...register('lgaId')}
+              disabled={!!user}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+            >
+              <option value="">-- Select LGA --</option>
+              {lgas.map((lga) => (
+                <option key={lga.id} value={lga.id}>
+                  {lga.name}
+                </option>
+              ))}
+            </select>
+            {isLoading && <p className="text-[11px] text-gray-500">Loading LGAs...</p>}
+            {errors.lgaId && <p className="text-[11px] text-red-600">{errors.lgaId.message}</p>}
           </div>
         )}
 
         {selectedRole === 'principal' && (
-          <div className="sm:col-span-6">
-            <label htmlFor="institutionId" className="block text-sm font-medium text-gray-700">
+          <div className="space-y-1 md:col-span-2">
+            <label htmlFor="institutionId" className="block text-[11px] font-medium text-gray-700">
               Institution *
             </label>
-            <div className="mt-1">
-              <select
-                id="institutionId"
-                {...register('institutionId')}
-                disabled={!!user}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 sm:text-sm"
-              >
-                <option value="">Select Institution</option>
-                {institutions.map((institution) => (
-                  <option key={institution.id} value={institution.id}>
-                    {institution.name}
-                  </option>
-                ))}
-              </select>
-              {errors.institutionId && (
-                <p className="mt-1 text-sm text-red-600">{errors.institutionId.message}</p>
-              )}
-            </div>
+            <select
+              id="institutionId"
+              {...register('institutionId')}
+              disabled={!!user}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+            >
+              <option value="">-- Select Institution --</option>
+              {institutions.map((institution) => (
+                <option key={institution.id} value={institution.id}>
+                  {institution.name}
+                </option>
+              ))}
+            </select>
+            {errors.institutionId && (
+              <p className="text-[11px] text-red-600">{errors.institutionId.message}</p>
+            )}
           </div>
         )}
 
         {!user && (
           <>
-            <div className="sm:col-span-3">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-1">
+              <label htmlFor="password" className="block text-[11px] font-medium text-gray-700">
                 Password *
               </label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  id="password"
-                  {...register('password')}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-                )}
-              </div>
+              <input
+                type="password"
+                id="password"
+                {...register('password')}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                placeholder="Minimum 8 characters"
+              />
+              {errors.password && (
+                <p className="text-[11px] text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
-            <div className="sm:col-span-3">
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+            <div className="space-y-1">
+              <label htmlFor="confirmPassword" className="block text-[11px] font-medium text-gray-700">
                 Confirm Password *
               </label>
-              <div className="mt-1">
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  {...register('confirmPassword')}
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                />
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
-                )}
-              </div>
+              <input
+                type="password"
+                id="confirmPassword"
+                {...register('confirmPassword')}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                placeholder="Repeat password"
+              />
+              {errors.confirmPassword && (
+                <p className="text-[11px] text-red-600">{errors.confirmPassword.message}</p>
+              )}
             </div>
           </>
         )}
@@ -367,14 +356,14 @@ export function UserForm({ user, onSubmit, isSubmitting, onCancel }: UserFormPro
 
             window.history.back();
           }}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isSubmitting || isLoading}
-          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>

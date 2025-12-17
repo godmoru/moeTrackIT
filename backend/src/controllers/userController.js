@@ -1,14 +1,19 @@
 'use strict';
 
 const bcrypt = require('bcryptjs');
-const { User, Role, UserRole } = require('../../models');
+const db = require('../../models');
+const { User, Role, UserRole, UserLga, Lga, sequelize } = db;
 
 async function createUser(req, res) {
   try {
-    const { name, email, password, role = 'officer', status = 'active' } = req.body;
+    const { name, email, password, role = 'officer', status = 'active', lgaId } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'name, email, password and role are required' });
+    }
+
+    if (role === 'area_education_officer' && !lgaId) {
+      return res.status(400).json({ message: 'lgaId is required for area_education_officer role' });
     }
 
     const existing = await User.findOne({ where: { email } });
@@ -18,30 +23,64 @@ async function createUser(req, res) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-      name,
-      email,
-      passwordHash,
-      role,
-      status,
-    });
+    const user = await sequelize.transaction(async (t) => {
+      const createdUser = await User.create(
+        {
+          name,
+          email,
+          passwordHash,
+          role,
+          status,
+        },
+        { transaction: t },
+      );
 
-    // Keep UserRoles in sync with the primary role string
-    try {
-      const roleRecord = await Role.findOne({ where: { slug: role } });
-      if (roleRecord) {
-        const now = new Date();
-        await UserRole.create({
-          userId: user.id,
-          roleId: roleRecord.id,
-          createdAt: now,
-          updatedAt: now,
-        });
+      // Keep UserRoles in sync with the primary role string
+      try {
+        const roleRecord = await Role.findOne({ where: { slug: role }, transaction: t });
+        if (roleRecord) {
+          const now = new Date();
+          await UserRole.create(
+            {
+              userId: createdUser.id,
+              roleId: roleRecord.id,
+              createdAt: now,
+              updatedAt: now,
+            },
+            { transaction: t },
+          );
+        }
+      } catch (syncErr) {
+        console.error('Failed to sync UserRoles on createUser:', syncErr);
+        // Do not fail the request if RBAC sync fails
       }
-    } catch (syncErr) {
-      console.error('Failed to sync UserRoles on createUser:', syncErr);
-      // Do not fail the request if RBAC sync fails
-    }
+
+      // Auto-assign AEO to an LGA at creation time
+      if (role === 'area_education_officer') {
+        const lga = await Lga.findByPk(lgaId, { transaction: t });
+        if (!lga) {
+          const err = new Error('LGA not found');
+          // @ts-ignore
+          err.status = 404;
+          throw err;
+        }
+
+        await UserLga.create(
+          {
+            userId: createdUser.id,
+            lgaId,
+            assignedAt: new Date(),
+            assignedBy: req.user?.id || null,
+            isCurrent: true,
+            removedAt: null,
+            removedBy: null,
+          },
+          { transaction: t },
+        );
+      }
+
+      return createdUser;
+    });
 
     res.status(201).json({
       id: user.id,
@@ -51,6 +90,10 @@ async function createUser(req, res) {
       status: user.status,
     });
   } catch (err) {
+    const status = err?.status || 500;
+    if (status !== 500) {
+      return res.status(status).json({ message: err.message || 'Failed to create user' });
+    }
     console.error(err);
     res.status(500).json({ message: 'Failed to create user' });
   }
@@ -80,6 +123,15 @@ async function listUsers(req, res) {
       where,
       order: [['createdAt', 'DESC']],
       attributes: ['id', 'name', 'email', 'role', 'status', 'createdAt'],
+      include: [
+        {
+          model: Lga,
+          as: 'assignedLgas',
+          attributes: ['id', 'name'],
+          through: { attributes: [], where: { isCurrent: true } },
+          required: false,
+        },
+      ],
     });
 
     res.json(users);

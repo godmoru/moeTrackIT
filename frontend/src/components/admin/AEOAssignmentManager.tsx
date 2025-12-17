@@ -3,11 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useApi } from '@/hooks/useApi';
-import { LGA, AEOAssignmentHistory } from '@/types/user';
+import { LGA } from '@/types/user';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/Button';
-import { Table } from '@/components/ui/Table';
-import { Badge } from '@/components/ui/Badge';
 
 interface AEOAssignmentManagerFormData {
   lgaId: string;
@@ -20,17 +17,44 @@ interface LGAWithId extends Omit<LGA, 'id' | 'createdAt' | 'updatedAt'> {
   updatedAt?: Date;
 }
 
+type UserLgaAssignment = {
+  id: string | number;
+  userId: string | number;
+  lgaId: string | number;
+  assignedAt?: string | Date;
+  assignedBy?: string | number | null;
+  isCurrent?: boolean;
+  removedAt?: string | Date | null;
+  removedBy?: string | number | null;
+  lga?: {
+    id: string | number;
+    name: string;
+    code?: string;
+    state?: string;
+  };
+  assigner?: {
+    id: string | number;
+    name: string;
+    email?: string;
+  };
+  remover?: {
+    id: string | number;
+    name: string;
+    email?: string;
+  };
+};
+
 interface AEOAssignmentManagerProps {
   userId: string;
-  currentAssignments?: AEOAssignmentHistory[];
+  currentAssignments?: any[];
   onAssignmentChange?: (success: boolean) => void;
 }
 
 export function AEOAssignmentManager({ userId, currentAssignments = [], onAssignmentChange }: AEOAssignmentManagerProps) {
-  const { get, post } = useApi<LGAWithId[] | AEOAssignmentHistory[]>();
+  const { get, post, put, delete: del } = useApi<any>();
   const [lgas, setLgas] = useState<LGA[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [assignmentHistory, setAssignmentHistory] = useState<AEOAssignmentHistory[]>(currentAssignments);
+  const [assignmentHistory, setAssignmentHistory] = useState<UserLgaAssignment[]>(currentAssignments as UserLgaAssignment[]);
 
   const { handleSubmit, register, reset, watch } = useForm<AEOAssignmentManagerFormData>();
 
@@ -39,13 +63,13 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [lgasResponse, historyResponse] = await Promise.all([
+        const [lgasResponse, assignmentsResponse] = await Promise.all([
           get('/lgas'),
-          get(`/users/${userId}/assignment-history`)
+          get(`/users/${userId}/lgas?includeHistory=1`),
         ]);
-        
-        setLgas(lgasResponse?.data || []);
-        setAssignmentHistory(historyResponse?.data || []);
+
+        setLgas((Array.isArray(lgasResponse) ? lgasResponse : []) as any);
+        setAssignmentHistory((Array.isArray(assignmentsResponse) ? assignmentsResponse : []) as any);
       } catch (error) {
         console.error('Failed to load data:', error);
         toast.error('Failed to load data. Please try again.');
@@ -60,15 +84,16 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
   const onSubmit = async (data: AEOAssignmentManagerFormData) => {
     try {
       setIsLoading(true);
-      const endpoint = data.action === 'assign' 
-        ? `/users/${userId}/assign-lga` 
-        : `/users/${userId}/unassign-lga`;
-      
-      await post(endpoint, { lgaId: data.lgaId });
-      
-      // Refresh the assignment history
-      const history = await get(`/users/${userId}/assignment-history`);
-      setAssignmentHistory((history?.data as AEOAssignmentHistory[]) || []);
+
+      if (data.action === 'assign') {
+        await put(`/users/${userId}/lgas`, { lgaIds: [data.lgaId] });
+      } else {
+        await del(`/users/${userId}/lgas/${data.lgaId}`);
+      }
+
+      // Refresh current assignments
+      const refreshed = await get(`/users/${userId}/lgas?includeHistory=1`);
+      setAssignmentHistory((Array.isArray(refreshed) ? refreshed : []) as any);
       
       const message = `LGA ${data.action === 'assign' ? 'assigned' : 'unassigned'} successfully`;
       toast.success(message);
@@ -82,74 +107,75 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
     }
   };
 
-  const currentAssignmentsList = (assignmentHistory || []).filter((a): a is AEOAssignmentHistory => a.isCurrent);
-  const pastAssignments = (assignmentHistory || []).filter((a): a is AEOAssignmentHistory => !a.isCurrent);
+  const currentAssignmentsList = (assignmentHistory || []).filter((a) => a.isCurrent !== false);
+  const pastAssignmentsList = (assignmentHistory || []).filter((a) => a.isCurrent === false);
 
   if (isLoading) {
-    return <div className="p-4">Loading assignments...</div>;
+    return <div className="p-4 text-xs text-gray-600">Loading assignments...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium mb-4">Manage LGA Assignments</h3>
-        
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="action" className="block text-sm font-medium text-gray-700 mb-1">
+    <div className="space-y-4 text-xs">
+      <div className="rounded-lg bg-white p-4 text-xs shadow-sm">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Manage LGA Assignments
+        </h3>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-3 space-y-3">
+          <div className="grid gap-3 md:grid-cols-[1fr_2fr_1fr] md:items-end">
+            <div className="space-y-1">
+              <label htmlFor="action" className="block text-[11px] font-medium text-gray-700">
                 Action
               </label>
               <select
                 id="action"
                 {...register('action')}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               >
-                <option value="assign">Assign LGA</option>
-                <option value="unassign">Unassign LGA</option>
+                <option value="assign">Assign</option>
+                <option value="unassign">Unassign</option>
               </select>
             </div>
-            
-            <div>
-              <label htmlFor="lgaId" className="block text-sm font-medium text-gray-700 mb-1">
-                {action === 'assign' ? 'Select LGA to assign' : 'Select LGA to unassign'}
+
+            <div className="space-y-1">
+              <label htmlFor="lgaId" className="block text-[11px] font-medium text-gray-700">
+                LGA
               </label>
               <select
                 id="lgaId"
                 {...register('lgaId', { required: true })}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
                 disabled={action === 'unassign' && currentAssignmentsList.length === 0}
               >
-                <option value="">Select LGA</option>
+                <option value="">-- Select LGA --</option>
                 {action === 'assign' ? (
-                  // Show only unassigned LGAs for assignment
                   lgas
-                    .filter(lga => !currentAssignmentsList?.some(a => a.lgaId === lga.id))
+                    .filter(lga => !currentAssignmentsList?.some(a => String(a.lgaId) === String(lga.id)))
                     .map(lga => (
                       <option key={lga.id} value={lga.id}>
                         {lga.name}
                       </option>
                     ))
                 ) : (
-                  // Show only currently assigned LGAs for unassignment
                   currentAssignmentsList.map(assignment => (
-                    <option key={assignment.lgaId} value={assignment.lgaId}>
+                    <option key={String(assignment.lgaId)} value={String(assignment.lgaId)}>
                       {assignment.lga?.name || 'Unknown LGA'}
                     </option>
                   ))
                 )}
               </select>
             </div>
-            
-            <div className="flex items-end">
+
+            <div className="space-y-1">
+              <span className="block text-[11px] font-medium text-transparent">Action</span>
               <button
                 type="submit"
                 disabled={isLoading || (action === 'unassign' && currentAssignmentsList.length === 0)}
-                className={`px-4 py-2 rounded-md text-white ${
-                  action === 'assign' 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-red-600 hover:bg-red-700'
-                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50`}
+                className={`w-full rounded-md px-4 py-2 text-xs font-semibold text-white disabled:opacity-70 ${
+                  action === 'assign'
+                    ? 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700'
+                    : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600'
+                }`}
               >
                 {isLoading ? 'Processing...' : action === 'assign' ? 'Assign LGA' : 'Unassign LGA'}
               </button>
@@ -158,99 +184,75 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
         </form>
       </div>
 
-      <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium mb-4">Current LGA Assignments</h3>
+      <div className="rounded-lg bg-white p-4 text-xs shadow-sm">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Current LGA Assignments
+        </h3>
+
         {currentAssignmentsList.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-gray-50 text-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    LGA
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned On
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned By
-                  </th>
+                  <th className="px-3 py-2 font-medium">LGA</th>
+                  <th className="px-3 py-2 font-medium">Assigned On</th>
+                  <th className="px-3 py-2 font-medium">Assigned By</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {currentAssignmentsList.map((assignment) => (
-                  <tr key={assignment.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {assignment.lga?.name || 'Unknown LGA'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <tr key={String(assignment.id)} className="border-t text-gray-800">
+                    <td className="px-3 py-2 text-xs">{assignment.lga?.name || 'Unknown LGA'}</td>
+                    <td className="px-3 py-2 text-xs">
                       {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assignment.assignedBy?.name || 'System'}
-                    </td>
+                    <td className="px-3 py-2 text-xs">{assignment.assigner?.name || 'System'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-gray-500">No current LGA assignments.</p>
+          <p className="mt-3 text-[11px] text-gray-500">No current LGA assignments.</p>
         )}
       </div>
 
-      {pastAssignments.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6 mt-6">
-          <h3 className="text-lg font-medium mb-4">Past LGA Assignments</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+      <div className="rounded-lg bg-white p-4 text-xs shadow-sm">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Past Assignments
+        </h3>
+
+        {pastAssignmentsList.length > 0 ? (
+          <div className="mt-3 overflow-x-auto">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-gray-50 text-gray-600">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    LGA
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned On
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned By
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Removed On
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Removed By
-                  </th>
+                  <th className="px-3 py-2 font-medium">LGA</th>
+                  <th className="px-3 py-2 font-medium">Assigned On</th>
+                  <th className="px-3 py-2 font-medium">Removed On</th>
+                  <th className="px-3 py-2 font-medium">Removed By</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {pastAssignments.map((assignment) => (
-                  <tr key={assignment.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {assignment.lga?.name || 'Unknown LGA'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <tbody>
+                {pastAssignmentsList.map((assignment) => (
+                  <tr key={String(assignment.id)} className="border-t text-gray-800">
+                    <td className="px-3 py-2 text-xs">{assignment.lga?.name || 'Unknown LGA'}</td>
+                    <td className="px-3 py-2 text-xs">
                       {assignment.assignedAt ? new Date(assignment.assignedAt).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assignment.assignedBy?.name || 'System'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-2 text-xs">
                       {assignment.removedAt ? new Date(assignment.removedAt).toLocaleDateString() : 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {assignment.removedBy?.name || 'System'}
-                    </td>
+                    <td className="px-3 py-2 text-xs">{assignment.remover?.name || 'System'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="mt-3 text-[11px] text-gray-500">No past assignments.</p>
+        )}
+      </div>
     </div>
   );
 }

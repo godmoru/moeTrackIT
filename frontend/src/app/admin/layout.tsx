@@ -16,8 +16,6 @@ const navItems = [
   { href: "/admin/assessments", label: "Assessments", title: "Assessments management", roles: ALL_ROLES },
   { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources", roles: ADMIN_ROLES.concat(["officer"]) },
   { href: "/admin/institutions", label: "Institutions", title: "Institution directory", roles: ALL_ROLES },
-  { href: "/admin/institutions-types", label: "Institution Types", title: "Institution directory", roles: ALL_ROLES },
-  { href: "/admin/institutions-ownership", label: "Institution Ownership", title: "Institution directory", roles: ALL_ROLES },
   { href: "/admin/revenue", label: "Revenue & Collections", title: "Revenue summary", roles: REVENUE_ROLES },
   { href: "/admin/payments", label: "Payments", title: "Payments list", roles: ALL_ROLES },
   { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas", roles: ADMIN_ROLES.concat(["officer", "area_education_officer"]) },

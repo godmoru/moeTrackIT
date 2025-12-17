@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -14,7 +14,7 @@ interface VerificationResult {
   channel?: string;
 }
 
-export default function PaymentVerifyPage() {
+function PaymentVerifyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [verifying, setVerifying] = useState(true);
@@ -189,5 +189,20 @@ export default function PaymentVerifyPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentVerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-green-200 border-t-green-700"></div>
+          <p className="mt-4 text-sm text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <PaymentVerifyContent />
+    </Suspense>
   );
 }

@@ -35,6 +35,7 @@ export default function NewEntityPage() {
   const [entityOwnershipId, setEntityOwnershipId] = useState("");
   const [state, setState] = useState("Benue");
   const [lga, setLga] = useState("");
+  const [lgaId, setLgaId] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -135,6 +136,7 @@ export default function NewEntityPage() {
           entityOwnershipId: entityOwnershipIdNum,
           state,
           lga: lga || null,
+          lgaId: lgaId ? Number(lgaId) : null,
           contactPerson: contactPerson || null,
           contactPhone: contactPhone || null,
           contactEmail: contactEmail || null,
@@ -269,7 +271,11 @@ export default function NewEntityPage() {
             </label>
             <select
               value={lga}
-              onChange={(e) => setLga(e.target.value)}
+              onChange={(e) => {
+                const selectedLga = lgas.find(x => x.name === e.target.value);
+                setLga(e.target.value);
+                setLgaId(selectedLga ? selectedLga.id.toString() : "");
+              }}
               className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
             >
               <option value="">-- Select LGA --</option>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/contexts/AuthContext";
 
 const sections = [
   {
@@ -24,6 +25,16 @@ const sections = [
     description: "Manage admin users for this control panel.",
   },
   {
+    key: "institution-types",
+    title: "Institution Types",
+    description: "Manage institution type classifications.",
+  },
+  {
+    key: "institution-ownerships",
+    title: "Institution Ownership",
+    description: "Manage institution ownership structures.",
+  },
+  {
     key: "audit-logs",
     title: "Audit Logs",
     description: "View all system activities and user operations. Super Admin only.",
@@ -32,6 +43,10 @@ const sections = [
 ];
 
 export default function ControlPanelPage() {
+  const { user } = useAuth();
+
+  console.log('User role:', user?.role); // Debug line
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -44,23 +59,41 @@ export default function ControlPanelPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {sections.map((section) => (
-          <div key={section.key} className="flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm">
-            <div>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                {section.title}
-              </h2>
-              <p className="mt-2 text-xs text-gray-600">{section.description}</p>
-            </div>
-            <div className="mt-3 text-xs">
-              <Link
-                href={`/admin/control-panel/${section.key}`}
-                className="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 font-medium text-gray-700 hover:bg-gray-50"
-              >
+        {sections
+          .filter((section) => !section.superAdminOnly || user?.role === "super_admin")
+          .map((section) => (
+            <Link
+              key={section.key}
+              href={
+                section.key === "users"
+                  ? "/admin/control-panel/users"
+                  : section.key === "roles"
+                  ? "/admin/control-panel/roles"
+                  : section.key === "permissions"
+                  ? "/admin/control-panel/permissions"
+                  : section.key === "preferences"
+                  ? "/admin/control-panel/preferences"
+                  : section.key === "institution-types"
+                  ? "/admin/control-panel/institution-types"
+                  : section.key === "institution-ownerships"
+                  ? "/admin/control-panel/institution-ownership"
+                  : section.key === "audit-logs"
+                  ? "/admin/control-panel/audit-logs"
+                  : "#"
+              }
+            >
+            <div className="flex flex-col justify-between rounded-lg bg-white p-4 shadow-sm">
+              <div>
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {section.title}
+                </h2>
+                <p className="mt-2 text-xs text-gray-600">{section.description}</p>
+              </div>
+              <div className="mt-3 text-xs">
                 View
-              </Link>
+              </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

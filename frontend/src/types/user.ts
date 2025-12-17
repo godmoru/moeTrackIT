@@ -69,6 +69,7 @@ export interface CreateUserData {
   role: UserRole;
   password?: string;
   status?: UserStatus;
+  lgaId?: string; // For AEO role (single-select on create)
   lgaIds?: string[]; // For AEO role
   institutionId?: string; // For Principal role
 }

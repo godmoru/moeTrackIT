@@ -8,17 +8,25 @@ const { UserLga, User, Lga } = require('../../models');
 async function listUserLgas(req, res) {
   try {
     const { userId } = req.params;
+    const includeHistory = String(req.query.includeHistory || '').toLowerCase() === 'true' ||
+      String(req.query.includeHistory || '') === '1';
 
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const where = { userId };
+    if (!includeHistory) {
+      where.isCurrent = true;
+    }
+
     const assignments = await UserLga.findAll({
-      where: { userId },
+      where,
       include: [
         { model: Lga, as: 'lga', attributes: ['id', 'name', 'code', 'state'] },
         { model: User, as: 'assigner', attributes: ['id', 'name', 'email'] },
+        { model: User, as: 'remover', attributes: ['id', 'name', 'email'] },
       ],
       order: [['assignedAt', 'DESC']],
     });
@@ -52,9 +60,9 @@ async function assignLga(req, res) {
       return res.status(404).json({ message: 'LGA not found' });
     }
 
-    // Check if already assigned
+    // Check if already assigned (current)
     const existing = await UserLga.findOne({
-      where: { userId, lgaId },
+      where: { userId, lgaId, isCurrent: true },
     });
     if (existing) {
       return res.status(409).json({ message: 'User is already assigned to this LGA' });
@@ -65,6 +73,9 @@ async function assignLga(req, res) {
       lgaId,
       assignedAt: new Date(),
       assignedBy: req.user?.id || null,
+      isCurrent: true,
+      removedAt: null,
+      removedBy: null,
     });
 
     // Reload with associations
@@ -90,14 +101,17 @@ async function unassignLga(req, res) {
     const { userId, lgaId } = req.params;
 
     const assignment = await UserLga.findOne({
-      where: { userId, lgaId },
+      where: { userId, lgaId, isCurrent: true },
     });
 
     if (!assignment) {
       return res.status(404).json({ message: 'Assignment not found' });
     }
 
-    await assignment.destroy();
+    assignment.isCurrent = false;
+    assignment.removedAt = new Date();
+    assignment.removedBy = req.user?.id || null;
+    await assignment.save();
 
     res.json({ message: 'LGA assignment removed successfully' });
   } catch (err) {
@@ -131,16 +145,26 @@ async function setUserLgas(req, res) {
       }
     }
 
-    // Remove all existing assignments
-    await UserLga.destroy({ where: { userId } });
+    const now = new Date();
+
+    await UserLga.update(
+      {
+        isCurrent: false,
+        removedAt: now,
+        removedBy: req.user?.id || null,
+      },
+      { where: { userId, isCurrent: true } },
+    );
 
     // Create new assignments
-    const now = new Date();
     const assignments = lgaIds.map((lgaId) => ({
       userId,
       lgaId,
       assignedAt: now,
       assignedBy: req.user?.id || null,
+      isCurrent: true,
+      removedAt: null,
+      removedBy: null,
       createdAt: now,
       updatedAt: now,
     }));
@@ -151,7 +175,7 @@ async function setUserLgas(req, res) {
 
     // Return updated assignments
     const result = await UserLga.findAll({
-      where: { userId },
+      where: { userId, isCurrent: true },
       include: [
         { model: Lga, as: 'lga', attributes: ['id', 'name', 'code', 'state'] },
       ],

@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       UserLga.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
       UserLga.belongsTo(models.Lga, { foreignKey: 'lgaId', as: 'lga' });
       UserLga.belongsTo(models.User, { foreignKey: 'assignedBy', as: 'assigner' });
+      UserLga.belongsTo(models.User, { foreignKey: 'removedBy', as: 'remover' });
     }
   }
 
@@ -16,6 +17,9 @@ module.exports = (sequelize, DataTypes) => {
       lgaId: DataTypes.INTEGER,
       assignedAt: DataTypes.DATE,
       assignedBy: DataTypes.INTEGER,
+      isCurrent: DataTypes.BOOLEAN,
+      removedAt: DataTypes.DATE,
+      removedBy: DataTypes.INTEGER,
     },
     {
       sequelize,
