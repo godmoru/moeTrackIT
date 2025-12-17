@@ -21,7 +21,17 @@ module.exports = (sequelize, DataTypes) => {
     method: DataTypes.STRING,
     reference: DataTypes.STRING,
     status: DataTypes.STRING,
-    recordedBy: DataTypes.INTEGER
+    recordedBy: DataTypes.INTEGER,
+    paystackReference: DataTypes.STRING,
+    paystackAccessCode: DataTypes.STRING,
+    channel: DataTypes.STRING,
+    payerEmail: DataTypes.STRING,
+    payerName: DataTypes.STRING,
+    gatewayResponse: DataTypes.TEXT,
+    paymentType: {
+      type: DataTypes.STRING,
+      defaultValue: 'manual',
+    },
   }, {
     sequelize,
     modelName: 'Payment',

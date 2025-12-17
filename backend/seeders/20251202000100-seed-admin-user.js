@@ -30,6 +30,15 @@ module.exports = {
           createdAt: now,
           updatedAt: now,
         },
+        {
+          name: 'Moses Alladin',
+          email: 'cashier@edu.be.gov.ng',
+          passwordHash,
+          role: 'hq_cashier',
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        },
       ],
       {}
     );

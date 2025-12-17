@@ -18,6 +18,12 @@ interface Assessment {
 interface EntityOption {
   id: number;
   name: string;
+  entityTypeId?: number;
+}
+
+interface EntityTypeOption {
+  id: number;
+  name: string;
 }
 
 interface IncomeSourceOption {
@@ -28,6 +34,7 @@ interface IncomeSourceOption {
 export default function AssessmentsPage() {
   const [items, setItems] = useState<Assessment[]>([]);
   const [entities, setEntities] = useState<EntityOption[]>([]);
+  const [entityTypes, setEntityTypes] = useState<EntityTypeOption[]>([]);
   const [incomeSources, setIncomeSources] = useState<IncomeSourceOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +58,8 @@ export default function AssessmentsPage() {
     dueDate: "",
     onlyActive: true,
   });
+  const [bulkEntityTypeFilter, setBulkEntityTypeFilter] = useState<string>("");
+  const [selectedEntityIds, setSelectedEntityIds] = useState<Set<number>>(new Set());
 
   async function load() {
     setLoading(true);
@@ -59,14 +68,14 @@ export default function AssessmentsPage() {
       const token =
         typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 
-      const [assessmentsRes, entitiesRes, incomeSourcesRes] = await Promise.all([
+      const [assessmentsRes, entitiesRes, incomeSourcesRes, entityTypesRes] = await Promise.all([
         fetch(`${API_BASE}/assessments`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }),
-        fetch(`${API_BASE}/entities`, {
+        fetch(`${API_BASE}/institutions`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -78,9 +87,15 @@ export default function AssessmentsPage() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }),
+        fetch(`${API_BASE}/institution-types`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }),
       ]);
 
-      if (!assessmentsRes.ok || !entitiesRes.ok || !incomeSourcesRes.ok) {
+      if (!assessmentsRes.ok || !entitiesRes.ok || !incomeSourcesRes.ok || !entityTypesRes.ok) {
         const body = await assessmentsRes.json().catch(() => ({}));
         throw new Error(body.message || "Failed to load data");
       }
@@ -88,10 +103,12 @@ export default function AssessmentsPage() {
       const assessmentsBody = await assessmentsRes.json();
       const entitiesBody = await entitiesRes.json();
       const incomeSourcesBody = await incomeSourcesRes.json();
+      const entityTypesBody = await entityTypesRes.json();
 
       setItems(assessmentsBody);
       setEntities(entitiesBody);
       setIncomeSources(incomeSourcesBody);
+      setEntityTypes(entityTypesBody);
     } catch (err: any) {
       setError(err.message || "Failed to load assessments");
     } finally {
@@ -106,6 +123,8 @@ export default function AssessmentsPage() {
       dueDate: "",
       onlyActive: true,
     });
+    setBulkEntityTypeFilter("");
+    setSelectedEntityIds(new Set());
     setShowBulkLicense(true);
   }
 
@@ -115,6 +134,16 @@ export default function AssessmentsPage() {
         icon: "error",
         title: "Missing fields",
         text: "Income Source and Assessment Year are required.",
+        confirmButtonColor: "#b91c1c",
+      });
+      return;
+    }
+
+    if (selectedEntityIds.size === 0) {
+      await Swal.fire({
+        icon: "error",
+        title: "No institutions selected",
+        text: "Please select at least one institution to apply the assessment to.",
         confirmButtonColor: "#b91c1c",
       });
       return;
@@ -145,7 +174,7 @@ export default function AssessmentsPage() {
           incomeSourceId,
           assessmentPeriod: bulkForm.assessmentPeriod,
           dueDate: bulkForm.dueDate || null,
-          onlyActive: Boolean(bulkForm.onlyActive),
+          entityIds: Array.from(selectedEntityIds),
         }),
       });
 
@@ -601,25 +630,104 @@ export default function AssessmentsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 md:col-span-2">
-            <input
-              id="bulk-only-active"
-              type="checkbox"
-              checked={bulkForm.onlyActive}
-              onChange={(e) =>
-                setBulkForm((prev) => ({
-                  ...prev,
-                  onlyActive: e.target.checked,
-                }))
-              }
-              className="h-3 w-3"
-            />
-            <label
-              htmlFor="bulk-only-active"
-              className="text-[11px] text-gray-700"
-            >
-              Only active institutions
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700">
+              Filter by Institution Type
             </label>
+            <select
+              value={bulkEntityTypeFilter}
+              onChange={(e) => {
+                setBulkEntityTypeFilter(e.target.value);
+                setSelectedEntityIds(new Set());
+              }}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+            >
+              <option value="">-- All Types --</option>
+              {entityTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Institution selection with checkboxes */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-medium text-gray-700">
+              Select Institutions
+            </label>
+            <span className="text-[10px] text-gray-500">
+              {selectedEntityIds.size} selected
+            </span>
+          </div>
+          <div className="max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-gray-50 p-2">
+            {(() => {
+              const filteredEntities = bulkEntityTypeFilter
+                ? entities.filter(
+                    (e) => e.entityTypeId === Number(bulkEntityTypeFilter)
+                  )
+                : entities;
+
+              if (filteredEntities.length === 0) {
+                return (
+                  <p className="py-2 text-center text-[11px] text-gray-500">
+                    No institutions found for the selected type.
+                  </p>
+                );
+              }
+
+              return (
+                <>
+                  <div className="mb-2 flex gap-2 border-b border-gray-200 pb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = new Set(filteredEntities.map((e) => e.id));
+                        setSelectedEntityIds(allIds);
+                      }}
+                      className="text-[10px] font-medium text-green-700 hover:underline"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedEntityIds(new Set())}
+                      className="text-[10px] font-medium text-gray-600 hover:underline"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {filteredEntities.map((entity) => (
+                      <label
+                        key={entity.id}
+                        className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 hover:bg-gray-100"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedEntityIds.has(entity.id)}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedEntityIds);
+                            if (e.target.checked) {
+                              newSet.add(entity.id);
+                            } else {
+                              newSet.delete(entity.id);
+                            }
+                            setSelectedEntityIds(newSet);
+                          }}
+                          className="h-3 w-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="text-[11px] text-gray-800">
+                          {entity.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 

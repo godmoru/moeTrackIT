@@ -3,17 +3,26 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
+import { UserHeader } from "@/components/UserHeader";
 
+// All supported roles
+const ALL_ROLES = ["super_admin", "admin", "system_admin", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
+const ADMIN_ROLES = ["super_admin", "admin", "system_admin"];
+const REVENUE_ROLES = ["super_admin", "admin", "officer", "cashier", "account_officer", "area_education_officer","principal"];
+
+// Navigation items with role-based visibility
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard", title: "Overview for all admin roles" },
-  { href: "/admin/assessments", label: "Assessments", title: "Assessments management (Admin / Officer)" },
-  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources (Admin)" },
-  { href: "/admin/institutions", label: "Institutions", title: "Institution directory and profiles" },
-  { href: "/admin/revenue", label: "Revenue & Collections", title: "Revenue summary and collections (Admin)" },
-  { href: "/admin/payments", label: "Payments", title: "Payments list and invoices" },
-  { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas overview" },
-  { href: "/admin/reports", label: "Reports", title: "Reporting and analytics (Admin)" },
-  { href: "/admin/control-panel", label: "Control Panel", title: "Roles, permissions, users and system preferences (Super Admin)" },
+  { href: "/admin/dashboard", label: "Dashboard", title: "Overview", roles: ALL_ROLES },
+  { href: "/admin/assessments", label: "Assessments", title: "Assessments management", roles: ALL_ROLES },
+  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources", roles: ADMIN_ROLES.concat(["officer"]) },
+  { href: "/admin/institutions", label: "Institutions", title: "Institution directory", roles: ALL_ROLES },
+  { href: "/admin/institutions-types", label: "Institution Types", title: "Institution directory", roles: ALL_ROLES },
+  { href: "/admin/institutions-ownership", label: "Institution Ownership", title: "Institution directory", roles: ALL_ROLES },
+  { href: "/admin/revenue", label: "Revenue & Collections", title: "Revenue summary", roles: REVENUE_ROLES },
+  { href: "/admin/payments", label: "Payments", title: "Payments list", roles: ALL_ROLES },
+  { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas", roles: ADMIN_ROLES.concat(["officer", "area_education_officer"]) },
+  { href: "/admin/reports", label: "Reports", title: "Reporting and analytics", roles: ALL_ROLES },
+  { href: "/admin/control-panel", label: "Control Panel", title: "Users, roles and settings", roles: ADMIN_ROLES },
 ];
 
 function NavIcon({ href }: { href: string }) {
@@ -113,11 +122,18 @@ function NavIcon({ href }: { href: string }) {
   );
 }
 
+interface UserInfo {
+  name: string;
+  email: string;
+  role: string;
+}
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -127,13 +143,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Decode JWT payload to extract role for UI gating (Control Panel visibility)
+    // Decode JWT payload to extract user info for UI
     try {
       const parts = token.split(".");
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
-        if (payload && typeof payload.role === "string") {
-          setUserRole(payload.role);
+        if (payload) {
+          setUserRole(payload.role || null);
+          setUserInfo({
+            name: payload.name || payload.email?.split("@")[0] || "User",
+            email: payload.email || "",
+            role: payload.role || "user",
+          });
         }
       }
     } catch {
@@ -141,19 +162,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     }
   }, [router]);
 
-  function canSeeNavItem(href: string): boolean {
-    if (!userRole) return true;
-    if (href.startsWith("/admin/control-panel")) {
-      return userRole === "super_admin" || userRole === "admin";
-    }
-    return true;
-  }
-
-  async function handleLogout() {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("authToken");
-    }
-    router.replace("/login");
+  function canSeeNavItem(item: typeof navItems[0]): boolean {
+    if (!userRole) return true; // Show all if role not loaded yet
+    return item.roles.includes(userRole);
   }
 
   return (
@@ -171,7 +182,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1">
-          {navItems.filter((item) => canSeeNavItem(item.href)).map((item) => {
+          {navItems.filter((item) => canSeeNavItem(item)).map((item) => {
             const active = pathname.startsWith(item.href);
             return (
               <Link
@@ -190,43 +201,54 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <button
-          onClick={handleLogout}
-          className="mt-4 rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-600"
-        >
-          Logout
-        </button>
+        {/* User info in sidebar */}
+        {userInfo && (
+          <div className="mt-4 border-t border-green-700 pt-4">
+            <div className="flex items-center gap-2 px-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-xs font-semibold text-white">
+                {userInfo.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-white truncate">{userInfo.name}</div>
+                <div className="text-[10px] text-green-200 truncate">{userInfo.email}</div>
+              </div>
+            </div>
+          </div>
+        )}
       </aside>
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="border-b bg-white px-4 py-3 text-sm">
+        <header className="border-b bg-white px-4 py-2 text-sm">
           <div className="flex items-center justify-between md:hidden">
             <button
               type="button"
               onClick={() => setMobileNavOpen((prev) => !prev)}
               className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-           >
+            >
               {mobileNavOpen ? "Close" : "Menu"}
             </button>
             <div className="font-semibold text-gray-800">Admin Portal</div>
-            <button
-              onClick={handleLogout}
-              className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800"
-            >
-              Logout
-            </button>
+            <UserHeader
+              userName={userInfo?.name}
+              userEmail={userInfo?.email}
+              userRole={userInfo?.role}
+            />
           </div>
           <div className="hidden items-center justify-between md:flex">
             <div className="font-semibold text-gray-800">Admin Portal</div>
-            <button
-              onClick={handleLogout}
-              className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800"
-            >
-              Logout
-            </button>
+            <UserHeader
+              userName={userInfo?.name}
+              userEmail={userInfo?.email}
+              userRole={userInfo?.role}
+            />
           </div>
           {mobileNavOpen && (
             <nav className="mt-3 space-y-1 border-t pt-3 text-xs md:hidden">
-              {navItems.filter((item) => canSeeNavItem(item.href)).map((item) => {
+              {navItems.filter((item) => canSeeNavItem(item)).map((item) => {
                 const active = pathname.startsWith(item.href);
                 return (
                   <Link

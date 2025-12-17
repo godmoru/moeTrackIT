@@ -37,6 +37,7 @@ export default function NewEntityPage() {
   const [lga, setLga] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [status, setStatus] = useState("active");
   const [code, setCode] = useState("");
   const [category, setCategory] = useState("");
@@ -55,13 +56,13 @@ export default function NewEntityPage() {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/entity-types`, {
+          fetch(`${API_BASE}/institution-types`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/entity-ownerships`, {
+          fetch(`${API_BASE}/institution-ownerships`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -122,7 +123,7 @@ export default function NewEntityPage() {
     try {
       const token =
         typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-      const res = await fetch(`${API_BASE}/entities`, {
+      const res = await fetch(`${API_BASE}/institutions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -136,6 +137,7 @@ export default function NewEntityPage() {
           lga: lga || null,
           contactPerson: contactPerson || null,
           contactPhone: contactPhone || null,
+          contactEmail: contactEmail || null,
           status: status || "active",
           type: "school",
           subType: null,
@@ -151,7 +153,7 @@ export default function NewEntityPage() {
         throw new Error(body.message || "Failed to create entity");
       }
 
-      router.push("/admin/entities");
+      router.push("/admin/institutions");
     } catch (err: any) {
       setError(err.message || "Failed to create entity");
     } finally {
@@ -313,6 +315,17 @@ export default function NewEntityPage() {
               onChange={(e) => setContactPhone(e.target.value)}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Phone number"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-[11px] font-medium text-gray-700">
+              Contact Email (optional)
+            </label>
+            <input
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="adikwu@edu.be.gov.ng"
             />
           </div>
 

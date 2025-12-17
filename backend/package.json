@@ -9,7 +9,7 @@
     "start": "node server.js"
   },
   "keywords": [],
-   "author": {
+  "author": {
     "name": "Umoru Godfrey",
     "email": "godfrey.umoru@gesusoft.com",
     "url": "https://gesusoft.com",
@@ -34,6 +34,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "nodemailer": "^7.0.11",
     "openai": "^4.20.1",
     "pdfkit": "^0.17.2",
     "pg": "^8.16.3",

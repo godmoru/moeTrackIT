@@ -45,7 +45,7 @@ export default function EntitiesPage() {
         typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 
       const [entitiesRes, lgasRes] = await Promise.all([
-        fetch(`${API_BASE}/entities`, {
+        fetch(`${API_BASE}/institutions`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -61,7 +61,7 @@ export default function EntitiesPage() {
 
       if (!entitiesRes.ok || !lgasRes.ok) {
         const body = await entitiesRes.json().catch(() => ({}));
-        throw new Error(body.message || "Failed to load entities or LGAs");
+        throw new Error(body.message || "Failed to load institutions or LGAs");
       }
 
       const entitiesBody = await entitiesRes.json();
@@ -70,7 +70,7 @@ export default function EntitiesPage() {
       setItems(entitiesBody);
       setLgas(lgasBody);
     } catch (err: any) {
-      setError(err.message || "Failed to load entities");
+      setError(err.message || "Failed to load institutions");
     } finally {
       setLoading(false);
     }
@@ -123,35 +123,35 @@ export default function EntitiesPage() {
             <span className="font-semibold text-gray-600">Export:</span>
             <button
               type="button"
-              onClick={() => handleDownload("/entities/export.csv", "institutions.csv")}
+              onClick={() => handleDownload("/institutions/export.csv", "institutions.csv")}
               className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
             >
               CSV
             </button>
             <button
               type="button"
-              onClick={() => handleDownload("/entities/export.xlsx", "institutions.xlsx")}
+              onClick={() => handleDownload("/institutions/export.xlsx", "institutions.xlsx")}
               className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
             >
               Excel
             </button>
             <button
               type="button"
-              onClick={() => handleDownload("/entities/export.pdf", "institutions.pdf")}
+              onClick={() => handleDownload("/institutions/export.pdf", "institutions.pdf")}
               className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
             >
               PDF
             </button>
           </div>
           <Link
-            href="/admin/entities/new"
+            href="/admin/institutions/new"
             className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800"
           >
             New Institution
           </Link>
         </div>
       </div>
-      {loading && <p className="text-sm text-gray-600">Loading institution...</p>}
+      {loading && <p className="text-sm text-gray-600">Loading institutions...</p>}
       {error && (
         <p className="text-sm text-red-600" role="alert">
           {error}
@@ -178,7 +178,7 @@ export default function EntitiesPage() {
                   <td className="px-3 py-2 text-xs">{index + 1}</td>
                   <td className="px-3 py-2 text-xs">
                     <Link
-                      href={`/admin/entities/${e.id}`}
+                      href={`/admin/institutions/${e.id}`}
                       className="text-green-700 hover:underline"
                     >
                       {e.name}
@@ -195,7 +195,7 @@ export default function EntitiesPage() {
                   <td className="px-3 py-2 text-xs capitalize">{e.status}</td>
                   <td className="px-3 py-2 text-right text-xs">
                     <Link
-                      href={`/admin/entities/${e.id}`}
+                      href={`/admin/institutions/${e.id}`}
                       className="rounded-md bg-green-50 px-2 py-1 font-medium text-green-800 hover:bg-green-100"
                     >
                       View

@@ -2,10 +2,16 @@
 
 const { Assessment, Entity, IncomeSource, Payment, sequelize } = require("../../models");
 const { createAssessmentWithCalculation } = require("../services/assessmentService");
+const { getAssessmentScopeWhere } = require('../middleware/scope');
 
 async function listAssessments(req, res) {
   try {
+    // Apply scope filtering for principals (own entity) and AEOs (assigned LGA)
+    const scopeWhere = getAssessmentScopeWhere(req.user);
+
+    // For AEO scope we need the entity include to filter by lgaId
     const assessments = await Assessment.findAll({
+      where: scopeWhere,
       include: [
         { model: Entity, as: 'entity' },
         { model: IncomeSource, as: 'incomeSource' },
@@ -65,6 +71,7 @@ async function createAssessment(req, res) {
  *   dueDate?: string,
  *   lgaNames?: string[],
  *   entityTypeIds?: number[],
+ *   entityIds?: number[],       // Explicit list of entity IDs to assess
  *   onlyActive?: boolean
  * }
  */
@@ -77,6 +84,7 @@ async function bulkAnnualLicense(req, res) {
       dueDate = null,
       lgaNames,
       entityTypeIds,
+      entityIds,
       onlyActive = true,
     } = req.body || {};
 
@@ -87,14 +95,21 @@ async function bulkAnnualLicense(req, res) {
     }
 
     const where = {};
-    if (onlyActive) {
-      where.status = "active";
-    }
-    if (Array.isArray(entityTypeIds) && entityTypeIds.length > 0) {
-      where.entityTypeId = entityTypeIds;
-    }
-    if (Array.isArray(lgaNames) && lgaNames.length > 0) {
-      where.lga = lgaNames;
+
+    // If explicit entityIds provided, use them directly (ignores other filters)
+    if (Array.isArray(entityIds) && entityIds.length > 0) {
+      where.id = entityIds;
+    } else {
+      // Otherwise apply filters
+      if (onlyActive) {
+        where.status = "active";
+      }
+      if (Array.isArray(entityTypeIds) && entityTypeIds.length > 0) {
+        where.entityTypeId = entityTypeIds;
+      }
+      if (Array.isArray(lgaNames) && lgaNames.length > 0) {
+        where.lga = lgaNames;
+      }
     }
 
     const entities = await Entity.findAll({ where, transaction: t });
@@ -108,11 +123,11 @@ async function bulkAnnualLicense(req, res) {
       });
     }
 
-    const entityIds = entities.map((e) => e.id);
+    const foundEntityIds = entities.map((e) => e.id);
 
     const existingAssessments = await Assessment.findAll({
       where: {
-        entityId: entityIds,
+        entityId: foundEntityIds,
         incomeSourceId,
         assessmentPeriod,
       },

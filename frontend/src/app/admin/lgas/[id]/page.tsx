@@ -68,7 +68,7 @@ export default function LgaProfilePage() {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/entities`, {
+          fetch(`${API_BASE}/institutions`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -256,7 +256,7 @@ export default function LgaProfilePage() {
 
                 <div className="rounded-lg bg-white p-4 shadow-sm">
                   <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Total Entities
+                    Total Institutions
                   </div>
                   <div className="mt-2 text-2xl font-semibold text-gray-900">
                     {lgaEntities.length}

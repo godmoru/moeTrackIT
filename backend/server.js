@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const { sequelize } = require('./models');
 const errorHandler = require('./src/middleware/errorHandler');
+const { auditLogger } = require('./src/middleware/auditLogger');
 
 // Import routes
 
@@ -41,6 +42,9 @@ app.get('/api/v1/health', (_, res) => {
 
 
 
+// Audit logging middleware (logs mutating operations)
+app.use(auditLogger);
+
 // API routes (versioned)
 app.use('/api/v1', require('./src/routes/v1'));
 
@@ -58,7 +62,7 @@ const startServer = async () => {
     
     // Sync models in development (use migrations in production)
     if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
+      await sequelize.sync({ alter: false });
       console.log('✅ Database models synchronized.');
     }
     

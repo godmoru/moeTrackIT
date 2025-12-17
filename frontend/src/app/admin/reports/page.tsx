@@ -24,7 +24,7 @@ export default function AdminReportsPage() {
           </p>
           <div className="mt-3 flex gap-2 text-xs">
             <Link
-              href="/admin/entities"
+              href="/admin/institutions"
               className="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 font-medium text-gray-700 hover:bg-gray-50"
             >
               Go to Institutions

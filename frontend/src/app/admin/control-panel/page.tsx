@@ -23,6 +23,12 @@ const sections = [
     title: "Users",
     description: "Manage admin users for this control panel.",
   },
+  {
+    key: "audit-logs",
+    title: "Audit Logs",
+    description: "View all system activities and user operations. Super Admin only.",
+    superAdminOnly: true,
+  },
 ];
 
 export default function ControlPanelPage() {
@@ -51,7 +57,7 @@ export default function ControlPanelPage() {
                 href={`/admin/control-panel/${section.key}`}
                 className="inline-flex items-center rounded-md border border-gray-300 px-3 py-1 font-medium text-gray-700 hover:bg-gray-50"
               >
-                Configure
+                View
               </Link>
             </div>
           </div>

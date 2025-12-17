@@ -1,6 +1,7 @@
 "use strict";
 
 const { Assessment, Payment, IncomeSource, Entity, sequelize } = require("../../models");
+const { Op } = require("sequelize");
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
 
@@ -9,8 +10,8 @@ async function summary(req, res) {
     const { from, to } = req.query;
 
     const wherePayments = {};
-    if (from) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [sequelize.Op.gte]: from };
-    if (to) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [sequelize.Op.lte]: to };
+    if (from) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [Op.gte]: from };
+    if (to) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [Op.lte]: to };
 
     // Total collections
     const totalResult = await Payment.findOne({
@@ -230,13 +231,13 @@ async function exportPaymentsExcel(req, res) {
     if (from) {
       wherePayments.paymentDate = {
         ...(wherePayments.paymentDate || {}),
-        [sequelize.Op.gte]: from,
+        [Op.gte]: from,
       };
     }
     if (to) {
       wherePayments.paymentDate = {
         ...(wherePayments.paymentDate || {}),
-        [sequelize.Op.lte]: to,
+        [Op.lte]: to,
       };
     }
 
@@ -418,8 +419,191 @@ async function exportEntitySummaryPdf(req, res) {
   }
 }
 
+async function getRemittanceByLgaRows(from, to) {
+  const wherePayments = {};
+  if (from) {
+    wherePayments.paymentDate = {
+      ...(wherePayments.paymentDate || {}),
+      [Op.gte]: from,
+    };
+  }
+  if (to) {
+    wherePayments.paymentDate = {
+      ...(wherePayments.paymentDate || {}),
+      [Op.lte]: to,
+    };
+  }
+
+  const rows = await Payment.findAll({
+    attributes: [
+      [sequelize.col('assessment.entity.lga'), 'lga'],
+      [sequelize.fn('SUM', sequelize.col('amountPaid')), 'totalAmount'],
+    ],
+    where: wherePayments,
+    include: [
+      {
+        model: Assessment,
+        as: 'assessment',
+        include: [{ model: Entity, as: 'entity', attributes: [] }],
+        attributes: [],
+      },
+    ],
+    group: ['assessment.entity.lga'],
+    raw: true,
+  });
+
+  return rows.map((row) => ({
+    lga: row.lga || 'Unspecified',
+    totalAmount: Number(row.totalAmount || 0),
+  }));
+}
+
+async function remittanceByLga(req, res) {
+  try {
+    const { from, to } = req.query;
+    const items = await getRemittanceByLgaRows(from, to);
+    res.json({ items });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to generate LGA remittance summary' });
+  }
+}
+
+async function exportRemittanceByLgaCsv(req, res) {
+  try {
+    const { from, to } = req.query;
+    const items = await getRemittanceByLgaRows(from, to);
+
+    const rows = items.map((item) => ({
+      lga: item.lga,
+      totalAmount: item.totalAmount,
+    }));
+
+    const headers = [
+      { key: 'lga', label: 'LGA' },
+      { key: 'totalAmount', label: 'Total Amount Paid' },
+    ];
+
+    const csv = toCsv(rows, headers);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="remittance-by-lga.csv"',
+    );
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to export LGA remittance CSV' });
+  }
+}
+
+async function exportRemittanceByLgaExcel(req, res) {
+  try {
+    const { from, to } = req.query;
+    const items = await getRemittanceByLgaRows(from, to);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Remittance by LGA');
+
+    sheet.columns = [
+      { header: 'LGA', key: 'lga', width: 30 },
+      { header: 'Total Amount Paid', key: 'totalAmount', width: 22 },
+    ];
+
+    items.forEach((item) => {
+      sheet.addRow({
+        lga: item.lga,
+        totalAmount: item.totalAmount,
+      });
+    });
+
+    sheet.getRow(1).font = { bold: true };
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="remittance-by-lga.xlsx"',
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to export LGA remittance Excel' });
+  }
+}
+
+async function exportRemittanceByLgaPdf(req, res) {
+  try {
+    const { from, to } = req.query;
+    const items = await getRemittanceByLgaRows(from, to);
+
+    const doc = new PDFDocument({ margin: 40 });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="remittance-by-lga.pdf"',
+    );
+
+    doc.pipe(res);
+
+    doc.fontSize(14).text('Benue State Ministry of Education', { align: 'left' });
+    doc.moveDown(0.3);
+    doc.fontSize(11).text('Education Revenue Management System');
+    doc.moveDown(1);
+
+    doc.fontSize(16).text('Remittance by LGA', { align: 'left' });
+    doc.moveDown(0.5);
+
+    if (from || to) {
+      doc.fontSize(10).text(`Period: ${from || '...'} to ${to || '...'}`);
+      doc.moveDown(0.5);
+    }
+
+    doc.fontSize(11).text('Summary of payments grouped by Local Government Area (LGA).');
+    doc.moveDown(1);
+
+    doc.fontSize(11).text('LGA', 40, doc.y, { continued: true });
+    doc.text('Total Amount Paid (NGN)', 260);
+    doc.moveDown(0.5);
+    doc.moveTo(40, doc.y).lineTo(550, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    let y = doc.y;
+    const lineHeight = 16;
+
+    items.forEach((item) => {
+      if (y > doc.page.height - 60) {
+        doc.addPage();
+        y = 60;
+      }
+      doc.fontSize(10).text(item.lga, 40, y, { width: 200 });
+      doc.text(Number(item.totalAmount || 0).toLocaleString('en-NG', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }), 260, y, { width: 200 });
+      y += lineHeight;
+    });
+
+    doc.end();
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: 'Failed to export LGA remittance PDF' });
+    }
+  }
+}
+
 module.exports = {
   summary,
+  remittanceByLga,
+  exportRemittanceByLgaCsv,
+  exportRemittanceByLgaExcel,
+  exportRemittanceByLgaPdf,
   exportEntityAssessmentsCsv,
   exportEntityPaymentsCsv,
   exportEntitiesExcel,

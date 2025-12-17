@@ -34,7 +34,7 @@ export function Footer() {
             </h3>
             <ul className="space-y-1 text-[11px]">
               <li>Dashboard & Reports</li>
-              <li>Entities & Profiles</li>
+              <li>Institutions & Profiles</li>
               <li>Assessments & Billing</li>
               <li>Collections & Revenue</li>
             </ul>

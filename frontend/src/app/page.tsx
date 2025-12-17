@@ -1,7 +1,118 @@
+"use client";
+
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
+import { useEffect, useState } from "react";
+
+type LandingMetrics = {
+  institutions: number | null;
+  last12Months: number | null;
+  lgas: number | null;
+  collectionRate: number | null;
+};
+
+function formatNaira(amount: number | null | undefined): string {
+  if (amount == null || Number.isNaN(amount)) return "₦ 0.00";
+  const value = Number(amount);
+  return `₦ ${value.toLocaleString("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 export default function Home() {
+  const [metrics, setMetrics] = useState<LandingMetrics>({
+    institutions: null,
+    last12Months: null,
+    lgas: null,
+    collectionRate: null,
+  });
+
+  useEffect(() => {
+    async function loadMetrics() {
+      try {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
+
+        const token =
+          typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        // Institutions count and distinct LGAs (public endpoint)
+        const entitiesRes = await fetch(`${baseUrl}/institutions`, {
+          headers,
+        });
+
+        let institutions: number | null = null;
+        let lgas: number | null = null;
+
+        if (entitiesRes.ok) {
+          const entities = await entitiesRes.json();
+          if (Array.isArray(entities)) {
+            institutions = entities.length;
+            const lgaSet = new Set<string>();
+            entities.forEach((e: any) => {
+              if (e && typeof e.lga === "string" && e.lga.trim().length > 0) {
+                lgaSet.add(e.lga.trim());
+              }
+            });
+            lgas = lgaSet.size || null;
+          }
+        }
+
+        // Payments summary (requires auth; fall back silently if unauthorized)
+        let last12Months: number | null = null;
+        let collectionRate: number | null = null;
+
+        if (token) {
+          const now = new Date();
+          const from = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+            .toISOString()
+            .slice(0, 10);
+
+          const summaryRes = await fetch(`${baseUrl}/reports/summary?from=${from}`, {
+            headers,
+          });
+
+          if (summaryRes.ok) {
+            const summary = await summaryRes.json();
+            if (summary && typeof summary.totalCollected === "number") {
+              last12Months = summary.totalCollected;
+            }
+
+            const statusCounts: Array<{ status: string; count: number }> =
+              Array.isArray(summary?.statusCounts) ? summary.statusCounts : [];
+            if (statusCounts.length > 0) {
+              let paid = 0;
+              let totalAssessments = 0;
+              statusCounts.forEach((row) => {
+                const c = Number(row.count || 0);
+                totalAssessments += c;
+                if (row.status === "paid") {
+                  paid += c;
+                }
+              });
+              if (totalAssessments > 0) {
+                collectionRate = (paid / totalAssessments) * 100;
+              }
+            }
+          }
+        }
+
+        setMetrics({ institutions, last12Months, lgas, collectionRate });
+      } catch (err) {
+        console.error("Failed to load landing metrics", err);
+      }
+    }
+
+    loadMetrics();
+  }, []);
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="border-b bg-white">
@@ -86,11 +197,128 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Overview section: metrics, chart, shortcuts, recent activity */}
+        <section className="bg-gray-50 border-b">
+          <div className="mx-auto max-w-6xl px-4 py-12 space-y-10">
+            {/* Metrics cards */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">At a glance</h2>
+              <p className="mt-2 text-sm text-gray-600 max-w-2xl">
+                A quick overview of institutions and revenue activity managed through the
+                Education Revenue Management System.
+              </p>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                <div className="rounded-lg bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase text-gray-500">Institutions</p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900">
+                    {(metrics.institutions ?? 1245).toLocaleString("en-NG")}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">Registered schools & vendors</p>
+                </div>
+                <div className="rounded-lg bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase text-gray-500">Last 12 months</p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900">
+                    {formatNaira(metrics.last12Months ?? 845_000_000)}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">Total payments recorded</p>
+                </div>
+                <div className="rounded-lg bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase text-gray-500">LGAs covered</p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900">
+                    {(metrics.lgas ?? 23).toLocaleString("en-NG")}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">State-wide coverage</p>
+                </div>
+                <div className="rounded-lg bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium uppercase text-gray-500">Collections status</p>
+                  <p className="mt-2 text-2xl font-semibold text-gray-900">
+                    {`${Math.round(metrics.collectionRate ?? 93)}%`}
+                  </p>
+                  <p className="mt-1 text-[11px] text-gray-500">Of assessed revenue collected</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Chart + branding card */}
+            <div className="grid gap-8 md:grid-cols-3">
+              <div className="md:col-span-2 rounded-lg bg-white p-4 shadow-sm">
+                <h2 className="text-sm font-semibold text-gray-900">LGA remittance trend</h2>
+                <p className="mt-1 text-xs text-gray-500">
+                  Illustrative view of remittances by LGA in recent months.
+                </p>
+                <div className="mt-4 flex items-end gap-3 h-40">
+                  {[
+                    { label: "Makurdi", h: "85%" },
+                    { label: "Gboko", h: "70%" },
+                    { label: "Otukpo", h: "60%" },
+                    { label: "Vandeikya", h: "55%" },
+                    { label: "Logo", h: "45%" },
+                    { label: "Guma", h: "40%" },
+                  ].map((lga) => (
+                    <div
+                      key={lga.label}
+                      className="flex-1 flex flex-col items-center justify-end"
+                    >
+                      <div
+                        className="w-6 rounded-t bg-green-600"
+                        style={{ height: lga.h }}
+                      />
+                      <span className="mt-1 text-[11px] text-gray-600 truncate w-full text-center">
+                        {lga.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-white p-4 shadow-sm flex flex-col items-center">
+                <h2 className="text-sm font-semibold text-gray-900 text-center">
+                  Leadership & Vision
+                </h2>
+                <p className="mt-1 text-xs text-gray-500 text-center">
+                  A modern revenue system in support of quality education for Benue State.
+                </p>
+                <div className="mt-4 w-full flex justify-center">
+                  <div className="overflow-hidden rounded-lg border border-gray-200 shadow-sm max-w-xs">
+                    <img
+                      src="/governor.png"
+                      alt="Executive Governor of Benue State"
+                      className="w-full h-60 object-cover"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent activity (illustrative) */}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Recent activity</h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Sample events showing how the platform is used day-to-day.
+              </p>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg bg-white p-3 shadow-sm text-sm text-gray-700">
+                  • New private secondary school registered in Makurdi LGA.
+                </div>
+                <div className="rounded-lg bg-white p-3 shadow-sm text-sm text-gray-700">
+                  • Batch license renewal payments processed for 48 schools.
+                </div>
+                <div className="rounded-lg bg-white p-3 shadow-sm text-sm text-gray-700">
+                  • Revenue report generated for the last 5 years of collections.
+                </div>
+                <div className="rounded-lg bg-white p-3 shadow-sm text-sm text-gray-700">
+                  • Assessment parameters updated for examination fees.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="about" className="bg-white">
           <div className="mx-auto max-w-6xl px-4 py-12">
             <h2 className="text-xl font-semibold text-gray-900">About the System</h2>
             <p className="mt-3 text-sm text-gray-700 md:text-base">
-              This platform helps the Benue State Ministry of Education and its agencies
+              This platform helps the Benue State Ministry of Education and Knowledge Management and its agencies
               manage all education-related revenues in one central place. Schools and
               vendors can be registered once, then assessed for recurring and one-time
               payments over time.

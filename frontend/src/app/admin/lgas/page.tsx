@@ -53,7 +53,7 @@ export default function LgasPage() {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/entities`, {
+          fetch(`${API_BASE}/institutions`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -98,7 +98,7 @@ export default function LgasPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-gray-900">LGAs (Benue State)</h1>
+      <h1 className="text-lg font-semibold text-gray-900">Benue State LGAs </h1>
       {loading && <p className="text-sm text-gray-600">Loading LGAs...</p>}
       {error && (
         <p className="text-sm text-red-600" role="alert">

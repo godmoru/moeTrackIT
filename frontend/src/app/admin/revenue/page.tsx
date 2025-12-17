@@ -24,9 +24,15 @@ interface Entity {
   lga?: { name: string } | null;
 }
 
+interface IncomeSource {
+  id: number;
+  name: string;
+  status: string;
+}
+
 interface Assessment {
   id: number;
-  amount: number;
+  amountAssessed: number;
   status: string;
   entityId: number;
   IncomeSource?: { name: string };
@@ -37,6 +43,7 @@ export default function RevenuePage() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
+  const [incomeSource, setIncomeSources] = useState<IncomeSource[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [showNewCollection, setShowNewCollection] = useState(false);
@@ -80,8 +87,8 @@ export default function RevenuePage() {
       const token =
         typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 
-      const [entitiesRes, assessmentsRes] = await Promise.all([
-        fetch(`${API_BASE}/entities`, {
+      const [entitiesRes, assessmentsRes, incomeSourceRes] = await Promise.all([
+        fetch(`${API_BASE}/institutions`, {
           headers: {
             "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -93,17 +100,25 @@ export default function RevenuePage() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }),
+        fetch(`${API_BASE}/income-sources`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }),
       ]);
 
-      if (!entitiesRes.ok || !assessmentsRes.ok) {
+      if (!entitiesRes.ok || !assessmentsRes.ok || !incomeSourceRes.ok) {
         throw new Error("Failed to load entities or assessments");
       }
 
       const entitiesData = await entitiesRes.json();
       const assessmentsData = await assessmentsRes.json();
+      const incomeSourceData = await incomeSourceRes.json();
 
       setEntities(entitiesData);
       setAssessments(assessmentsData);
+      setIncomeSources(incomeSourceData);
     } catch (err) {
       console.error(err);
     }
@@ -345,7 +360,7 @@ export default function RevenuePage() {
                     const sourceName = a.IncomeSource?.name || "Assessment";
                     return (
                       <option key={a.id} value={a.id}>
-                        {sourceName} - ₦{a.amount} ({a.status})
+                        {sourceName} - ₦{a.amountAssessed} ({a.status})
                       </option>
                     );
                   })}

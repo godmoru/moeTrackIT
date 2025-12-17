@@ -110,7 +110,7 @@ export default function EntityProfilePage() {
           typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 
         const [entityRes, assessmentsRes, paymentsRes] = await Promise.all([
-          fetch(`${API_BASE}/entities/${id}`, {
+          fetch(`${API_BASE}/institutions/${id}`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -264,7 +264,7 @@ export default function EntityProfilePage() {
             </span>
           )}
           <Link
-            href="/admin/entities"
+            href="/admin/institutions"
             className="rounded-md bg-gray-100 px-3 py-1 font-medium text-gray-700 hover:bg-gray-200"
           >
             Back to list
@@ -440,7 +440,7 @@ export default function EntityProfilePage() {
                       type="button"
                       onClick={() =>
                         handleDownloadCsv(
-                          `/reports/entities/${id}/assessments.csv`,
+                          `/reports/institutions/${id}/assessments.csv`,
                           `institution-${id}-assessments.csv`,
                         )
                       }
@@ -550,7 +550,7 @@ export default function EntityProfilePage() {
                       type="button"
                       onClick={() =>
                         handleDownloadCsv(
-                          `/reports/entities/${id}/payments.csv`,
+                          `/reports/institutions/${id}/payments.csv`,
                           `institution-${id}-payments.csv`,
                         )
                       }

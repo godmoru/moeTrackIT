@@ -1,6 +1,11 @@
+'use client';
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,7 +17,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+// export const metadata: Metadata = {
+//   title: "MOETrackIT - Revenue Monitor",
+//   description: "Developed by GESUSoft Technology Ltd",
+//   icons: {
+//     icon: "/benue.png",
+//   },
+// };
+
+const metadata: Metadata = {
   title: "MOETrackIT - Revenue Monitor",
   description: "Developed by GESUSoft Technology Ltd",
   icons: {
@@ -27,10 +40,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ErrorBoundary>
+          <AuthProvider>
+            {children}
+            <Toaster position="top-right" richColors closeButton />
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
