@@ -1,9 +1,11 @@
-import React from '../../_node_modules/@types/react';
+import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { Sidebar } from '../components';
 import { useAuth } from '../context/AuthContext';
 import {
   LoginScreen,
@@ -12,6 +14,17 @@ import {
   PaymentsScreen,
   AssessmentsScreen,
   ProfileScreen,
+  PaymentDetailsScreen,
+  AssessmentDetailsScreen,
+  LGAScreen,
+  InstitutionsScreen,
+  InstitutionDetailsScreen,
+  ChangePasswordScreen,
+  NotificationsScreen,
+  HelpSupportScreen,
+  AboutScreen,
+  ReportsScreen,
+  ReportDetailsScreen,
 } from '../screens';
 import { RootStackParamList, MainTabParamList } from '../types';
 
@@ -21,7 +34,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route, navigation }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
 
@@ -34,6 +47,9 @@ function MainTabs() {
               break;
             case 'Assessments':
               iconName = focused ? 'document-text' : 'document-text-outline';
+              break;
+            case 'Institutions':
+              iconName = focused ? 'business' : 'business-outline';
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -66,6 +82,15 @@ function MainTabs() {
           color: '#1f2937',
         },
         headerShadowVisible: false,
+        headerLeft: () => (
+          <Ionicons
+            name="menu"
+            size={24}
+            color="#1f2937"
+            style={{ marginLeft: 16 }}
+            onPress={() => (navigation as any).openDrawer()}
+          />
+        ),
       })}
     >
       <Tab.Screen
@@ -84,11 +109,29 @@ function MainTabs() {
         options={{ title: 'Assessments' }}
       />
       <Tab.Screen
+        name="Institutions"
+        component={InstitutionsScreen}
+        options={{ title: 'Institutions' }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
       />
     </Tab.Navigator>
+  );
+}
+
+const Drawer = createDrawerNavigator();
+
+function DrawerGroup() {
+  return (
+    <Drawer.Navigator
+      drawerContent={(props) => <Sidebar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Drawer.Screen name="MainTabs" component={MainTabs} />
+    </Drawer.Navigator>
   );
 }
 
@@ -107,7 +150,64 @@ export function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Main" component={DrawerGroup} />
+            <Stack.Screen
+              name="PaymentDetail"
+              component={PaymentDetailsScreen}
+              options={{ title: 'Payment Details', headerShown: true }}
+            />
+            <Stack.Screen
+              name="AssessmentDetail"
+              component={AssessmentDetailsScreen}
+              options={{ title: 'Assessment Details', headerShown: true }}
+            />
+            <Stack.Screen
+              name="LGAList"
+              component={LGAScreen}
+              options={{ title: 'LGA Performance', headerShown: true }}
+            />
+            <Stack.Screen
+              name="Institutions"
+              component={InstitutionsScreen}
+              options={{ title: 'Institutions', headerShown: true }}
+            />
+            <Stack.Screen
+              name="InstitutionDetail"
+              component={InstitutionDetailsScreen}
+              options={{ title: 'Institution Details', headerShown: true }}
+            />
+            <Stack.Screen
+              name="ChangePassword"
+              component={ChangePasswordScreen}
+              options={{ title: 'Change Password', headerShown: true }}
+            />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ title: 'Notifications', headerShown: true }}
+            />
+            <Stack.Screen
+              name="HelpSupport"
+              component={HelpSupportScreen}
+              options={{ title: 'Help & Support', headerShown: true }}
+            />
+            <Stack.Screen
+              name="About"
+              component={AboutScreen}
+              options={{ title: 'About', headerShown: true }}
+            />
+            <Stack.Screen
+              name="Reports"
+              component={ReportsScreen}
+              options={{ title: 'Reports', headerShown: true }}
+            />
+            <Stack.Screen
+              name="ReportDetails"
+              component={ReportDetailsScreen}
+              options={{ title: 'Report Details', headerShown: true }}
+            />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login" component={LoginScreen} />

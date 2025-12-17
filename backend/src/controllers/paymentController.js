@@ -38,6 +38,32 @@ async function listPayments(req, res) {
   }
 }
 
+async function getPaymentById(req, res) {
+  try {
+    // Apply scope filtering for principals (own entity) and AEOs (assigned LGA)
+    const scopeWhere = getPaymentScopeWhere(req.user);
+
+    const payment = await Payment.findOne({
+      where: { id: req.params.id },
+      include: [
+        {
+          model: Assessment,
+          as: "assessment",
+          include: [
+            { model: Entity, as: "entity" },
+            { model: IncomeSource, as: "incomeSource" },
+          ],
+        },
+        { model: User, as: "recorder" },
+      ],
+    });
+    res.json(payment);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch payment" });
+  }
+}
+
 async function createPayment(req, res) {
   const t = await sequelize.transaction();
   try {
@@ -661,6 +687,7 @@ async function getMyAssessments(req, res) {
 
 module.exports = {
   listPayments,
+  getPaymentById,
   createPayment,
   paymentInvoice,
   initializeOnlinePayment,

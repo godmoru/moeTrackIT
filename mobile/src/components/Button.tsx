@@ -1,5 +1,6 @@
-import React from '../../_node_modules/@types/react';
+import React from 'react';
 import {
+  View,
   TouchableOpacity,
   Text,
   StyleSheet,
@@ -17,6 +18,7 @@ interface ButtonProps {
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  leftIcon?: React.ReactNode;
 }
 
 export function Button({
@@ -28,6 +30,7 @@ export function Button({
   disabled = false,
   style,
   textStyle,
+  leftIcon,
 }: ButtonProps) {
   const buttonStyles = [
     styles.button,
@@ -57,7 +60,10 @@ export function Button({
           size="small"
         />
       ) : (
-        <Text style={textStyles}>{title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {leftIcon}
+          <Text style={textStyles}>{title}</Text>
+        </View>
       )}
     </TouchableOpacity>
   );

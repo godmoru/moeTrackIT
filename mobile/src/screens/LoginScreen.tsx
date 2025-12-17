@@ -1,4 +1,4 @@
-import React, { useState } from '../../_node_modules/@types/react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -53,9 +53,14 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
+          <Image
+            source={require('../../assets/benue.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <View style={styles.logoContainer}>
             <Text style={styles.logoText}>MOE</Text>
-            <Text style={styles.logoSubtext}>TrackIT</Text>
+            <Text style={styles.logoSubtext}> RevenueTrackIT</Text>
           </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>
@@ -106,8 +111,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
         </View>
 
         <View style={styles.footer}>
+          {/* Centralize this text */}
           <Text style={styles.footerText}>
-            Ministry of Education Revenue System
+            Benue State Ministry of Education & Knowledge Management Revenue Tracking System
           </Text>
         </View>
       </ScrollView>
@@ -129,18 +135,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  logoImage: {
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 24,
+    marginBottom: 8,
   },
   logoText: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: '800',
     color: '#059669',
   },
   logoSubtext: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: '300',
     color: '#1f2937',
   },
@@ -184,5 +195,6 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 12,
     color: '#9ca3af',
+    textAlign: 'center',
   },
 });

@@ -65,12 +65,24 @@ export type RootStackParamList = {
   Login: undefined;
   ForgotPassword: undefined;
   Main: undefined;
+  PaymentDetail: { paymentId: number };
+  AssessmentDetail: { assessmentId: number };
+  LGAList: undefined;
+  Institutions: undefined;
+  InstitutionDetail: { institutionId: number };
+  ChangePassword: undefined;
+  Notifications: undefined;
+  HelpSupport: undefined;
+  About: undefined;
+  Reports: undefined;
+  ReportDetails: { reportId: string; title: string };
 };
 
 export type MainTabParamList = {
   Dashboard: undefined;
   Payments: undefined;
   Assessments: undefined;
+  Institutions: undefined;
   Profile: undefined;
 };
 

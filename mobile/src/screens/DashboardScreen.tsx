@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from '../../_node_modules/@types/react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,12 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatCard, ProgressRing, Card, PaymentItem } from '../components';
 import { formatCurrency } from '../utils/format';
-import { DashboardSummary, LgaRemittance, Payment } from '../types';
+import { DashboardSummary, LgaRemittance, Payment, RootStackParamList } from '../types';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export function DashboardScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user } = useAuth();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [lgaData, setLgaData] = useState<LgaRemittance[]>([]);
@@ -29,7 +32,7 @@ export function DashboardScreen() {
       const to = today.toISOString().slice(0, 10);
 
       const [summaryData, lgaRes, paymentsRes] = await Promise.all([
-        api.getSummary(from, to),
+        api.getSummary(), // Fetch all-time summary
         api.getLgaRemittance(from, to),
         api.getPayments({ limit: 5 }),
       ]);
@@ -54,7 +57,7 @@ export function DashboardScreen() {
     loadData();
   }, [loadData]);
 
-  const totalCollected = summary?.totalCollected || 0;
+  const totalCollected = Number(summary?.totalCollected || 0);
   const totalAssessments = summary?.statusCounts?.reduce(
     (sum, s) => sum + Number(s.count),
     0
@@ -97,7 +100,7 @@ export function DashboardScreen() {
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
           <Text style={styles.summaryTitle}>Total Collections</Text>
-          <Text style={styles.summaryPeriod}>This Year</Text>
+          <Text style={styles.summaryPeriod}>All Time</Text>
         </View>
         <Text style={styles.summaryAmount}>
           {formatCurrency(totalCollected)}
@@ -118,7 +121,7 @@ export function DashboardScreen() {
       <View style={styles.statsGrid}>
         <View style={styles.statItem}>
           <StatCard
-            title="Assessments"
+            title="Asst"
             value={totalAssessments}
             icon="document-text-outline"
             color="blue"
@@ -165,7 +168,7 @@ export function DashboardScreen() {
         <Card style={styles.lgaCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Top LGAs</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('LGAList')}>
               <Text style={styles.viewAll}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -195,7 +198,11 @@ export function DashboardScreen() {
             </TouchableOpacity>
           </View>
           {recentPayments.map((payment) => (
-            <PaymentItem key={payment.id} payment={payment} />
+            <PaymentItem
+              key={payment.id}
+              payment={payment}
+              onPress={() => navigation.navigate('PaymentDetail', { paymentId: payment.id })}
+            />
           ))}
         </View>
       )}

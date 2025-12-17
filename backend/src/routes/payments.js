@@ -11,6 +11,7 @@ router.post('/webhook', paymentController.paystackWebhook);
 
 // All authenticated roles can list payments (scope filtering applied in controller)
 router.get('/', authMiddleware, paymentController.listPayments);
+router.get('/:id', authMiddleware, paymentController.getPaymentById);
 
 // super_admin, officer, and area_education_officer can record manual payments
 router.post('/', authMiddleware, requireRole('super_admin', 'officer', 'area_education_officer', 'hq_cashier'), paymentController.createPayment);

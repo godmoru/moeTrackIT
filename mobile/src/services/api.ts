@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { DashboardSummary, LgaRemittance, Assessment, Payment, User } from '../types';
 
 // Update this to your backend URL
@@ -8,13 +9,26 @@ const API_BASE = 'http://localhost:5000/api/v1';
 class ApiService {
   private token: string | null = null;
 
+  get API_BASE() {
+    return API_BASE;
+  }
+
   async init() {
-    this.token = await SecureStore.getItemAsync('authToken');
+    console.log('Current Platform OS:', Platform.OS);
+    if (Platform.OS === 'web') {
+      this.token = localStorage.getItem('authToken');
+    } else {
+      this.token = await SecureStore.getItemAsync('authToken');
+    }
   }
 
   private async getHeaders(): Promise<Record<string, string>> {
     if (!this.token) {
-      this.token = await SecureStore.getItemAsync('authToken');
+      if (Platform.OS === 'web') {
+        this.token = localStorage.getItem('authToken');
+      } else {
+        this.token = await SecureStore.getItemAsync('authToken');
+      }
     }
     return {
       'Content-Type': 'application/json',
@@ -24,17 +38,29 @@ class ApiService {
 
   async setToken(token: string) {
     this.token = token;
-    await SecureStore.setItemAsync('authToken', token);
+    if (Platform.OS === 'web') {
+      localStorage.setItem('authToken', token);
+    } else {
+      await SecureStore.setItemAsync('authToken', token);
+    }
   }
 
   async clearToken() {
     this.token = null;
-    await SecureStore.deleteItemAsync('authToken');
+    if (Platform.OS === 'web') {
+      localStorage.removeItem('authToken');
+    } else {
+      await SecureStore.deleteItemAsync('authToken');
+    }
   }
 
   async getToken(): Promise<string | null> {
     if (!this.token) {
-      this.token = await SecureStore.getItemAsync('authToken');
+      if (Platform.OS === 'web') {
+        this.token = localStorage.getItem('authToken');
+      } else {
+        this.token = await SecureStore.getItemAsync('authToken');
+      }
     }
     return this.token;
   }
@@ -84,7 +110,7 @@ class ApiService {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
-    
+
     const res = await fetch(`${API_BASE}/reports/summary?${params}`, {
       headers: await this.getHeaders(),
     });
@@ -99,7 +125,7 @@ class ApiService {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
-    
+
     const res = await fetch(`${API_BASE}/reports/remittance-by-lga?${params}`, {
       headers: await this.getHeaders(),
     });
@@ -107,15 +133,77 @@ class ApiService {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.message || 'Failed to load LGA data');
     }
-    return res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return { items: data };
+    }
+    return data;
+  }
+
+  async getLGAs(): Promise<{ items: any[] }> {
+    const res = await fetch(`${API_BASE}/lgas`, {
+      headers: await this.getHeaders(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Failed to load LGAs');
+    }
+    const data = await res.json();
+    if (Array.isArray(data)) return { items: data };
+    return data;
+  }
+
+  async getInstitutions(): Promise<{ items: any[] }> {
+    const res = await fetch(`${API_BASE}/institutions`, {
+      headers: await this.getHeaders(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Failed to load institutions');
+    }
+    const data = await res.json();
+    if (Array.isArray(data)) return { items: data };
+    return data;
+  }
+
+  async getInstitution(id: number): Promise<{ entity: any; assessments: any[]; payments: any[] }> {
+    const [entityRes, assessmentsRes, paymentsRes] = await Promise.all([
+      fetch(`${API_BASE}/institutions/${id}`, { headers: await this.getHeaders() }),
+      fetch(`${API_BASE}/assessments`, { headers: await this.getHeaders() }),
+      fetch(`${API_BASE}/payments`, { headers: await this.getHeaders() }),
+    ]);
+
+    if (!entityRes.ok) {
+      throw new Error('Failed to load institution profile data');
+    }
+
+    const entity = await entityRes.json();
+    // For assessments and payments, we might want to filter server-side if endpoints support it,
+    // but following the user's snippet logic which fetches all and filters client-side (optimized for small data for now).
+    // If endpoints return { items: [] }, handle that.
+    const assessmentsData = await assessmentsRes.json();
+    const paymentsData = await paymentsRes.json();
+
+    return {
+      entity,
+      assessments: Array.isArray(assessmentsData) ? assessmentsData : (assessmentsData.items || []),
+      payments: Array.isArray(paymentsData) ? paymentsData : (paymentsData.items || []),
+    };
   }
 
   // Payments
-  async getPayments(params?: { page?: number; limit?: number }): Promise<{ items: Payment[]; total: number }> {
+  async getPayments(params?: {
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<{ items: Payment[]; total: number }> {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
-    
+    if (params?.startDate) query.set('startDate', params.startDate);
+    if (params?.endDate) query.set('endDate', params.endDate);
+
     const res = await fetch(`${API_BASE}/payments?${query}`, {
       headers: await this.getHeaders(),
     });
@@ -123,7 +211,11 @@ class ApiService {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.message || 'Failed to load payments');
     }
-    return res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return { items: data, total: data.length };
+    }
+    return data;
   }
 
   async getPayment(id: number): Promise<Payment> {
@@ -156,16 +248,16 @@ class ApiService {
   }
 
   // Assessments
-  async getAssessments(params?: { 
-    page?: number; 
-    limit?: number; 
+  async getAssessments(params?: {
+    page?: number;
+    limit?: number;
     status?: string;
   }): Promise<{ items: Assessment[]; total: number }> {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
     if (params?.status) query.set('status', params.status);
-    
+
     const res = await fetch(`${API_BASE}/assessments?${query}`, {
       headers: await this.getHeaders(),
     });
@@ -173,7 +265,11 @@ class ApiService {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.message || 'Failed to load assessments');
     }
-    return res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return { items: data, total: data.length };
+    }
+    return data;
   }
 
   async getAssessment(id: number): Promise<Assessment> {

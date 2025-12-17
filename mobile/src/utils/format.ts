@@ -1,5 +1,6 @@
-export function formatCurrency(amount: number): string {
-  return `₦${amount.toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
+export function formatCurrency(amount: number | string | undefined | null): string {
+  const num = Number(amount) || 0;
+  return `₦${num.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function formatDate(dateString: string): string {

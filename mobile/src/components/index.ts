@@ -1,5 +1,6 @@
 export { Card } from './Card';
-export { Button } from './Button';
+export * from './Button';
+export * from './Sidebar';
 export { Input } from './Input';
 export { StatCard } from './StatCard';
 export { ProgressRing } from './ProgressRing';

@@ -26,6 +26,28 @@ async function listAssessments(req, res) {
   }
 }
 
+async function getAssessmentById(req, res) {
+  try {
+    // Apply scope filtering for principals (own entity) and AEOs (assigned LGA)
+    const scopeWhere = getAssessmentScopeWhere(req.user);
+
+    // For AEO scope we need the entity include to filter by lgaId
+    const assessment = await Assessment.findOne({
+      where: scopeWhere,
+      include: [
+        { model: Entity, as: 'entity' },
+        { model: IncomeSource, as: 'incomeSource' },
+        { model: Payment, as: 'payments' },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(assessment);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch assessment' });
+  }
+}
+
 async function createAssessment(req, res) {
   const t = await sequelize.transaction();
   try {
@@ -183,6 +205,7 @@ async function bulkAnnualLicense(req, res) {
 
 module.exports = {
   listAssessments,
+  getAssessmentById,
   createAssessment,
   bulkAnnualLicense,
 };

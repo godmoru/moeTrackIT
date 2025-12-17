@@ -1,4 +1,4 @@
-import React from '../../_node_modules/@types/react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 

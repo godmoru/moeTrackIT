@@ -1,4 +1,4 @@
-import React from '../../_node_modules/@types/react';
+import React from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,15 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Card } from '../components';
 import { getInitials } from '../utils/format';
 
 export function ProfileScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -48,27 +52,32 @@ export function ProfileScreen() {
     {
       icon: 'person-outline' as const,
       label: 'Edit Profile',
-      onPress: () => {},
+      onPress: () => Alert.alert('Coming Soon', 'Profile editing will be available soon.'),
     },
     {
       icon: 'lock-closed-outline' as const,
       label: 'Change Password',
-      onPress: () => {},
+      onPress: () => navigation.navigate('ChangePassword'),
     },
+    // {
+    //   icon: 'business-outline' as const,
+    //   label: 'Institutions',
+    //   onPress: () => navigation.navigate('Institutions'),
+    // },
     {
       icon: 'notifications-outline' as const,
       label: 'Notifications',
-      onPress: () => {},
+      onPress: () => navigation.navigate('Notifications'),
     },
     {
       icon: 'help-circle-outline' as const,
       label: 'Help & Support',
-      onPress: () => {},
+      onPress: () => navigation.navigate('HelpSupport'),
     },
     {
       icon: 'information-circle-outline' as const,
       label: 'About',
-      onPress: () => {},
+      onPress: () => navigation.navigate('About'),
     },
   ];
 

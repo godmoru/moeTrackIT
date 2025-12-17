@@ -1,5 +1,5 @@
-import React, { ReactNode } from '../../_node_modules/@types/react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
+import React, { ReactNode } from 'react';
+import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 
 interface CardProps {
   children: ReactNode;
@@ -15,10 +15,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.05)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 2,
+      },
+    }),
   },
 });

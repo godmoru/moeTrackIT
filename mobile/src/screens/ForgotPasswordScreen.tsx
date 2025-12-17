@@ -1,4 +1,4 @@
-import React, { useState } from '../../_node_modules/@types/react';
+import React, { useState } from 'react';
 import {
   View,
   Text,

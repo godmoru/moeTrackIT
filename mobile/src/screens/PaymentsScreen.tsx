@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from '../../_node_modules/@types/react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../services/api';
 import { PaymentItem } from '../components';
-import { Payment } from '../types';
+import { Payment, RootStackParamList } from '../types';
 import { formatCurrency } from '../utils/format';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 export function PaymentsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,13 +29,13 @@ export function PaymentsScreen() {
     try {
       const res = await api.getPayments({ page: pageNum, limit: 20 });
       const items = res.items || [];
-      
+
       if (refresh) {
         setPayments(items);
       } else {
         setPayments((prev) => [...prev, ...items]);
       }
-      
+
       setTotal(res.total || 0);
       setHasMore(items.length === 20);
     } catch (error) {
@@ -121,7 +124,12 @@ export function PaymentsScreen() {
       <FlatList
         data={payments}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <PaymentItem payment={item} />}
+        renderItem={({ item }) => (
+          <PaymentItem
+            payment={item}
+            onPress={() => navigation.navigate('PaymentDetail', { paymentId: item.id })}
+          />
+        )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from '../../_node_modules/@types/react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,14 @@ import { api } from '../services/api';
 import { AssessmentItem } from '../components';
 import { Assessment } from '../types';
 import { formatCurrency } from '../utils/format';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../types';
 
 const STATUS_FILTERS = ['all', 'pending', 'partial', 'paid', 'overdue'];
 
 export function AssessmentsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -152,7 +156,12 @@ export function AssessmentsScreen() {
       <FlatList
         data={assessments}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => <AssessmentItem assessment={item} />}
+        renderItem={({ item }) => (
+          <AssessmentItem
+            assessment={item}
+            onPress={() => navigation.navigate('AssessmentDetail', { assessmentId: item.id })}
+          />
+        )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
