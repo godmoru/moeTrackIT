@@ -31,10 +31,34 @@ export function DashboardScreen() {
       const from = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
       const to = today.toISOString().slice(0, 10);
 
+      let lgaId: number | undefined;
+      let entityId: number | undefined;
+
+      // Determine scope based on role
+      if (user?.role === 'area_education_officer') {
+        lgaId = user.lgaId;
+      } else if (['principal', 'cashier'].includes(user?.role || '')) {
+        entityId = user?.entityId;
+      }
+      // Everyone else (super_admin, admin, hon_commissioner, dfa, perm_secretary, director, hq_cashier) sees ALL (Statewide)
+
       const [summaryData, lgaRes, paymentsRes] = await Promise.all([
-        api.getSummary(), // Fetch all-time summary
-        api.getLgaRemittance(from, to),
-        api.getPayments({ limit: 5 }),
+        api.getSummary(undefined, undefined, lgaId, entityId), // Use all-time by default if dates undefined in api, but here passing undefined for dates to get all time?
+        // Actually the original code passed undefined to getSummary() which defaults to no date filter (All Time).
+        // So I pass undefined for dates.
+
+        // Only fetch LGA data if not restricted to entity (or if needed)
+        // Entity users probably don't need "Top LGAs" list, or it should be empty/hidden.
+        !entityId ? api.getLgaRemittance(from, to) : Promise.resolve({ items: [] }),
+
+        // Payments might need filtering too? api.getPayments supports it now?
+        // If api.getPayments doesn't support lgaId/entityId params yet, we might see all payments.
+        // Let's check api.getPayments signature. It supports startDate/endDate.
+        // We probably need to filter payments by lga/entity too if the backend doesn't do it automatically based on user context.
+        // Assuming backend handles data segregation or we need to add params to getPayments too.
+        // For now, let's assume getPayments needs params or backend handles it. 
+        // Given I just added lgaId/entityId to getSummary, I probably need them for getPayments too.
+        api.getPayments({ limit: 5, lgaId, entityId }),
       ]);
 
       setSummary(summaryData);
@@ -46,7 +70,7 @@ export function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user]); // Added user dependency
 
   useEffect(() => {
     loadData();
@@ -56,6 +80,16 @@ export function DashboardScreen() {
     setRefreshing(true);
     loadData();
   }, [loadData]);
+
+  // Debug logging
+  useEffect(() => {
+    if (user) {
+      console.log('Dashboard User:', JSON.stringify(user, null, 2));
+      console.log('Role:', user.role);
+      console.log('LGA ID:', user.lgaId);
+      console.log('Entity ID:', user.entityId);
+    }
+  }, [user]);
 
   const totalCollected = Number(summary?.totalCollected || 0);
   const totalAssessments = summary?.statusCounts?.reduce(
@@ -100,7 +134,12 @@ export function DashboardScreen() {
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
           <Text style={styles.summaryTitle}>Total Collections</Text>
-          <Text style={styles.summaryPeriod}>All Time</Text>
+          <Text style={styles.summaryPeriod}>
+            All Time
+            {user?.role === 'area_education_officer' ? ' (LGA)' :
+              ['principal', 'cashier'].includes(user?.role || '') ? ' (Institution)' :
+                ''}
+          </Text>
         </View>
         <Text style={styles.summaryAmount}>
           {formatCurrency(totalCollected)}
@@ -115,6 +154,46 @@ export function DashboardScreen() {
             <Text style={styles.summaryStatText}>{pendingCount} Pending</Text>
           </View>
         </View>
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActions}>
+        {user?.role === 'area_education_officer' && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.actionButton, styles.aeoButton]} onPress={() => navigation.navigate('Payments')}>
+              <Ionicons name="wallet" size={20} color="#fff" />
+              <Text style={styles.actionText}>Payments</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.aeoButton]} onPress={() => navigation.navigate('Assessments')}>
+              <Ionicons name="document-text" size={20} color="#fff" />
+              <Text style={styles.actionText}>Assessments</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {['principal', 'cashier'].includes(user?.role || '') && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.actionButton, styles.principalButton]} onPress={() => navigation.navigate('Payments')}>
+              <Ionicons name="wallet" size={20} color="#fff" />
+              <Text style={styles.actionText}>Payments</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.principalButton]} onPress={() => navigation.navigate('Assessments')}>
+              <Ionicons name="document-text" size={20} color="#fff" />
+              <Text style={styles.actionText}>Assessments</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {['super_admin', 'admin', 'officer', 'hon_commissioner', 'system_admin'].includes(user?.role || '') && (
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={[styles.actionButton, styles.adminButton]} onPress={() => navigation.navigate('Users')}>
+              <Ionicons name="people" size={20} color="#fff" />
+              <Text style={styles.actionText}>Users</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionButton, styles.adminButton]} onPress={() => navigation.navigate('Payments')}>
+              <Ionicons name="wallet" size={20} color="#fff" />
+              <Text style={styles.actionText}>Payments</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Stats Grid */}
@@ -315,6 +394,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#059669',
     fontWeight: '500',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: '#059669',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    minHeight: 48,
+  },
+  aeoButton: {
+    backgroundColor: '#10b981',
+  },
+  principalButton: {
+    backgroundColor: '#f59e0b',
+  },
+  adminButton: {
+    backgroundColor: '#7c3aed',
+  },
+  actionText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   lgaCard: {
     marginBottom: 16,

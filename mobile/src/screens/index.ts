@@ -15,3 +15,4 @@ export * from './HelpSupportScreen';
 export * from './AboutScreen';
 export * from './ReportsScreen';
 export * from './ReportDetailsScreen';
+export { UsersScreen } from './UsersScreen';

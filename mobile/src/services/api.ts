@@ -106,10 +106,12 @@ class ApiService {
   }
 
   // Dashboard
-  async getSummary(from?: string, to?: string): Promise<DashboardSummary> {
+  async getSummary(from?: string, to?: string, lgaId?: number, entityId?: number): Promise<DashboardSummary> {
     const params = new URLSearchParams();
     if (from) params.set('from', from);
     if (to) params.set('to', to);
+    if (lgaId) params.set('lgaId', lgaId.toString());
+    if (entityId) params.set('entityId', entityId.toString());
 
     const res = await fetch(`${API_BASE}/reports/summary?${params}`, {
       headers: await this.getHeaders(),
@@ -197,12 +199,16 @@ class ApiService {
     limit?: number;
     startDate?: string;
     endDate?: string;
+    lgaId?: number;
+    entityId?: number;
   }): Promise<{ items: Payment[]; total: number }> {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', params.page.toString());
     if (params?.limit) query.set('limit', params.limit.toString());
     if (params?.startDate) query.set('startDate', params.startDate);
     if (params?.endDate) query.set('endDate', params.endDate);
+    if (params?.lgaId) query.set('lgaId', params.lgaId.toString());
+    if (params?.entityId) query.set('entityId', params.entityId.toString());
 
     const res = await fetch(`${API_BASE}/payments?${query}`, {
       headers: await this.getHeaders(),

@@ -84,6 +84,8 @@ export type MainTabParamList = {
   Assessments: undefined;
   Institutions: undefined;
   Profile: undefined;
+  Reports: undefined;
+  Users: undefined;
 };
 
 export type PaymentsStackParamList = {

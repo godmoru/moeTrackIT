@@ -21,6 +21,8 @@ interface JwtPayload {
   name?: string;
   lgaId?: number;
   entityId?: number;
+  lga_id?: number;
+  entity_id?: number;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -36,13 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = await api.getToken();
       if (token) {
         const decoded = jwtDecode<JwtPayload>(token);
+        console.log('Decoded Token:', decoded); // Debug log
         setUser({
           id: decoded.id,
           email: decoded.email,
           role: decoded.role,
           name: decoded.name || decoded.email,
-          lgaId: decoded.lgaId,
-          entityId: decoded.entityId,
+          lgaId: decoded.lgaId || decoded.lga_id,
+          entityId: decoded.entityId || decoded.entity_id,
         });
       }
     } catch (error) {
@@ -56,13 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(email: string, password: string) {
     const { token, user: userData } = await api.login(email, password);
     const decoded = jwtDecode<JwtPayload>(token);
+    console.log('Decoded Token (Login):', decoded); // Debug log
     setUser({
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
       name: decoded.name || userData?.name || decoded.email,
-      lgaId: decoded.lgaId,
-      entityId: decoded.entityId,
+      lgaId: decoded.lgaId || decoded.lga_id,
+      entityId: decoded.entityId || decoded.entity_id,
     });
   }
 

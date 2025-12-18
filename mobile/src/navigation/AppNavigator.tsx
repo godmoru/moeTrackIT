@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -25,6 +25,7 @@ import {
   AboutScreen,
   ReportsScreen,
   ReportDetailsScreen,
+  UsersScreen,
 } from '../screens';
 import { RootStackParamList, MainTabParamList } from '../types';
 
@@ -32,6 +33,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabs() {
+  const { user } = useAuth();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({
@@ -47,9 +50,6 @@ function MainTabs() {
               break;
             case 'Assessments':
               iconName = focused ? 'document-text' : 'document-text-outline';
-              break;
-            case 'Institutions':
-              iconName = focused ? 'business' : 'business-outline';
               break;
             case 'Profile':
               iconName = focused ? 'person' : 'person-outline';
@@ -83,13 +83,21 @@ function MainTabs() {
         },
         headerShadowVisible: false,
         headerLeft: () => (
-          <Ionicons
-            name="menu"
-            size={24}
-            color="#1f2937"
-            style={{ marginLeft: 16 }}
-            onPress={() => (navigation as any).openDrawer()}
-          />
+          <View style={styles.headerLeft}>
+            <Ionicons
+              name="menu"
+              size={24}
+              color="#1f2937"
+              style={{ marginLeft: 16 }}
+              onPress={() => (navigation as any).openDrawer()}
+            />
+            {/* Admin-only dropdown menu */}
+            {['super_admin', 'admin', 'officer', 'hon_commissioner', 'system_admin'].includes(user?.role || '') && (
+              <TouchableOpacity style={styles.menuButton} onPress={() => (navigation as any).navigate('Users')}>
+                <Ionicons name="people" size={20} color="#059669" />
+              </TouchableOpacity>
+            )}
+          </View>
         ),
       })}
     >
@@ -107,11 +115,6 @@ function MainTabs() {
         name="Assessments"
         component={AssessmentsScreen}
         options={{ title: 'Assessments' }}
-      />
-      <Tab.Screen
-        name="Institutions"
-        component={InstitutionsScreen}
-        options={{ title: 'Institutions' }}
       />
       <Tab.Screen
         name="Profile"
@@ -218,3 +221,18 @@ export function AppNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  menuButton: {
+    marginLeft: 16,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#f0fdf4',
+  },
+});
+
+export { AppNavigator };
