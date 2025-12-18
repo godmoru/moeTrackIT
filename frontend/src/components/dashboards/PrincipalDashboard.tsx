@@ -147,7 +147,7 @@ export function PrincipalDashboard() {
           )}
 
           {/* Quick Actions */}
-          <div className="grid gap-3 sm:grid-cols-3">
+          {/* <div className="grid gap-3 sm:grid-cols-3">
             <Link href="/admin/assessments" className="rounded-lg bg-green-50 p-3 hover:bg-green-100 transition-colors">
               <div className="text-xs font-medium text-green-800">My Assessments</div>
               <div className="text-[11px] text-green-600">View all assessments</div>
@@ -160,7 +160,7 @@ export function PrincipalDashboard() {
               <div className="text-xs font-medium text-orange-800">Reports</div>
               <div className="text-[11px] text-orange-600">Download statements</div>
             </Link>
-          </div>
+          </div> */}
 
           {/* Stats cards */}
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">

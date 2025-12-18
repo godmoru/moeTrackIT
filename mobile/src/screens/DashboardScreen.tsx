@@ -157,7 +157,7 @@ export function DashboardScreen() {
       </View>
 
       {/* Quick Actions */}
-      <View style={styles.quickActions}>
+      {/* <View style={styles.quickActions}>
         {user?.role === 'area_education_officer' && (
           <View style={styles.actionRow}>
             <TouchableOpacity style={[styles.actionButton, styles.aeoButton]} onPress={() => navigation.navigate('Payments')}>
@@ -194,7 +194,7 @@ export function DashboardScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </View> */}
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>

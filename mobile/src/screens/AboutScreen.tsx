@@ -18,7 +18,7 @@ export function AboutScreen() {
 
             <Card style={styles.card}>
                 <Text style={styles.description}>
-                    The Ministry of Education Tracking & Intelligence Tool (MOETrackIT) is a comprehensive revenue management system designed for the Benue State Ministry of Education.
+                    The Ministry of Education Tracking & Intelligence Tool (MOETrackIT) is a comprehensive revenue management system designed for the Benue State Ministry of Education & Knowldege Management.
                 </Text>
                 <Text style={styles.description}>
                     It facilitates transparent and efficient tracking of revenue collections, assessments, and remittances across all schools and educational institutions in the state.
@@ -28,9 +28,11 @@ export function AboutScreen() {
             <Card style={styles.card}>
                 <Text style={styles.sectionTitle}>Developed By</Text>
                 <Text style={styles.developer}>
+                    <br />
                     Benue State Ministry of Education & Knowledge Management in partnership with GESUSoft Technology Ltd, Abuja - Nigeria
                 </Text>
                 <Text style={styles.copyright}>
+                    <br />  
                     © {new Date().getFullYear()} All Rights Reserved
                 </Text>
             </Card>
@@ -94,16 +96,20 @@ const styles = StyleSheet.create({
         color: '#1f2937',
         marginBottom: 8,
         textTransform: 'uppercase',
+        textAlign: 'center'
     },
     developer: {
         fontSize: 15,
         fontWeight: '500',
         color: '#1f2937',
         marginBottom: 4,
+        textAlign: 'center'
     },
     copyright: {
         fontSize: 13,
         color: '#9ca3af',
+        textAlign: 'center',
+
     },
     links: {
         flexDirection: 'row',

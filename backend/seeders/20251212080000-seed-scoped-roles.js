@@ -48,7 +48,7 @@ module.exports = {
         updatedAt: now,
       },
       {
-        name: 'Director Finance',
+        name: 'Director Finance Administration',
         slug: 'dfa',
         description: 'Director of finance with admin function on the system without control panel functions ',
         isSystem: true,

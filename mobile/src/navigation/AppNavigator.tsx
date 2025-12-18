@@ -235,4 +235,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export { AppNavigator };
+// export { AppNavigator };

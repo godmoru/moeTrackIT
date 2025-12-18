@@ -55,6 +55,7 @@ export default function RevenuePage() {
     paymentDate: "",
     method: "",
     reference: "",
+    // recordedBy: ""
   });
 
   async function loadSummary() {
@@ -147,6 +148,7 @@ export default function RevenuePage() {
       paymentDate: "",
       method: "",
       reference: "",
+      // recordedBy: ""
     });
     setShowNewCollection(true);
   }

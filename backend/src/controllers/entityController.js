@@ -25,6 +25,8 @@ function generatePasswordFromContactInfo(name, email, phone) {
   
   // Ensure password is at least 8 characters
   return password.length >= 8 ? password : `${password}2024`;
+  // console.log(`The supplied password is: ${password}`);
+  
 }
 
 function formatAmount(value) {

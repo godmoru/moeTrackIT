@@ -66,9 +66,9 @@ async function getPaymentById(req, res) {
 
 async function createPayment(req, res) {
   const t = await sequelize.transaction();
+
   try {
     const { assessmentId, amountPaid, paymentDate, method, reference, status = 'confirmed', recordedBy } = req.body;
-
     const payment = await Payment.create(
       {
         assessmentId,
