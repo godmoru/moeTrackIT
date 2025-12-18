@@ -1,0 +1,37 @@
+/** @type {import('sequelize-cli').Migration} */
+export const up = async (queryInterface, Sequelize) => {
+  // First, remove the existing foreign key constraint
+  await queryInterface.sequelize.query(
+    'ALTER TABLE `Budgets` DROP FOREIGN KEY `Budgets_ibfk_1`;'
+  );
+  
+  // Then modify the mdaId column to allow null
+  await queryInterface.changeColumn('Budgets', 'mdaId', {
+    type: Sequelize.UUID,
+    allowNull: true, // Changed from false to true
+    references: {
+      model: 'Mdas',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'SET NULL'
+  });
+};
+
+export const down = async (queryInterface, Sequelize) => {
+  // Revert the changes if needed
+  await queryInterface.sequelize.query(
+    'ALTER TABLE `Budgets` DROP FOREIGN KEY `Budgets_ibfk_1`;'
+  );
+  
+  await queryInterface.changeColumn('Budgets', 'mdaId', {
+    type: Sequelize.UUID,
+    allowNull: false,
+    references: {
+      model: 'Mdas',
+      key: 'id'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE' // Changed from SET NULL to CASCADE for the rollback
+  });
+};
