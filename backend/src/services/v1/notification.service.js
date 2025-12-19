@@ -1,7 +1,7 @@
-import { Op } from 'sequelize';
-import AppError from '../../utils/appError.js';
-import db from '../../models/v1/index.js';
-import emailService from './email.service.js'; // You'll need to implement this
+const { Op } = require('sequelize');
+const AppError = require('../../utils/appError.js');
+const db = require('../../../models/index.js');
+const emailService = require('./email.service.js'); // You'll need to implement this
 
 class NotificationService {
   /**
@@ -62,7 +62,7 @@ class NotificationService {
    */
   static async getUserNotifications(userId, options = {}) {
     const { unreadOnly = false, limit = 20, offset = 0 } = options;
-    
+
     const where = { userId };
     if (unreadOnly) {
       where.isRead = false;
@@ -91,7 +91,7 @@ class NotificationService {
    */
   static async markAsRead(userId, notificationIds) {
     const ids = Array.isArray(notificationIds) ? notificationIds : [notificationIds];
-    
+
     const [updatedCount] = await db.Notification.update(
       { isRead: true, readAt: new Date() },
       {
@@ -209,7 +209,7 @@ class NotificationService {
       // This is a placeholder for your real-time notification system
       // In a real app, you would use Socket.IO, Pusher, or a similar service
       const { default: io } = await import('../../socket.js'); // Assuming you have a socket setup
-      
+
       if (io) {
         io.to(`user_${notification.userId}`).emit('notification', {
           id: notification.id,
@@ -341,8 +341,166 @@ class NotificationService {
       sendEmail: options.sendEmail !== false, // Default to true unless explicitly set to false
     });
   }
+
+  /**
+   * Notify approvers when expenditure is submitted
+   * @param {Object} expenditure - Expenditure data
+   * @returns {Promise<void>}
+   */
+  static async notifyExpenditureSubmitted(expenditure) {
+    try {
+      // Get approvers for the MDA
+      const approvers = await db.User.findAll({
+        where: {
+          mdaId: expenditure.mdaId,
+          role: { [Op.in]: ['admin', 'budget_approver', 'director'] },
+        },
+      });
+
+      for (const approver of approvers) {
+        await this.notifyExpenditureAction(approver.id, 'submitted', expenditure);
+      }
+    } catch (error) {
+      console.error('Error notifying expenditure submitted:', error);
+    }
+  }
+
+  /**
+   * Notify creator when expenditure is approved
+   * @param {Object} expenditure - Expenditure data
+   * @returns {Promise<void>}
+   */
+  static async notifyExpenditureApproved(expenditure) {
+    try {
+      await this.notifyExpenditureAction(expenditure.createdBy, 'approved', expenditure);
+    } catch (error) {
+      console.error('Error notifying expenditure approved:', error);
+    }
+  }
+
+  /**
+   * Notify creator when expenditure is rejected
+   * @param {Object} expenditure - Expenditure data
+   * @returns {Promise<void>}
+   */
+  static async notifyExpenditureRejected(expenditure) {
+    try {
+      await this.notifyExpenditureAction(expenditure.createdBy, 'rejected', expenditure, {
+        metadata: { rejectionReason: expenditure.rejectionReason },
+      });
+    } catch (error) {
+      console.error('Error notifying expenditure rejected:', error);
+    }
+  }
+
+  /**
+   * Notify stakeholders of budget warning
+   * @param {Object} lineItem - Budget line item
+   * @param {Object} warningStatus - Warning status details
+   * @param {Array} stakeholders - List of stakeholders to notify
+   * @returns {Promise<void>}
+   */
+  static async notifyBudgetWarning(lineItem, warningStatus, stakeholders) {
+    try {
+      const warningLevels = {
+        medium: { emoji: '⚠️', color: 'yellow' },
+        high: { emoji: '🔶', color: 'orange' },
+        critical: { emoji: '🚨', color: 'red' },
+      };
+
+      const level = warningLevels[warningStatus.level] || warningLevels.medium;
+
+      for (const stakeholder of stakeholders) {
+        await this.createNotification({
+          userId: stakeholder.id,
+          title: `${level.emoji} Budget Warning: ${warningStatus.threshold}% Utilization`,
+          message: `Budget line item "${lineItem.name}" (${lineItem.code}) has reached ${warningStatus.threshold}% utilization.`,
+          type: 'warning',
+          referenceType: 'budget_line_item',
+          referenceId: lineItem.id,
+          metadata: {
+            lineItemId: lineItem.id,
+            lineItemCode: lineItem.code,
+            lineItemName: lineItem.name,
+            threshold: warningStatus.threshold,
+            level: warningStatus.level,
+            amount: lineItem.amount,
+            balance: lineItem.balance,
+          },
+          sendEmail: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error notifying budget warning:', error);
+    }
+  }
+
+  /**
+   * Notify reviewers when retirement is submitted
+   * @param {Object} retirement - Retirement data
+   * @returns {Promise<void>}
+   */
+  static async notifyRetirementSubmitted(retirement) {
+    try {
+      const expenditure = await db.Expenditure.findByPk(retirement.expenditureId);
+      if (!expenditure) return;
+
+      // Get reviewers for the MDA
+      const reviewers = await db.User.findAll({
+        where: {
+          mdaId: expenditure.mdaId,
+          role: { [Op.in]: ['admin', 'budget_reviewer', 'director'] },
+        },
+      });
+
+      for (const reviewer of reviewers) {
+        await this.createNotification({
+          userId: reviewer.id,
+          title: 'Retirement Submitted for Review',
+          message: `Retirement ${retirement.retirementNumber} has been submitted for review.`,
+          type: 'info',
+          referenceType: 'retirement',
+          referenceId: retirement.id,
+          metadata: {
+            retirementId: retirement.id,
+            retirementNumber: retirement.retirementNumber,
+            amountRetired: retirement.amountRetired,
+          },
+          sendEmail: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error notifying retirement submitted:', error);
+    }
+  }
+
+  /**
+   * Notify creator when retirement is approved
+   * @param {Object} retirement - Retirement data
+   * @returns {Promise<void>}
+   */
+  static async notifyRetirementApproved(retirement) {
+    try {
+      await this.createNotification({
+        userId: retirement.createdBy,
+        title: 'Retirement Approved',
+        message: `Retirement ${retirement.retirementNumber} has been approved.`,
+        type: 'success',
+        referenceType: 'retirement',
+        referenceId: retirement.id,
+        metadata: {
+          retirementId: retirement.id,
+          retirementNumber: retirement.retirementNumber,
+          amountRetired: retirement.amountRetired,
+        },
+        sendEmail: true,
+      });
+    } catch (error) {
+      console.error('Error notifying retirement approved:', error);
+    }
+  }
 }
 
 const notificationService = new NotificationService();
 
-export default notificationService;
+module.exports = notificationService;

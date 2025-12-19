@@ -1,6 +1,8 @@
 /** @type {import('sequelize-cli').Migration} */
-import { DataTypes } from 'sequelize';
-export const up = async (queryInterface, Sequelize) => {
+const { DataTypes } = require('sequelize');
+
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Mdas', {
       id: {
         type: Sequelize.UUID,
@@ -78,8 +80,9 @@ export const up = async (queryInterface, Sequelize) => {
     // await queryInterface.addIndex('Mdas', ['name'], { unique: true });
     // await queryInterface.addIndex('Mdas', ['type']);
     // await queryInterface.addIndex('Mdas', ['isActive']);
-};
+  },
 
-export const down = async (queryInterface, Sequelize) => {
-  await queryInterface.dropTable('Mdas');
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable('Mdas');
+  }
 };

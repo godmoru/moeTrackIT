@@ -1,7 +1,8 @@
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   // Create MDAs table
   await queryInterface.createTable('Mdas', {
     id: {
@@ -144,8 +145,9 @@ export const up = async (queryInterface, Sequelize) => {
 
   // Create other tables...
   // (Add other table creation code here)
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.dropAllTables();
+}
 };

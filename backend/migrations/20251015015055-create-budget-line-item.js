@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   await queryInterface.createTable('BudgetLineItems', {
     id: {
       allowNull: false,
@@ -70,4 +71,5 @@ export const up = async (queryInterface, Sequelize) => {
       type: Sequelize.DATE
     }
   });
+}
 };

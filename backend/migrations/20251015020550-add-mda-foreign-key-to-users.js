@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   const [results] = await queryInterface.sequelize.query(
     "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
     "WHERE TABLE_NAME = 'Users' AND CONSTRAINT_NAME = 'fk_user_mda'"
@@ -21,12 +22,13 @@ export const up = async (queryInterface, Sequelize) => {
   } else {
     console.log('Foreign key constraint fk_user_mda already exists');
   }
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   try {
     await queryInterface.removeConstraint('Users', 'fk_user_mda');
   } catch (error) {
     console.log('Constraint fk_user_mda does not exist, skipping removal');
   }
+}
 };

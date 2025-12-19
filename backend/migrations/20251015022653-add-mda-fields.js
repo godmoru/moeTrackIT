@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   // Add new columns to MDAs table
   await queryInterface.addColumn('Mdas', 'is_active', {
     type: Sequelize.BOOLEAN,
@@ -25,9 +26,10 @@ export const up = async (queryInterface, Sequelize) => {
 
   // Add index for better performance on parent_ministry_id
   await queryInterface.addIndex('Mdas', ['parent_ministry_id']);
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.removeColumn('Mdas', 'is_active');
   await queryInterface.removeColumn('Mdas', 'logo_url');
-  await queryInterface.removeColumn('Mdas', 'parent_ministry_id');};
+  await queryInterface.removeColumn('Mdas', 'parent_ministry_id');}
+};

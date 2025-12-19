@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   const transaction = await queryInterface.sequelize.transaction();
   
   try {
@@ -34,8 +35,9 @@ export const up = async (queryInterface, Sequelize) => {
     await transaction.rollback();
     throw error;
   }
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.removeConstraint('Users', 'Users_mdaId_fkey');
+}
 };

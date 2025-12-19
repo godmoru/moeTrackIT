@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
     await queryInterface.createTable('Budgets', {
       id: {
         allowNull: false,
@@ -63,8 +64,9 @@ export const up = async (queryInterface, Sequelize) => {
         type: Sequelize.DATE
       }
     });
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.dropTable('Budgets');
+}
 };

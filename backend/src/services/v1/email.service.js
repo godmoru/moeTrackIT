@@ -1,5 +1,4 @@
-import nodemailer from 'nodemailer';
-import logger from '../../config/v1/logger.js';
+const nodemailer = require('nodemailer');
 
 // Create a test account for development
 const createTestAccount = async () => {
@@ -143,4 +142,4 @@ class EmailService {
 }
 
 const emailService = new EmailService();
-export default emailService;
+module.exports = emailService;

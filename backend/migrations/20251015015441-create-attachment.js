@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   await queryInterface.createTable('Attachments', {
     id: {
       allowNull: false,
@@ -70,8 +71,9 @@ export const up = async (queryInterface, Sequelize) => {
       defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
     }
   });
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.dropTable('Attachments');
+}
 };

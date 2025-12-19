@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   await queryInterface.createTable('RetirementAttachments', {
     id: {
       allowNull: false,
@@ -103,8 +104,9 @@ export const up = async (queryInterface, Sequelize) => {
   // await queryInterface.addIndex('RetirementAttachments', ['retirementId']);
   // await queryInterface.addIndex('RetirementAttachments', ['documentType']);
   // await queryInterface.addIndex('RetirementAttachments', ['verified']);
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   await queryInterface.dropTable('RetirementAttachments');
+}
 };

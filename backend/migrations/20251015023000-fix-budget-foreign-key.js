@@ -1,5 +1,6 @@
 /** @type {import('sequelize-cli').Migration} */
-export const up = async (queryInterface, Sequelize) => {
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
   // First, remove the existing foreign key constraint
   await queryInterface.sequelize.query(
     'ALTER TABLE `Budgets` DROP FOREIGN KEY `Budgets_ibfk_1`;'
@@ -16,9 +17,9 @@ export const up = async (queryInterface, Sequelize) => {
     onUpdate: 'CASCADE',
     onDelete: 'SET NULL'
   });
-};
+},
 
-export const down = async (queryInterface, Sequelize) => {
+  down: async (queryInterface, Sequelize) => {
   // Revert the changes if needed
   await queryInterface.sequelize.query(
     'ALTER TABLE `Budgets` DROP FOREIGN KEY `Budgets_ibfk_1`;'
@@ -34,4 +35,5 @@ export const down = async (queryInterface, Sequelize) => {
     onUpdate: 'CASCADE',
     onDelete: 'CASCADE' // Changed from SET NULL to CASCADE for the rollback
   });
+}
 };
