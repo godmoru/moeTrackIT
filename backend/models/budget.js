@@ -122,7 +122,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       approvedBy: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
       approvedAt: {
@@ -130,11 +130,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       createdBy: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
       updatedBy: {
-        type: DataTypes.UUID,
+        type: DataTypes.INTEGER,
         allowNull: true,
       },
     },

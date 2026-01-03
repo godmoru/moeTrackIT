@@ -1,14 +1,12 @@
-import express from 'express';
-import { check } from 'express-validator';
-import { protect } from '../../middleware/v1/auth.middleware.js';
-import { hasPermission } from '../../middleware/v1/authorize.middleware.js';
-import validate from '../../middleware/v1/validate.js';
-import * as retirementController from '../../controllers/v1/expenditureRetirement.controller.js';
+const express = require('express');
+const { check } = require('express-validator');
+const { authMiddleware, requireRole, requirePermission } = require('../../middleware/auth.js');
+const retirementController = require('../../controllers/v1/expenditureRetirement.controller.js');
 
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(protect);
+router.use(authMiddleware);
 
 // Validation rules
 const createRetirementValidation = [
@@ -34,52 +32,48 @@ const rejectRetirementValidation = [
 // Routes
 router
     .route('/')
-    .get(hasPermission('retirement:read'), retirementController.getAllRetirements)
+    .get(requirePermission('retirement:read'), retirementController.getAllRetirements)
     .post(
-        hasPermission('retirement:create'),
+        requirePermission('retirement:create'),
         createRetirementValidation,
-        validate,
         retirementController.createRetirement
     );
 
 router
     .route('/stats')
-    .get(hasPermission('retirement:read'), retirementController.getRetirementStats);
+    .get(requirePermission('retirement:read'), retirementController.getRetirementStats);
 
 router
     .route('/:id')
-    .get(hasPermission('retirement:read'), retirementController.getRetirement)
+    .get(requirePermission('retirement:read'), retirementController.getRetirement)
     .patch(
-        hasPermission('retirement:create'),
+        requirePermission('retirement:create'),
         updateRetirementValidation,
-        validate,
         retirementController.updateRetirement
     );
 
 router
     .route('/:id/submit')
-    .post(hasPermission('retirement:create'), retirementController.submitRetirement);
+    .post(requirePermission('retirement:create'), retirementController.submitRetirement);
 
 router
     .route('/:id/review')
     .post(
-        hasPermission('retirement:review'),
+        requirePermission('retirement:review'),
         reviewRetirementValidation,
-        validate,
         retirementController.reviewRetirement
     );
 
 router
     .route('/:id/approve')
-    .post(hasPermission('retirement:approve'), retirementController.approveRetirement);
+    .post(requirePermission('retirement:approve'), retirementController.approveRetirement);
 
 router
     .route('/:id/reject')
     .post(
-        hasPermission('retirement:approve'),
+        requirePermission('retirement:approve'),
         rejectRetirementValidation,
-        validate,
         retirementController.rejectRetirement
     );
 
-export default router;
+module.exports = router;

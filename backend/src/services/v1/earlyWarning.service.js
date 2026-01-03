@@ -1,6 +1,6 @@
-import AppError from '../../utils/appError.js';
-import db from '../../models/index.js';
-import NotificationService from './notification.service.js';
+const AppError = require('../../utils/appError.js');
+const db = require('../../../models/index.js');
+const NotificationService = require('./notification.service.js');
 
 class EarlyWarningService {
     // Warning thresholds
@@ -208,4 +208,4 @@ class EarlyWarningService {
     }
 }
 
-export default EarlyWarningService;
+module.exports = EarlyWarningService;

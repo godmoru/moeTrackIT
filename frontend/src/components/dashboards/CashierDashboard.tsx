@@ -118,7 +118,7 @@ export function CashierDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         <Link 
           href="/admin/payments?action=new" 
           className="rounded-lg bg-green-600 p-3 hover:bg-green-700 transition-colors text-white"
@@ -140,6 +140,10 @@ export function CashierDashboard() {
         <Link href="/admin/assessments" className="rounded-lg bg-orange-50 p-3 hover:bg-orange-100 transition-colors">
           <div className="text-xs font-medium text-orange-800">Pending Bills</div>
           <div className="text-[11px] text-orange-600">Awaiting payment</div>
+        </Link>
+        <Link href="/admin/expenditures" className="rounded-lg bg-red-50 p-3 hover:bg-red-100 transition-colors">
+          <div className="text-xs font-medium text-red-800">Expenditures</div>
+          <div className="text-[11px] text-red-600">Manage expenditures</div>
         </Link>
         <Link href="/admin/reports" className="rounded-lg bg-purple-50 p-3 hover:bg-purple-100 transition-colors">
           <div className="text-xs font-medium text-purple-800">Daily Report</div>

@@ -109,7 +109,7 @@ export function SuperAdminDashboard() {
       </div>
 
       {/* Quick Actions */}
-      {/* <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         <Link href="/admin/control-panel" className="rounded-lg bg-purple-50 p-3 hover:bg-purple-100 transition-colors">
           <div className="text-xs font-medium text-purple-800">Control Panel</div>
           <div className="text-[11px] text-purple-600">Users, Roles & Settings</div>
@@ -122,11 +122,15 @@ export function SuperAdminDashboard() {
           <div className="text-xs font-medium text-green-800">Assessments</div>
           <div className="text-[11px] text-green-600">View & create assessments</div>
         </Link>
+        <Link href="/admin/expenditures" className="rounded-lg bg-red-50 p-3 hover:bg-red-100 transition-colors">
+          <div className="text-xs font-medium text-red-800">Expenditures</div>
+          <div className="text-[11px] text-red-600">Manage expenditures</div>
+        </Link>
         <Link href="/admin/reports" className="rounded-lg bg-orange-50 p-3 hover:bg-orange-100 transition-colors">
           <div className="text-xs font-medium text-orange-800">Reports</div>
           <div className="text-[11px] text-orange-600">Generate reports</div>
         </Link>
-      </div> */}
+      </div>
 
       {/* Date filters */}
       <div className="flex flex-wrap items-end gap-3 text-sm">
