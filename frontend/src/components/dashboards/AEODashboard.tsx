@@ -117,7 +117,7 @@ export function AEODashboard() {
       </div>
 
       {/* Quick Actions */}
-      {/* <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         <Link href="/admin/institutions" className="rounded-lg bg-blue-50 p-3 hover:bg-blue-100 transition-colors">
           <div className="text-xs font-medium text-blue-800">Schools</div>
           <div className="text-[11px] text-blue-600">View LGA schools</div>
@@ -130,11 +130,15 @@ export function AEODashboard() {
           <div className="text-xs font-medium text-yellow-800">Payments</div>
           <div className="text-[11px] text-yellow-600">Record payments</div>
         </Link>
+        <Link href="/admin/expenditures" className="rounded-lg bg-red-50 p-3 hover:bg-red-100 transition-colors">
+          <div className="text-xs font-medium text-red-800">Expenditures</div>
+          <div className="text-[11px] text-red-600">Manage expenditures</div>
+        </Link>
         <Link href="/admin/reports" className="rounded-lg bg-orange-50 p-3 hover:bg-orange-100 transition-colors">
           <div className="text-xs font-medium text-orange-800">Reports</div>
           <div className="text-[11px] text-orange-600">LGA reports</div>
         </Link>
-      </div> */}
+      </div>
 
       {loading && <p className="text-sm text-gray-600">Loading data...</p>}
       {error && <p className="text-sm text-red-600" role="alert">{error}</p>}

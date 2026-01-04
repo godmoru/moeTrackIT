@@ -1,10 +1,10 @@
-import ExpenditureRetirementService from '../services/v1/expenditureRetirement.service.js';
-import { catchAsync } from '../utils/catchAsync.js';
+const ExpenditureRetirementService = require('../../services/v1/expenditureRetirement.service.js');
+const catchAsync = require('../../utils/catchAsync.js');
 
 /**
  * Create a new retirement
  */
-export const createRetirement = catchAsync(async (req, res) => {
+const createRetirement = catchAsync(async (req, res) => {
     const retirement = await ExpenditureRetirementService.createRetirement(req.body, req.user.id);
 
     res.status(201).json({
@@ -16,7 +16,7 @@ export const createRetirement = catchAsync(async (req, res) => {
 /**
  * Get all retirements
  */
-export const getAllRetirements = catchAsync(async (req, res) => {
+const getAllRetirements = catchAsync(async (req, res) => {
     const result = await ExpenditureRetirementService.getAllRetirements(req.query);
 
     res.status(200).json({
@@ -28,7 +28,7 @@ export const getAllRetirements = catchAsync(async (req, res) => {
 /**
  * Get a single retirement
  */
-export const getRetirement = catchAsync(async (req, res) => {
+const getRetirement = catchAsync(async (req, res) => {
     const retirement = await ExpenditureRetirementService.getRetirementById(
         req.params.id,
         { includeAttachments: req.query.includeAttachments !== 'false' }
@@ -43,7 +43,7 @@ export const getRetirement = catchAsync(async (req, res) => {
 /**
  * Update a retirement
  */
-export const updateRetirement = catchAsync(async (req, res) => {
+const updateRetirement = catchAsync(async (req, res) => {
     const retirement = await ExpenditureRetirementService.updateRetirement(
         req.params.id,
         req.body,
@@ -59,7 +59,7 @@ export const updateRetirement = catchAsync(async (req, res) => {
 /**
  * Submit retirement for review
  */
-export const submitRetirement = catchAsync(async (req, res) => {
+const submitRetirement = catchAsync(async (req, res) => {
     const retirement = await ExpenditureRetirementService.submitRetirement(
         req.params.id,
         req.user.id
@@ -75,7 +75,7 @@ export const submitRetirement = catchAsync(async (req, res) => {
 /**
  * Review a retirement
  */
-export const reviewRetirement = catchAsync(async (req, res) => {
+const reviewRetirement = catchAsync(async (req, res) => {
     const { status, remarks } = req.body;
     const retirement = await ExpenditureRetirementService.reviewRetirement(
         req.params.id,
@@ -94,7 +94,7 @@ export const reviewRetirement = catchAsync(async (req, res) => {
 /**
  * Approve a retirement
  */
-export const approveRetirement = catchAsync(async (req, res) => {
+const approveRetirement = catchAsync(async (req, res) => {
     const retirement = await ExpenditureRetirementService.approveRetirement(
         req.params.id,
         req.user.id
@@ -110,7 +110,7 @@ export const approveRetirement = catchAsync(async (req, res) => {
 /**
  * Reject a retirement
  */
-export const rejectRetirement = catchAsync(async (req, res) => {
+const rejectRetirement = catchAsync(async (req, res) => {
     const { reason } = req.body;
     const retirement = await ExpenditureRetirementService.rejectRetirement(
         req.params.id,
@@ -128,7 +128,7 @@ export const rejectRetirement = catchAsync(async (req, res) => {
 /**
  * Get retirement statistics
  */
-export const getRetirementStats = catchAsync(async (req, res) => {
+const getRetirementStats = catchAsync(async (req, res) => {
     const stats = await ExpenditureRetirementService.getRetirementStats(req.query);
 
     res.status(200).json({
@@ -136,3 +136,15 @@ export const getRetirementStats = catchAsync(async (req, res) => {
         data: { stats },
     });
 });
+
+module.exports = {
+    createRetirement,
+    getAllRetirements,
+    getRetirement,
+    updateRetirement,
+    submitRetirement,
+    reviewRetirement,
+    approveRetirement,
+    rejectRetirement,
+    getRetirementStats,
+};

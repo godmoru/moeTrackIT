@@ -88,7 +88,7 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: 'other',
             },
             uploadedBy: {
-                type: DataTypes.UUID,
+                type: DataTypes.INTEGER,
                 allowNull: false,
             },
         },

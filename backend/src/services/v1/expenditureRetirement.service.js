@@ -1,7 +1,7 @@
-import { Op } from 'sequelize';
-import AppError from '../../utils/appError.js';
-import db from '../../models/index.js';
-import NotificationService from './notification.service.js';
+const { Op } = require('sequelize');
+const AppError = require('../../utils/appError.js');
+const db = require('../../../models/index.js');
+const NotificationService = require('./notification.service.js');
 
 class ExpenditureRetirementService {
     /**
@@ -447,4 +447,4 @@ class ExpenditureRetirementService {
     }
 }
 
-export default ExpenditureRetirementService;
+module.exports = ExpenditureRetirementService;
