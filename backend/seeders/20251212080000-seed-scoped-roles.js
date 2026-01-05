@@ -163,6 +163,78 @@ module.exports = {
         createdAt: now,
         updatedAt: now,
       },
+      // Expenditures
+      {
+        name: 'View Expenditures',
+        code: 'expenditure:read',
+        module: 'expenditure',
+        description: 'view all expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'Create Expenditures',
+        code: 'expenditure:create',
+        module: 'expenditure',
+        description: 'create new expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'Update Expenditures',
+        code: 'expenditure:update',
+        module: 'expenditure',
+        description: 'update expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'Delete Expenditures',
+        code: 'expenditure:trash',
+        module: 'expenditure',
+        description: 'trash expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'View Expenditures',
+        code: 'expenditure-category:read',
+        module: 'expenditure',
+        description: 'view all expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'Create Expenditures',
+        code: 'expenditure-category:create',
+        module: 'expenditure',
+        description: 'create new expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'Update Expenditures',
+        code: 'expenditure-category:update',
+        module: 'expenditure',
+        description: 'update expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
+        name: 'Delete Expenditures',
+        code: 'expenditure-category:trash',
+        module: 'expenditure',
+        description: 'trash expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
 
     // Fetch role and permission IDs to link them

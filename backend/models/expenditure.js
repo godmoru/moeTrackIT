@@ -51,6 +51,12 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'expenditureId',
                 as: 'retirement'
             });
+
+            // Expenditure belongs to one category
+            Expenditure.belongsTo(models.ExpenditureCategory, {
+                foreignKey: 'expenditureCategoryId',
+                as: 'categoryId'
+            });
         }
 
         /**
@@ -106,6 +112,14 @@ module.exports = (sequelize, DataTypes) => {
                 type: DataTypes.UUID,
                 defaultValue: DataTypes.UUIDV4,
                 primaryKey: true,
+            },
+            expenditureCategoryId: {
+                type: DataTypes.UUID,
+                allowNull: false,
+                references: {
+                    model: 'ExpenditureCategory',
+                    key: 'id'
+                }
             },
             budgetLineItemId: {
                 type: DataTypes.INTEGER,

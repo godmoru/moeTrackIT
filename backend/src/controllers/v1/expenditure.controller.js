@@ -133,6 +133,28 @@ const getExpenditureStats = catchAsync(async (req, res) => {
     });
 });
 
+const createExpenditureCategory = catchAsync(async (req, res) => {
+
+});
+
+const getAllExpenditureCategories = catchAsync(async (req, res) => {
+
+});
+
+const getExpenditureCategoryById = catchAsync(async (req, res) => {
+
+});
+
+const updateExpenditureCategory = catchAsync(async (req, res) => {
+
+});
+
+const deleteExpenditureCategory = catchAsync(async (req, res) => {
+
+});
+
+
+
 module.exports = {
     createExpenditure,
     getAllExpenditures,
@@ -143,4 +165,12 @@ module.exports = {
     rejectExpenditure,
     deleteExpenditure,
     getExpenditureStats,
+
+    // ExpenditureCategories
+    createExpenditureCategory,
+    getAllExpenditureCategories,
+    getExpenditureCategoryById,
+    updateExpenditureCategory,
+    deleteExpenditureCategory,
+
 };
