@@ -26,6 +26,9 @@ router.post('/reset-password', authController.resetPasswordWithToken);
 // Admin-only: Reset a user's password directly
 router.post('/admin-reset-password', authMiddleware, requireRole('super_admin'), authController.adminResetPassword);
 
+// Get current user details
+router.get('/me', authMiddleware, authController.getMe);
+
 // Authenticated user changes own password
 router.post('/change-password', authMiddleware, authController.changePassword);
 

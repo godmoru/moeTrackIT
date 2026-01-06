@@ -15,6 +15,12 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'uploadedBy',
                 as: 'uploader'
             });
+
+            // Retirement attachment verified by user
+            RetirementAttachment.belongsTo(models.User, {
+                foreignKey: 'verifiedBy',
+                as: 'verifier'
+            });
         }
 
         /**
@@ -87,9 +93,31 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 defaultValue: 'other',
             },
+            amount: {
+                type: DataTypes.DECIMAL(20, 2),
+                allowNull: true,
+                comment: 'Amount associated with this specific document'
+            },
             uploadedBy: {
                 type: DataTypes.INTEGER,
                 allowNull: false,
+            },
+            verified: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false,
+                allowNull: false
+            },
+            verifiedBy: {
+                type: DataTypes.INTEGER,
+                allowNull: true,
+            },
+            verifiedAt: {
+                type: DataTypes.DATE,
+                allowNull: true
+            },
+            verificationNotes: {
+                type: DataTypes.TEXT,
+                allowNull: true
             },
         },
         {

@@ -1,104 +1,104 @@
-import { v4 as uuidv4 } from 'uuid';
+const { v4: uuidv4 } = require('uuid');
 
-export default {
+module.exports = {
   async up(queryInterface, Sequelize) {
     const categories = [
       {
-        id: uuidv4(),
-        name: 'Personnel Costs',
-        code: 'PC',
+        reference: 'CAT-202501-0001',
+        cat_name: 'Personnel Costs',
         description: 'Salaries, wages, and benefits for employees',
-        isActive: true,
+        status: 'active',
+        createdBy: 1, // Assuming admin user has ID 1
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Office Supplies',
-        code: 'OS',
+        reference: 'CAT-202501-0002',
+        cat_name: 'Office Supplies',
         description: 'Office stationery and supplies',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Travel & Transportation',
-        code: 'TT',
+        reference: 'CAT-202501-0003',
+        cat_name: 'Travel & Transportation',
         description: 'Local and international travel expenses',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Training & Development',
-        code: 'TD',
+        reference: 'CAT-202501-0004',
+        cat_name: 'Training & Development',
         description: 'Staff training and capacity building',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Maintenance',
-        code: 'MT',
+        reference: 'CAT-202501-0005',
+        cat_name: 'Maintenance',
         description: 'Equipment and facility maintenance',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Utilities',
-        code: 'UT',
+        reference: 'CAT-202501-0006',
+        cat_name: 'Utilities',
         description: 'Electricity, water, internet, and other utilities',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Capital Expenditure',
-        code: 'CAPEX',
+        reference: 'CAT-202501-0007',
+        cat_name: 'Capital Expenditure',
         description: 'Purchase of fixed assets and equipment',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Consultancy Services',
-        code: 'CS',
+        reference: 'CAT-202501-0008',
+        cat_name: 'Consultancy Services',
         description: 'Professional and consultancy services',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Grants & Contributions',
-        code: 'GC',
+        reference: 'CAT-202501-0009',
+        cat_name: 'Grants & Contributions',
         description: 'Grants and contributions to other organizations',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       },
       {
-        id: uuidv4(),
-        name: 'Other Expenses',
-        code: 'OE',
+        reference: 'CAT-202501-0010',
+        cat_name: 'Other Expenses',
         description: 'Miscellaneous expenses not covered by other categories',
-        isActive: true,
+        status: 'active',
+        createdBy: 1,
         createdAt: new Date(),
         updatedAt: new Date()
       }
     ];
 
-    await queryInterface.bulkInsert('BudgetCategories', categories, {});
+    await queryInterface.bulkInsert('ExpenditureCategories', categories, {});
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.bulkDelete('BudgetCategories', null, {});
+    await queryInterface.bulkDelete('ExpenditureCategories', null, {});
   }
 };

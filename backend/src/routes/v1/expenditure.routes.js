@@ -44,15 +44,15 @@ router
     .route('/:id')
     .get(requirePermission('expenditure:read'), expenditureController.getExpenditure)
     .patch(
-        requirePermission('expenditure:create'),
+        requirePermission('expenditure:update'),
         updateExpenditureValidation,
         expenditureController.updateExpenditure
     )
-    .delete(requirePermission('expenditure:create'), expenditureController.deleteExpenditure);
+    .delete(requirePermission('expenditure:trash'), expenditureController.deleteExpenditure);
 
 router
     .route('/:id/submit')
-    .post(requirePermission('expenditure:create'), expenditureController.submitExpenditure);
+    .post(requirePermission('expenditure:update'), expenditureController.submitExpenditure);
 
 router
     .route('/:id/approve')

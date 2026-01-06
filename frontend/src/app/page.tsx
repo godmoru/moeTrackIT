@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Footer } from "@/components/Footer";
 import { useEffect, useState } from "react";
+import { Menu, X } from "lucide-react";
 
 type LandingMetrics = {
   institutions: number | null;
@@ -27,6 +28,7 @@ export default function Home() {
     lgas: null,
     collectionRate: null,
   });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     async function loadMetrics() {
@@ -115,7 +117,7 @@ export default function Home() {
   }, []);
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="border-b bg-white">
+      <header className="sticky top-0 z-50 border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             {/* <div className="h-8 w-8 rounded-full bg-green-700" /> */}
@@ -130,7 +132,9 @@ export default function Home() {
               </span>
             </div>
           </div>
-          <nav className="flex items-center gap-4 text-sm font-medium text-gray-700">
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-4 text-sm font-medium text-gray-700">
             <Link href="/about" className="hover:text-green-700">
               About
             </Link>
@@ -145,12 +149,43 @@ export default function Home() {
               className="rounded-full bg-green-700 px-4 py-2 text-white hover:bg-green-800"
             >
               Admin Login
-              {/* Ifalreay logged in, change to Admin Area */}
-
             </Link>
           </nav>
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden text-gray-700 hover:text-green-700"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-      </header>
+
+        {/* Mobile Nav */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t bg-white px-4 py-4 shadow-md">
+            <nav className="flex flex-col gap-4 text-sm font-medium text-gray-700">
+              <Link href="/about" className="hover:text-green-700" onClick={() => setIsMenuOpen(false)}>
+                About
+              </Link>
+              <Link href="#how-it-works" className="hover:text-green-700" onClick={() => setIsMenuOpen(false)}>
+                How it works
+              </Link>
+              <Link href="#benefits" className="hover:text-green-700" onClick={() => setIsMenuOpen(false)}>
+                Benefits
+              </Link>
+              <Link
+                href="/login"
+                className="inline-block w-fit rounded-full bg-green-700 px-4 py-2 text-white hover:bg-green-800"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Admin Login
+              </Link>
+            </nav>
+          </div>
+        )}
+
+      </header >
 
       <main className="flex-1">
         <section className="bg-green-700 text-white">
@@ -377,6 +412,6 @@ export default function Home() {
       </main>
 
       <Footer />
-    </div>
+    </div >
   );
 }

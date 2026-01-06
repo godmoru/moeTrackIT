@@ -25,6 +25,17 @@ router.post('/initialize', authMiddleware, requireRole('principal', 'area_educat
 // Verify payment after Paystack callback
 router.get('/verify/:reference', authMiddleware, paymentController.verifyOnlinePayment);
 
+// --- REMITA ROUTES ---
+// Initialize Remita Payment
+router.post('/remita/initialize', authMiddleware, requireRole('principal', 'area_education_officer', 'super_admin', 'officer', 'hq_cashier'), paymentController.initializeRemitaPayment);
+
+// Verify Remita Payment
+router.get('/remita/verify/:rrr', authMiddleware, paymentController.verifyRemitaPayment);
+
+// Remita Webhook
+router.post('/remita/webhook', paymentController.remitaWebhook);
+// ---------------------
+
 // All authenticated roles can view invoices for payments they can see
 router.get('/:id/invoice.pdf', authMiddleware, paymentController.paymentInvoice);
 

@@ -369,100 +369,121 @@ export default function RevenuePage() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">
-                Amount Paid (NGN)
-              </label>
-              <input
-                value={newCollection.amountPaid}
-                onChange={(e) =>
-                  setNewCollection((prev) => ({
-                    ...prev,
-                    amountPaid: e.target.value,
-                  }))
-                }
-                type="number"
-                min={0}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="Enter amount paid"
-              />
-            </div>
+            {(() => {
+              const selectedAssessment = assessments.find(
+                (a) => a.id === Number(newCollection.assessmentId)
+              );
+              const isPaid = selectedAssessment?.status === "paid" || selectedAssessment?.status === "confirmed";
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">
-                Payment Date
-              </label>
-              <input
-                value={newCollection.paymentDate}
-                onChange={(e) =>
-                  setNewCollection((prev) => ({
-                    ...prev,
-                    paymentDate: e.target.value,
-                  }))
-                }
-                type="date"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-              />
-            </div>
+              return (
+                <>
+                  {isPaid && (
+                    <div className="md:col-span-2 rounded-md bg-yellow-50 p-2 text-xs text-yellow-800">
+                      This assessment has already been paid.
+                    </div>
+                  )}
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">
-                Payment Method
-              </label>
-              <select
-                value={newCollection.method}
-                onChange={(e) =>
-                  setNewCollection((prev) => ({
-                    ...prev,
-                    method: e.target.value,
-                  }))
-                }
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-              >
-                <option value="">-- Select Method --</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cash">Cash</option>
-                <option value="pos">POS</option>
-                <option value="cheque">Cheque</option>
-              </select>
-            </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Amount Paid (NGN)
+                    </label>
+                    <input
+                      value={newCollection.amountPaid}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          amountPaid: e.target.value,
+                        }))
+                      }
+                      type="number"
+                      min={0}
+                      disabled={isPaid}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+                      placeholder="Enter amount paid"
+                    />
+                  </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <label className="block text-xs font-medium text-gray-700">
-                Reference / Purpose
-              </label>
-              <input
-                value={newCollection.reference}
-                onChange={(e) =>
-                  setNewCollection((prev) => ({
-                    ...prev,
-                    reference: e.target.value,
-                  }))
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="e.g. 2024 License Renewal (optional)"
-              />
-            </div>
-          </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Payment Date
+                    </label>
+                    <input
+                      value={newCollection.paymentDate}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          paymentDate: e.target.value,
+                        }))
+                      }
+                      type="date"
+                      disabled={isPaid}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+                    />
+                  </div>
 
-          <div className="flex justify-end gap-2 pt-2 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                if (!savingCollection) setShowNewCollection(false);
-              }}
-              className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={submitNewCollection}
-              disabled={savingCollection}
-              className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70"
-            >
-              {savingCollection ? "Recording..." : "Record Payment"}
-            </button>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Payment Method
+                    </label>
+                    <select
+                      value={newCollection.method}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          method: e.target.value,
+                        }))
+                      }
+                      disabled={isPaid}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+                    >
+                      <option value="">-- Select Method --</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="cash">Cash</option>
+                      <option value="pos">POS</option>
+                      <option value="cheque">Cheque</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Reference / Purpose
+                    </label>
+                    <input
+                      value={newCollection.reference}
+                      onChange={(e) =>
+                        setNewCollection((prev) => ({
+                          ...prev,
+                          reference: e.target.value,
+                        }))
+                      }
+                      disabled={isPaid}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+                      placeholder="e.g. 2024 License Renewal (optional)"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 flex justify-end gap-2 pt-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!savingCollection) setShowNewCollection(false);
+                      }}
+                      className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={submitNewCollection}
+                      disabled={savingCollection || isPaid}
+                      className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      {savingCollection ? "Recording..." : "Record Payment"}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </Modal>

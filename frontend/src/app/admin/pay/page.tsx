@@ -33,6 +33,7 @@ export default function PayPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [payerEmail, setPayerEmail] = useState("");
   const [payerName, setPayerName] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"paystack" | "remita">("remita"); // Default to Remita as requested
 
   // Filter state for AEOs with multiple schools
   const [lgaFilter, setLgaFilter] = useState<string>("");
@@ -69,7 +70,7 @@ export default function PayPage() {
           const user = JSON.parse(userStr);
           if (user.email) setPayerEmail(user.email);
           if (user.name) setPayerName(user.name);
-        } catch {}
+        } catch { }
       }
     } catch (err: any) {
       setError(err.message || "Failed to load assessments");
@@ -127,7 +128,12 @@ export default function PayPage() {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("Not authenticated");
 
-      const res = await fetch(`${API_BASE}/payments/initialize`, {
+      // Choose endpoint key based on method
+      const endpoint = paymentMethod === "remita"
+        ? `${API_BASE}/payments/remita/initialize`
+        : `${API_BASE}/payments/initialize`;
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -147,12 +153,45 @@ export default function PayPage() {
         throw new Error(data.message || "Failed to initialize payment");
       }
 
-      // Redirect to Paystack checkout
-      if (data.authorizationUrl) {
-        window.location.href = data.authorizationUrl;
+      if (paymentMethod === "remita") {
+        // Remita Flow
+        if (data.rrr) {
+          await Swal.fire({
+            icon: "success",
+            title: "RRR Generated Successfully",
+            html: `
+              <div class="text-left">
+                <p class="mb-2">Your Remita Retrieval Reference (RRR) is:</p>
+                <div class="bg-gray-100 p-3 rounded-lg text-center text-xl font-bold tracking-wider select-all cursor-pointer mb-4" onclick="navigator.clipboard.writeText('${data.rrr}'); Swal.showToast({ title: 'Copied!', icon: 'success' })">
+                  ${data.rrr}
+                </div>
+                <p class="text-sm text-gray-600 mb-4">
+                  Please proceed to any bank branch with this RRR or pay online using Remita.
+                </p>
+                <a href="https://remita.net/pay-bills" target="_blank" rel="noopener noreferrer" 
+                   class="block w-full text-center bg-orange-600 text-white rounded-md px-4 py-2 font-medium hover:bg-orange-700">
+                  Complete Payment on Remita
+                </a>
+              </div>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true,
+          });
+          // Refresh assessments to show pending
+          loadAssessments();
+          setSelectedAssessment(null);
+        } else {
+          throw new Error("No RRR received from Remita");
+        }
       } else {
-        throw new Error("No payment URL received");
+        // Paystack Flow
+        if (data.authorizationUrl) {
+          window.location.href = data.authorizationUrl;
+        } else {
+          throw new Error("No payment URL received");
+        }
       }
+
     } catch (err: any) {
       await Swal.fire({
         icon: "error",
@@ -281,9 +320,8 @@ export default function PayPage() {
                       pendingAssessments.map((a) => (
                         <tr
                           key={a.id}
-                          className={`hover:bg-gray-50 ${
-                            selectedAssessment?.id === a.id ? "bg-green-50" : ""
-                          }`}
+                          className={`hover:bg-gray-50 ${selectedAssessment?.id === a.id ? "bg-green-50" : ""
+                            }`}
                         >
                           <td className="px-3 py-2 text-[11px] text-gray-900">
                             <div>{a.entityName}</div>
@@ -463,8 +501,7 @@ export default function PayPage() {
                   </div>
 
                   <div className="rounded-md bg-blue-50 p-3 text-[10px] text-blue-800">
-                    <strong>Secure Payment:</strong> You will be redirected to Paystack to complete
-                    your payment securely. We accept cards, bank transfers, and USSD.
+                    <strong>Secure Payment:</strong> You will be redirected to complete your payment securely via {paymentMethod === 'remita' ? 'Remita' : 'Paystack'}.
                   </div>
                 </div>
               ) : (

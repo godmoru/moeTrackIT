@@ -5,29 +5,12 @@ import Swal from "sweetalert2";
 import { Modal } from "@/components/Modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
-
-interface Expenditure {
-  id: number;
-  referenceNumber: string;
-  description: string;
-  amount: number;
-  status: string;
-  date: string;
-  category?: { name: string };
-  approvedBy?: { name: string };
-  createdBy?: { name: string };
-}
-
-interface CategoryOption {
-  id: number;
-  name: string;
-}
+import { expendituresApi, expenditureCategoriesApi } from "@/lib/api/expenditure.api";
+import type { Expenditure, ExpenditureCategory } from "@/types/expenditure.types";
 
 export default function ExpendituresPage() {
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categories, setCategories] = useState<ExpenditureCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -46,46 +29,26 @@ export default function ExpendituresPage() {
   });
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        const token =
-          typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-        
-        const [expendituresRes, categoriesRes] = await Promise.all([
-          fetch(`${API_BASE}/expenditures`, {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          }),
-          fetch(`${API_BASE}/expenditure-categories`, {
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          }),
-        ]);
-
-        if (!expendituresRes.ok || !categoriesRes.ok) {
-          throw new Error("Failed to load data");
-        }
-
-        const expendituresBody = await expendituresRes.json();
-        const categoriesBody = await categoriesRes.json();
-
-        setExpenditures(expendituresBody);
-        setCategories(categoriesBody);
-      } catch (err: any) {
-        setError(err.message || "Failed to load expenditures");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [expendituresResponse, categoriesResponse] = await Promise.all([
+        expendituresApi.getAll(),
+        expenditureCategoriesApi.getAll(),
+      ]);
+
+      setExpenditures(expendituresResponse.data.items);
+      setCategories(categoriesResponse.data.items);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredExpenditures = expenditures.filter((e) => {
     if (statusFilter !== "all" && (e.status || "") !== statusFilter) return false;
@@ -132,7 +95,21 @@ export default function ExpendituresPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">Expenditures</h1>
+        <div className="flex items-center space-x-4">
+          <h1 className="text-lg font-semibold text-gray-900">Expenditures</h1>
+          <Link
+            href="/admin/expenditures/categories"
+            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            Manage Categories
+          </Link>
+          <Link
+            href="/admin/expenditures/retirements"
+            className="rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
+          >
+            Retirements
+          </Link>
+        </div>
         <Link
           href="/admin/expenditures/create"
           className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
@@ -214,45 +191,57 @@ export default function ExpendituresPage() {
                   <th className="px-3 py-2 font-medium text-right">Action</th>
                 </tr>
               </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {expenditures.length === 0 ? (
-                            <tr>
-                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                                    No expenditures found. Create your first expenditure to get started.
-                                </td>
-                            </tr>
-                        ) : (
-                            expenditures.map((exp) => (
-                                <tr key={exp.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {exp.referenceNumber}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        <div className="max-w-xs truncate">{exp.description}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        ₦{exp.amount.toLocaleString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(exp.status)}`}>
-                                            {exp.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(exp.date).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <Link
-                                            href={`/admin/expenditures/${exp.id}`}
-                                            className="text-green-600 hover:text-green-900"
-                                        >
-                                            View Details
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
+                    <tbody>
+                {filteredExpenditures.length === 0 && (
+                  <tr>
+                    <td className="px-3 py-2 text-xs text-gray-500" colSpan={8}>
+                      No expenditures match the selected filters.
+                    </td>
+                  </tr>
+                )}
+                {filteredExpenditures.map((exp, index) => {
+                  const dateLabel = exp.date
+                    ? new Date(exp.date).toLocaleDateString("en-NG")
+                    : "-";
+                  return (
+                    <tr key={exp.id} className="border-t text-gray-800">
+                      <td className="px-3 py-2 text-xs">{index + 1}</td>
+                      <td className="px-3 py-2 text-xs">{dateLabel}</td>
+                      <td className="px-3 py-2 text-xs">{exp.referenceNumber || "-"}</td>
+                      <td className="px-3 py-2 text-xs">{exp.description || "-"}</td>
+                      <td className="px-3 py-2 text-xs">{exp.category?.name || "-"}</td>
+                      <td className="px-3 py-2 text-right text-xs">
+                        ₦{Number(exp.amount || 0).toLocaleString("en-NG", {
+                          maximumFractionDigits: 2,
+                        })}
+                      </td>
+                      <td className="px-3 py-2 text-xs capitalize">
+                        <span
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
+                            exp.status === "approved"
+                              ? "bg-green-100 text-green-700"
+                              : exp.status === "rejected"
+                              ? "bg-red-100 text-red-700"
+                              : exp.status === "submitted"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {exp.status || "-"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right text-xs">
+                        <Link
+                          href={`/admin/expenditures/${exp.id}`}
+                          className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                          View Details
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
                 </table>
             </div>
         </>

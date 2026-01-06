@@ -45,7 +45,7 @@ export interface BudgetLineItemUtilization {
     };
 }
 
-// Expenditure Types
+// Expenditure
 export interface Expenditure {
     id: string;
     budgetLineItemId: number;
@@ -196,6 +196,27 @@ export interface EarlyWarning {
     balance: number;
 }
 
+// Expenditure Category Types
+export interface ExpenditureCategory {
+    id: string;
+    reference: string;
+    cat_name: string;
+    description: string;
+    status: 'active' | 'suspended';
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+    creator?: User;
+    expenditures?: Expenditure[];
+}
+
+// User Type
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+
 // Form Types
 export interface BudgetLineItemFormData {
     code: string;
@@ -230,4 +251,9 @@ export interface RetirementFormData {
     purpose: string;
     remarks?: string;
     retirementDate?: string;
+}
+
+export interface ExpenditureCategoryFormData {
+    cat_name: string;
+    description: string;
 }

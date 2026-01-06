@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
     BudgetLineItem,
     Expenditure,
+    ExpenditureCategory,
     ExpenditureRetirement,
     PaginatedResponse,
     ApiResponse,
@@ -161,6 +162,24 @@ export const attachmentsApi = {
 
     delete: (id: string) =>
         api.delete(`/attachments/${id}`),
+};
+
+// Expenditure Categories API
+export const expenditureCategoriesApi = {
+    getAll: (params?: any) =>
+        api.get<PaginatedResponse<ExpenditureCategory>>('/expenditure-categories', { params }),
+
+    getById: (id: string) =>
+        api.get<ApiResponse<{ category: ExpenditureCategory }>>(`/expenditure-categories/${id}`),
+
+    create: (data: any) =>
+        api.post<ApiResponse<{ category: ExpenditureCategory }>>('/expenditure-categories', data),
+
+    update: (id: string, data: any) =>
+        api.patch<ApiResponse<{ category: ExpenditureCategory }>>(`/expenditure-categories/${id}`, data),
+
+    delete: (id: string) =>
+        api.delete(`/expenditure-categories/${id}`),
 };
 
 // Dashboard API

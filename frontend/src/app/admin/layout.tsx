@@ -8,7 +8,7 @@ import { UserHeader } from "@/components/UserHeader";
 // All supported roles
 const ALL_ROLES = ["super_admin", "admin", "system_admin", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
 const ADMIN_ROLES = ["super_admin", "admin", "system_admin"];
-const REVENUE_ROLES = ["super_admin", "admin", "officer", "cashier", "account_officer", "area_education_officer","principal"];
+const REVENUE_ROLES = ["super_admin", "admin", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
 
 // Navigation items with role-based visibility
 const navItems = [
@@ -113,6 +113,14 @@ function NavIcon({ href }: { href: string }) {
     );
   }
 
+  if (href === "menu") {
+    return (
+      <svg {...baseProps}>
+        <path d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    );
+  }
+
   return (
     <svg {...baseProps}>
       <circle cx="12" cy="12" r="4" />
@@ -187,9 +195,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 key={item.href}
                 href={item.href}
                 title={item.title}
-                className={`block rounded-md px-3 py-2 text-xs font-medium transition-colors ${
-                  active ? "bg-green-700 text-white" : "text-green-100 hover:bg-green-700/60"
-                }`}
+                className={`block rounded-md px-3 py-2 text-xs font-medium transition-colors ${active ? "bg-green-700 text-white" : "text-green-100 hover:bg-green-700/60"
+                  }`}
               >
                 <span className="flex items-center gap-2">
                   <NavIcon href={item.href} />
@@ -225,7 +232,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setMobileNavOpen((prev) => !prev)}
-              className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 md:hidden"
             >
               {mobileNavOpen ? "Close" : "Menu"}
             </button>
@@ -252,11 +259,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`block rounded-md px-3 py-2 font-medium transition-colors ${
-                      active
+                    className={`block rounded-md px-3 py-2 font-medium transition-colors ${active
                         ? "bg-green-100 text-green-800"
                         : "text-gray-700 hover:bg-gray-50"
-                    }`}
+                      }`}
                     onClick={() => setMobileNavOpen(false)}
                     title={item.title}
                   >
@@ -270,7 +276,57 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </nav>
           )}
         </header>
-        <main className="flex-1 px-4 py-4">{children}</main>
+        <main className="flex-1 px-4 py-4 pb-24 md:pb-4">{children}</main>
+
+        {/* Mobile Bottom Tab Menu */}
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-gray-200 bg-white px-2 py-2 shadow-lg md:hidden">
+          {/* Main quick links */}
+          {[
+            { label: "Dashboard", href: "/admin/dashboard" },
+            { label: "Assessments", href: "/admin/assessments" },
+            { label: "Payments", href: "/admin/payments" },
+          ].map((link) => {
+            const active = pathname.startsWith(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileNavOpen(false)}
+                className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-md py-1 text-[10px] font-medium transition-colors ${active ? "text-green-700" : "text-gray-500 hover:bg-gray-50"
+                  }`}
+              >
+                <NavIcon href={link.href} />
+                <span>{link.label}</span>
+              </Link>
+            );
+          })}
+
+          {/* Revenue Link (Role Restricted) */}
+          {userRole && REVENUE_ROLES.includes(userRole) && (
+            <Link
+              href="/admin/revenue"
+              onClick={() => setMobileNavOpen(false)}
+              className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-md py-1 text-[10px] font-medium transition-colors ${pathname.startsWith("/admin/revenue")
+                ? "text-green-700"
+                : "text-gray-500 hover:bg-gray-50"
+                }`}
+            >
+              <NavIcon href="/admin/revenue" />
+              <span>Revenue</span>
+            </Link>
+          )}
+
+          {/* More / Menu Toggle */}
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((prev) => !prev)}
+            className={`flex flex-1 flex-col items-center justify-center gap-1 rounded-md py-1 text-[10px] font-medium transition-colors ${mobileNavOpen ? "text-green-700 bg-green-50" : "text-gray-500 hover:bg-gray-50"
+              }`}
+          >
+            <NavIcon href="menu" />
+            <span>More</span>
+          </button>
+        </div>
       </div>
     </div>
   );

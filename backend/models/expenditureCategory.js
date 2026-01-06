@@ -4,58 +4,24 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class ExpenditureCategory extends Model {
         static associate(models) {
-            
-            // ExpenditureCategory has many expenditures
-            ExpenditureCategory.hasMany(models.Expenditure, {
-                foreignKey: 'expenditureCategoryId',
-                as: 'categoryId'
-            });
-        }
+        // ExpenditureCategory has many expenditures
+        ExpenditureCategory.hasMany(models.Expenditure, {
+            foreignKey: 'expenditureCategoryId',
+            as: 'expenditures'
+        });
+
+        // ExpenditureCategory belongs to creator
+        ExpenditureCategory.belongsTo(models.User, {
+            foreignKey: 'createdBy',
+            as: 'creator'
+        });
+    }
 
         /**
-         * Generate unique reference number
+         * Check if category is active
          */
-        static async generateReferenceNumber() {
-            const year = new Date().getFullYear();
-            const month = String(new Date().getMonth() + 1).padStart(2, '0');
-
-            // Find the last expenditure for this month
-            const lastExpenditure = await Expenditure.findOne({
-                where: sequelize.where(
-                    sequelize.fn('DATE_FORMAT', sequelize.col('createdAt'), '%Y-%m'),
-                    `${year}-${month}`
-                ),
-                order: [['createdAt', 'DESC']],
-            });
-
-            let sequence = 1;
-            if (lastExpenditure && lastExpenditure.referenceNumber) {
-                const lastSequence = parseInt(lastExpenditure.referenceNumber.split('-').pop());
-                sequence = lastSequence + 1;
-            }
-
-            return `EXP-${year}${month}-${String(sequence).padStart(4, '0')}`;
-        }
-
-        /**
-         * Check if expenditure can be edited
-         */
-        canEdit() {
-            return this.status === 'draft';
-        }
-
-        /**
-         * Check if expenditure can be deleted
-         */
-        canDelete() {
-            return this.status === 'draft';
-        }
-
-        /**
-         * Check if expenditure can be approved
-         */
-        canApprove() {
-            return this.status === 'submitted';
+        isActive() {
+            return this.status === 'active';
         }
     }
 

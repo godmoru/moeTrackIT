@@ -201,8 +201,17 @@ module.exports = {
       },
 
       {
+        name: 'Approve Expenditures',
+        code: 'expenditure:approve',
+        module: 'expenditure',
+        description: 'approve expenditures',
+        createdAt: now,
+        updatedAt: now,
+      },
+
+      {
         name: 'View Expenditures',
-        code: 'expenditure-category:read',
+        code: 'expenditure:read',
         module: 'expenditure',
         description: 'view all expenditures',
         createdAt: now,
@@ -211,7 +220,7 @@ module.exports = {
 
       {
         name: 'Create Expenditures',
-        code: 'expenditure-category:create',
+        code: 'expenditure:create',
         module: 'expenditure',
         description: 'create new expenditures',
         createdAt: now,
@@ -220,7 +229,7 @@ module.exports = {
 
       {
         name: 'Update Expenditures',
-        code: 'expenditure-category:update',
+        code: 'expenditure:update',
         module: 'expenditure',
         description: 'update expenditures',
         createdAt: now,
@@ -229,7 +238,7 @@ module.exports = {
 
       {
         name: 'Delete Expenditures',
-        code: 'expenditure-category:trash',
+        code: 'expenditure:trash',
         module: 'expenditure',
         description: 'trash expenditures',
         createdAt: now,
@@ -239,13 +248,14 @@ module.exports = {
 
     // Fetch role and permission IDs to link them
     const [roles] = await queryInterface.sequelize.query(
-      `SELECT id, slug FROM "Roles" WHERE slug IN ('principal', 'area_education_officer')`
+      `SELECT id, slug FROM "Roles" WHERE slug IN ('super_admin', 'system_admin', 'admin', 'hon_commissioner', 'perm_secretary', 'director', 'hq_cashier', 'officer', 'principal', 'area_education_officer')`
     );
     const [permissions] = await queryInterface.sequelize.query(
       `SELECT id, code FROM "Permissions" WHERE code IN (
         'entity:view_own', 'entity:view_lga',
         'assessment:view_own', 'assessment:view_lga',
-        'payment:view_own', 'payment:view_lga', 'payment:record_lga'
+        'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+        'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'
       )`
     );
 
@@ -257,9 +267,147 @@ module.exports = {
 
     const rolePermissions = [];
 
+    // Super Admin gets all permissions
+    if (roleMap.super_admin) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.super_admin,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // System Admin gets all permissions
+    if (roleMap.system_admin) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.system_admin,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // Admin gets all permissions
+    if (roleMap.admin) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.admin,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // Hon. Commissioner gets all permissions
+    if (roleMap.hon_commissioner) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.hon_commissioner,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // Permanent Secretary gets all permissions
+    if (roleMap.perm_secretary) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.perm_secretary,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // Director gets all permissions
+    if (roleMap.director) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.director,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // HQ Cashier gets all permissions
+    if (roleMap.hq_cashier) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.hq_cashier,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
+    // Officer gets all permissions
+    if (roleMap.officer) {
+      ['entity:view_own', 'entity:view_lga',
+       'assessment:view_own', 'assessment:view_lga',
+       'payment:view_own', 'payment:view_lga', 'payment:record_lga',
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'].forEach((code) => {
+        if (permMap[code]) {
+          rolePermissions.push({
+            roleId: roleMap.officer,
+            permissionId: permMap[code],
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      });
+    }
+
     // Principal permissions
     if (roleMap.principal) {
-      ['entity:view_own', 'assessment:view_own', 'payment:view_own'].forEach((code) => {
+      ['entity:view_own', 'assessment:view_own', 'payment:view_own', 
+       'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:approve',
+       'expenditure-category:read', 'expenditure-category:create', 'expenditure-category:update'].forEach((code) => {
         if (permMap[code]) {
           rolePermissions.push({
             roleId: roleMap.principal,
@@ -278,6 +426,8 @@ module.exports = {
         'assessment:view_lga',
         'payment:view_lga',
         'payment:record_lga',
+        'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:approve',
+        'expenditure-category:read', 'expenditure-category:create', 'expenditure-category:update'
       ].forEach((code) => {
         if (permMap[code]) {
           rolePermissions.push({
@@ -306,10 +456,11 @@ module.exports = {
         'payment:view_own',
         'payment:view_lga',
         'payment:record_lga',
+        'expenditure:read', 'expenditure:create', 'expenditure:update', 'expenditure:trash', 'expenditure:approve'
       ],
     });
     await queryInterface.bulkDelete('Roles', {
-      slug: ['principal', 'area_education_officer'],
+      slug: ['super_admin', 'system_admin', 'admin', 'hon_commissioner', 'perm_secretary', 'director', 'hq_cashier', 'officer', 'principal', 'area_education_officer'],
     });
   },
 };

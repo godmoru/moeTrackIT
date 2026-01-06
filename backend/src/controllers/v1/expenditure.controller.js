@@ -1,4 +1,5 @@
 const ExpenditureService = require('../../services/v1/expenditure.service.js');
+const ExpenditureCategoryService = require('../../services/v1/expenditureCategory.service.js');
 const catchAsync = require('../../utils/catchAsync.js');
 
 /**
@@ -134,23 +135,52 @@ const getExpenditureStats = catchAsync(async (req, res) => {
 });
 
 const createExpenditureCategory = catchAsync(async (req, res) => {
+    const category = await ExpenditureCategoryService.createExpenditureCategory(req.body, req.user.id);
 
+    res.status(201).json({
+        status: 'success',
+        data: { category },
+    });
 });
 
 const getAllExpenditureCategories = catchAsync(async (req, res) => {
+    const result = await ExpenditureCategoryService.getAllExpenditureCategories(req.query);
 
+    res.status(200).json({
+        status: 'success',
+        ...result,
+    });
 });
 
 const getExpenditureCategoryById = catchAsync(async (req, res) => {
+    const category = await ExpenditureCategoryService.getExpenditureCategoryById(req.params.id);
 
+    res.status(200).json({
+        status: 'success',
+        data: { category },
+    });
 });
 
 const updateExpenditureCategory = catchAsync(async (req, res) => {
+    const category = await ExpenditureCategoryService.updateExpenditureCategory(
+        req.params.id,
+        req.body,
+        req.user.id
+    );
 
+    res.status(200).json({
+        status: 'success',
+        data: { category },
+    });
 });
 
 const deleteExpenditureCategory = catchAsync(async (req, res) => {
+    await ExpenditureCategoryService.deleteExpenditureCategory(req.params.id);
 
+    res.status(204).json({
+        status: 'success',
+        data: null,
+    });
 });
 
 

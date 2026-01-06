@@ -23,7 +23,7 @@ const createExpenditureValidation = [
 router
     .route('/')
     .get(
-        // requirePermission('expenditure-categories:read'), 
+        requirePermission('expenditure-category:read'), 
         expenditureController.getAllExpenditureCategories)
     .post(
         requirePermission('expenditure-category:create'),
@@ -38,11 +38,14 @@ router
         requirePermission('expenditure-category:read'),
          expenditureController.getExpenditureCategoryById)
     .patch(
-        // requirePermission('expenditure-category:create'),
+        requirePermission('expenditure-category:update'),
         // updateExpenditureValidation,
         expenditureController.updateExpenditureCategory
     )
-    .delete(requirePermission('expenditure-category:create'), expenditureController.deleteExpenditure);
+    .delete(
+        requirePermission('expenditure-category:trash'), 
+        expenditureController.deleteExpenditureCategory
+    );
 
 
 

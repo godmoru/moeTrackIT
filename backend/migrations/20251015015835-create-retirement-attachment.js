@@ -56,7 +56,7 @@ module.exports = {
       comment: 'Amount associated with this specific document'
     },
     uploadedBy: {
-      type: Sequelize.UUID,
+      type: Sequelize.INTEGER,
       allowNull: false,
       references: {
         model: 'Users',
@@ -71,7 +71,7 @@ module.exports = {
       allowNull: false
     },
     verifiedBy: {
-      type: Sequelize.UUID,
+      type: Sequelize.INTEGER,
       allowNull: true,
       references: {
         model: 'Users',
@@ -96,7 +96,7 @@ module.exports = {
     updatedAt: {
       allowNull: false,
       type: Sequelize.DATE,
-      defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+      defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
     }
   });
 

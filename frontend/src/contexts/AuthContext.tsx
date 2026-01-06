@@ -27,6 +27,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,17 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Check for token in localStorage
         const token = localStorage.getItem('authToken');
-        
+
         if (token) {
           // Verify token with backend
           // console.log(`The user token is ${token}.`);
-          
-          const userData = await fetchWithErrorHandling('', {            
+
+          const userData = await fetchWithErrorHandling(`${API_BASE}/auth/me`, {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
           });
-          
+
           if (userData) {
             setUser(userData);
           } else {
@@ -69,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const data = await fetchWithErrorHandling('/api/auth/login', {
+      const data = await fetchWithErrorHandling(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,13 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data && data.token) {
         // Store the token
         localStorage.setItem('authToken', data.token);
-        
+
         // Set the user
         setUser(data.user);
-        
+
         // Redirect to dashboard or intended URL
         router.push('/dashboard');
-        
+
         toast.success('Login successful');
       }
     } catch (error) {
@@ -99,16 +101,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear the token and user data
     localStorage.removeItem('authToken');
     setUser(null);
-    
+
     // Redirect to login page
     router.push('/login');
-    
+
     toast.success('You have been logged out');
   };
 
   const hasRole = (roles: UserRole | UserRole[]): boolean => {
     if (!user) return false;
-    
+
     const rolesToCheck = Array.isArray(roles) ? roles : [roles];
     return rolesToCheck.includes(user.role);
   };

@@ -208,27 +208,27 @@ async function forgotPassword(req, res) {
     }
 
     const user = await User.findOne({ where: { email } });
-    
+
     // Always return success to prevent email enumeration attacks
     if (!user) {
-      return res.json({ 
-        message: 'If an account with that email exists, a password reset link has been sent.' 
+      return res.json({
+        message: 'If an account with that email exists, a password reset link has been sent.'
       });
     }
 
     // Check if user is active
     if (user.status === 'inactive' || user.status === 'suspended') {
-      return res.json({ 
-        message: 'If an account with that email exists, a password reset link has been sent.' 
+      return res.json({
+        message: 'If an account with that email exists, a password reset link has been sent.'
       });
     }
 
     // Generate a secure random token
     const resetToken = crypto.randomBytes(32).toString('hex');
-    
+
     // Hash the token before storing (for security)
     const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    
+
     user.resetToken = hashedToken;
     user.resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
     await user.save();
@@ -245,8 +245,8 @@ async function forgotPassword(req, res) {
       return res.status(500).json({ message: 'Failed to send password reset email. Please try again.' });
     }
 
-    res.json({ 
-      message: 'If an account with that email exists, a password reset link has been sent.' 
+    res.json({
+      message: 'If an account with that email exists, a password reset link has been sent.'
     });
   } catch (err) {
     console.error(err);
@@ -280,14 +280,41 @@ async function verifyResetToken(req, res) {
       return res.status(400).json({ valid: false, message: 'Invalid or expired reset token' });
     }
 
-    res.json({ 
-      valid: true, 
+    res.json({
+      valid: true,
       email: user.email,
-      message: 'Token is valid' 
+      message: 'Token is valid'
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ valid: false, message: 'Token verification failed' });
+  }
+}
+
+async function getMe(req, res) {
+  try {
+    const user = req.user; // User is attached by authMiddleware
+    if (!user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    // Refresh user from DB to ensure latest role/status
+    const freshUser = await User.findByPk(user.id);
+    if (!freshUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      id: freshUser.id,
+      name: freshUser.name,
+      email: freshUser.email,
+      role: freshUser.role,
+      entityId: freshUser.entityId,
+      lgaId: freshUser.lgaId,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch user details' });
   }
 }
 
@@ -300,4 +327,5 @@ module.exports = {
   changePassword,
   forgotPassword,
   verifyResetToken,
+  getMe,
 };
