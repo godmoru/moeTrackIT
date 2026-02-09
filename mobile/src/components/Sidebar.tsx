@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { DrawerContentComponentProps } from '@react-navigation/drawer';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { getInitials } from '../utils/format';
@@ -10,7 +11,32 @@ export function Sidebar(props: DrawerContentComponentProps) {
     const { navigation } = props;
 
     const navigateTo = (screen: string) => {
-        navigation.navigate(screen);
+        // Close the drawer first
+        navigation.closeDrawer();
+
+        // For tab screens, we need to navigate through the root navigator
+        const tabScreens = ['Dashboard', 'Payments', 'Assessments', 'Profile'];
+        if (tabScreens.includes(screen)) {
+            // Navigate to the Main screen and then to the specific tab
+            navigation.dispatch(
+                CommonActions.navigate({
+                    name: 'Main',
+                    params: {
+                        screen: 'MainTabs',
+                        params: {
+                            screen: screen,
+                        },
+                    },
+                })
+            );
+        } else {
+            // For stack screens, navigate normally from root
+            navigation.dispatch(
+                CommonActions.navigate({
+                    name: screen,
+                })
+            );
+        }
     };
 
     return (

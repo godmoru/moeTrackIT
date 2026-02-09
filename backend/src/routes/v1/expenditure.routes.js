@@ -29,7 +29,9 @@ const rejectExpenditureValidation = [
 // Routes
 router
     .route('/')
-    .get(requirePermission('expenditure:read'), expenditureController.getAllExpenditures)
+    .get(
+        requirePermission('expenditure:read'), 
+        expenditureController.getAllExpenditures)
     .post(
         requirePermission('expenditure:create'),
         createExpenditureValidation,

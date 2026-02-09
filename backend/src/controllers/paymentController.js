@@ -4,6 +4,7 @@ const path = require("path");
 const { Payment, Assessment, Entity, IncomeSource, User, Setting, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const PDFDocument = require('pdfkit');
+const QRCode = require('qrcode');
 const { getPaymentScopeWhere } = require('../middleware/scope');
 const {
   initializePayment,
@@ -159,22 +160,25 @@ async function paymentInvoice(req, res) {
     // Optional watermark: OFFICIAL RECEIPT
     doc.save();
     doc.font("Helvetica-Bold");
-    doc.fontSize(60);
+    doc.fontSize(50);
     doc.fillColor("#CCCCCC");
     doc.opacity(0.15);
-    doc.rotate(-25, { origin: [300, 400] });
-    doc.text("OFFICIAL RECEIPT", 60, 350, {
+    doc.rotate(-25, { origin: [300, 300] });
+    doc.text("OFFICIAL RECEIPT", 60, 200, {
       align: "center",
       width: 500,
     });
-    doc.rotate(25, { origin: [300, 400] });
+    doc.rotate(25, { origin: [300, 300] });
     doc.opacity(1);
     doc.restore();
 
+    doc.moveDown(0.2);
     // Header with logo and ministry details
     const logoPath = path.join(__dirname, "../../../frontend/public/benue.png");
     try {
-      doc.image(logoPath, 40, 40, { width: 60 });
+      const logoWidth = 60;
+      const centerX = (doc.page.width - logoWidth) / 2;
+      doc.image(logoPath, centerX, 40, { width: logoWidth });
     } catch (e) {
       // If the logo file is not found, continue without breaking the invoice
     }
@@ -182,94 +186,48 @@ async function paymentInvoice(req, res) {
     doc
       .font("Helvetica-Bold")
       .fontSize(14)
-      .text("Benue State Ministry of Education", 120, 40, {
-        align: "left",
+      .text("Benue State Ministry of Education And Knowledge Managemenet", 40, 110, {
+        align: "center",
+        width: doc.page.width - 80
       })
       .moveDown(0.2)
       .font("Helvetica")
       .fontSize(11)
-      .text("Education Revenue Management System", 120, 58, {
-        align: "left",
+      .text("Education Revenue Management System", 40, 130, {
+        align: "center",
+        width: doc.page.width - 80
       })
       .moveDown(0.5)
       .font("Helvetica-Bold")
       .fontSize(16)
-      .text("Payment Invoice", 40, 90, { align: "left" });
+      .text("Payment Invoice", 40, 155, {
+        align: "center",
+        width: doc.page.width - 80
+      });
 
     // Horizontal rule under header
-    doc.moveTo(40, 110).lineTo(550, 110).stroke();
+    doc.moveTo(40, 180).lineTo(550, 180).stroke();
     doc.moveDown(1);
+
+
 
     const assessmentStatus = assessment.status || null;
 
     // Invoice meta information
-    doc.font("Helvetica-Bold").fontSize(11);
-    doc.text(`Invoice No: INV-${payment.id}`);
-    doc.font("Helvetica");
-    doc.text(`Payment Date: ${dateLabel || '-'}`);
-    if (payment.status === 'paid' || assessmentStatus === 'paid') {
-      doc.text(`Status: PAID`);
-    } else if (payment.status) {
-      doc.text(`Status: ${String(payment.status).toUpperCase()}`);
-    } else if (assessmentStatus) {
-      doc.text(`Status: ${String(assessmentStatus).toUpperCase()}`);
-    }
-    doc.moveDown(0.5);
+    const startY = doc.y;
 
-    // Entity block
-    doc.font("Helvetica-Bold").fontSize(12).text('Payer Details', { underline: true });
-    doc.moveDown(0.5);
-    doc.font("Helvetica").fontSize(11);
-    doc.text(`Instituion: ${entity.name || '-'}`);
-    if (entity.code) doc.text(`Institution Code: ${entity.code}`);
-    if (entity.lga || entity.state) {
-      doc.text(
-        `Location: ${entity.lga || '-'}, ${entity.state || ''}`.trim(),
-      );
-    }
-    doc.moveDown(1);
-
-    // Payment details block
-    doc.font("Helvetica-Bold").fontSize(12).text('Payment Details', { underline: true });
-    doc.moveDown(0.5);
-    doc.font("Helvetica").fontSize(11);
-
-    doc.text(`Purpose: ${source.name || 'Assessment'}`);
-    doc.text(
-      `Assessment Year: ${assessment.assessmentPeriod ? assessment.assessmentPeriod.toString() : '-'
-      }`,
-    );
-    doc.text(`Method: ${payment.method || '-'}`);
-    doc.text(`Reference / Purpose: ${payment.reference || '-'}`);
-    if (recorder || recorder === 0) {
-      const recName = recorder.name || '';
-      const recEmail = recorder.email || '';
-      if (recName || recEmail) {
-        doc.text(
-          `Recorded By: ${[recName, recEmail].filter(Boolean).join(' | ')}`,
-        );
-      }
-    }
-    doc.moveDown(0.5);
-
-    doc.moveDown(0.5);
-    doc.font("Helvetica-Bold");
-    doc.text(`Amount Paid (NGN): ${amount.toLocaleString()}`);
-    doc.font("Helvetica");
-    doc.moveDown(0.5);
-
-    // PAID stamp near top-right if fully paid (payment or assessment status)
+    // 1. PAID Stamp (Top Right)
     if (payment.status === 'paid' || assessmentStatus === 'paid') {
       const stampDate = dateLabel || '';
       doc.save();
       doc.font("Helvetica-Bold");
-      doc.fontSize(18);
+      doc.fontSize(16);
       doc.fillColor("#15803d"); // dark green
       doc.opacity(0.85);
       doc.text(
-        stampDate ? `PAID\n${stampDate}` : 'PAID',
-        400,
-        130,
+        stampDate ? `PAID\nNGN ${amount.toLocaleString()}\n${stampDate}` : `PAID\nNGN ${amount.toLocaleString()}`,
+        425, // X position (width 140, end at 550 -> 410)
+        startY,
         {
           align: 'center',
           width: 140,
@@ -278,7 +236,117 @@ async function paymentInvoice(req, res) {
       doc.restore();
     }
 
-    // Footer note (reset styling, directly under amount line)
+    // 2. QR Code (Top Right, below Stamp)
+    try {
+      // Use block scope to avoid variable collisions
+      {
+        const qrData = JSON.stringify({
+          ref: payment.reference || payment.id,
+          amt: amount,
+          date: dateLabel,
+          payer: payment.payerName || entity.name,
+          type: 'MOE-RECEIPT',
+          pur: source.name || 'Assessment',
+          stat: payment.status || 'unknown',
+          lga: entity.lga || 'N/A'
+        });
+
+        const qrWidth = 100;
+        const qrBuffer = await QRCode.toBuffer(qrData, {
+          width: qrWidth,
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
+
+        // Align to the right: 550 - 100 = 450
+        const qrX = 550 - qrWidth;
+        const qrY = startY + 60; // Below stamp
+
+        doc.image(qrBuffer, qrX, qrY, { width: qrWidth });
+
+        // Overlay Logo
+        const logoPath = path.join(__dirname, "../../../frontend/public/benue.png");
+        try {
+          const logoSize = qrWidth * 0.25;
+          const logoX = qrX + (qrWidth - logoSize) / 2;
+          const logoY = qrY + (qrWidth - logoSize) / 2;
+
+          doc.image(logoPath, logoX, logoY, { width: logoSize });
+        } catch (e) {
+          // Logo not found
+        }
+      }
+    } catch (e) {
+      console.error('Failed to generate Top Right QR', e);
+    }
+
+    // Reset cursor for Left Column content
+    doc.x = 40;
+    doc.y = startY;
+    const leftColWidth = 350;
+
+    doc.font("Helvetica-Bold").fontSize(11);
+    doc.text(`Invoice No: INV-${payment.id}`, { width: leftColWidth });
+    doc.font("Helvetica");
+    doc.text(`Payment Date: ${dateLabel || '-'}`, { width: leftColWidth });
+    if (payment.status === 'paid' || assessmentStatus === 'paid') {
+      doc.text(`Status: PAID`, { width: leftColWidth });
+    } else if (payment.status) {
+      doc.text(`Status: ${String(payment.status).toUpperCase()}`, { width: leftColWidth });
+    } else if (assessmentStatus) {
+      doc.text(`Status: ${String(assessmentStatus).toUpperCase()}`, { width: leftColWidth });
+    }
+    doc.moveDown(0.5);
+
+    // Entity block
+    doc.font("Helvetica-Bold").fontSize(12).text('Payer Details', { underline: true, width: leftColWidth });
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+    doc.text(`Instituion: ${entity.name || '-'}`, { width: leftColWidth });
+    if (entity.code) doc.text(`Institution Code: ${entity.code}`, { width: leftColWidth });
+    if (entity.lga || entity.state) {
+      doc.text(
+        `Location: ${entity.lga || '-'}, ${entity.state || ''}`.trim(),
+        { width: leftColWidth }
+      );
+    }
+    doc.moveDown(1);
+
+    // Payment details block
+    doc.font("Helvetica-Bold").fontSize(12).text('Payment Details', { underline: true, width: leftColWidth });
+    doc.moveDown(0.5);
+    doc.font("Helvetica").fontSize(11);
+
+    doc.text(`Purpose: ${source.name || 'Assessment'}`, { width: leftColWidth });
+    doc.text(
+      `Assessment Year: ${assessment.assessmentPeriod ? assessment.assessmentPeriod.toString() : '-'}`,
+      { width: leftColWidth }
+    );
+    doc.text(`Method: ${payment.method || '-'}`, { width: leftColWidth });
+    doc.text(`Reference / Purpose: ${payment.reference || '-'}`, { width: leftColWidth });
+    if (recorder || recorder === 0) {
+      const recName = recorder.name || '';
+      const recEmail = recorder.email || '';
+      if (recName || recEmail) {
+        doc.text(
+          `Recorded By: ${[recName, recEmail].filter(Boolean).join(' | ')}`,
+          { width: leftColWidth }
+        );
+      }
+    }
+    doc.moveDown(0.5);
+
+    // doc.moveDown(0.5);
+    const amountY = doc.y || 200;
+    doc.font("Helvetica-Bold");
+    doc.text(`Amount Paid (NGN): ${amount.toLocaleString()}`);
+    doc.font("Helvetica");
+    doc.moveDown(0.5);
+
+    // Footer note
     let invoiceFooterText =
       'This receipt is only valid if generated from the official MOETrackIT platform.';
     try {
@@ -290,10 +358,14 @@ async function paymentInvoice(req, res) {
       // If settings cannot be loaded, fall back to default text silently
     }
 
+    doc.moveDown(2); // Ensure spacing from content
     doc.font("Helvetica");
     doc.fontSize(9);
     doc.fillColor("#000000");
-    doc.text(invoiceFooterText, { width: 500 });
+    doc.text(invoiceFooterText, 40, doc.y, {
+      width: doc.page.width - 80,
+      align: 'center'
+    });
 
     doc.end();
   } catch (err) {

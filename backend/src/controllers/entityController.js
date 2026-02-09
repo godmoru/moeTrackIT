@@ -12,21 +12,21 @@ function generatePasswordFromContactInfo(name, email, phone) {
   // Extract first name and take first 3 characters
   const firstName = name?.split(' ')[0] || '';
   const namePart = firstName.substring(0, 3).toLowerCase();
-  
+
   // Extract domain from email (remove @ and .)
   const emailDomain = email?.split('@')[1] || '';
   const emailPart = emailDomain.replace(/[.@]/g, '').substring(0, 3).toLowerCase();
-  
+
   // Extract last 4 digits of phone number
   const phoneDigits = phone?.replace(/\D/g, '').slice(-4) || '1234';
-  
+
   // Combine parts: namePart + emailPart + phoneDigits
   const password = `${namePart}${emailPart}${phoneDigits}`;
-  
+
   // Ensure password is at least 8 characters
   return password.length >= 8 ? password : `${password}2024`;
   // console.log(`The supplied password is: ${password}`);
-  
+
 }
 
 function formatAmount(value) {
@@ -66,11 +66,11 @@ async function createEntity(req, res) {
     // Auto-create principal user account if contact person information is provided
     if (data.contactPerson && data.contactEmail && data.contactPhone) {
       // Check if user with this email already exists
-      const existingUser = await User.findOne({ 
-        where: { email: data.contactEmail }, 
-        transaction: t 
+      const existingUser = await User.findOne({
+        where: { email: data.contactEmail },
+        transaction: t
       });
-      
+
       if (!existingUser) {
         // Generate password from contact information
         const generatedPassword = generatePasswordFromContactInfo(
@@ -78,10 +78,10 @@ async function createEntity(req, res) {
           data.contactEmail,
           data.contactPhone
         );
-        
+
         // Hash the password
         const passwordHash = await bcrypt.hash(generatedPassword, 10);
-        
+
         // Create the principal user
         const principalUser = await User.create({
           name: data.contactPerson,
@@ -94,11 +94,11 @@ async function createEntity(req, res) {
 
         // Assign principal role in UserRole table
         try {
-          const principalRole = await Role.findOne({ 
-            where: { slug: 'principal' }, 
-            transaction: t 
+          const principalRole = await Role.findOne({
+            where: { slug: 'principal' },
+            transaction: t
           });
-          
+
           if (principalRole) {
             const now = new Date();
             await UserRole.create({
@@ -147,7 +147,130 @@ async function getEntityById(req, res) {
   }
 }
 
-async function getEntityTypes(req, res){
+async function updateEntity(req, res) {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    const scopeWhere = getEntityScopeWhere(req.user);
+
+    // Find the entity with scope filtering
+    const entity = await Entity.findOne({
+      where: { id, ...scopeWhere },
+      transaction: t,
+    });
+
+    if (!entity) {
+      await t.rollback();
+      return res.status(404).json({ message: 'Entity or School not found' });
+    }
+
+    // Check if user has permission to edit this entity
+    // Principals can only edit their own entity
+    if (req.user.role === 'principal' && entity.id !== req.user.entityId) {
+      await t.rollback();
+      return res.status(403).json({ message: 'You can only edit your own institution' });
+    }
+
+    // Store old contact email for comparison
+    const oldContactEmail = entity.contactEmail;
+
+    // Update entity fields
+    await entity.update(data, { transaction: t });
+
+    // Handle principal user account creation/update if contact information is provided
+    if (data.contactPerson && data.contactEmail && data.contactPhone) {
+      // Check if contact email changed
+      const emailChanged = oldContactEmail !== data.contactEmail;
+
+      if (emailChanged && oldContactEmail) {
+        // Email changed - check if old user exists and update
+        const oldUser = await User.findOne({
+          where: { email: oldContactEmail, entityId: entity.id },
+          transaction: t,
+        });
+
+        if (oldUser) {
+          // Update existing user with new email and name
+          await oldUser.update({
+            name: data.contactPerson,
+            email: data.contactEmail,
+          }, { transaction: t });
+
+          console.log(`Principal user account updated for ${entity.name}:`);
+          console.log(`Email: ${oldContactEmail} → ${data.contactEmail}`);
+        }
+      } else if (!oldContactEmail || !emailChanged) {
+        // No previous email or email didn't change - check if user exists
+        const existingUser = await User.findOne({
+          where: { email: data.contactEmail },
+          transaction: t,
+        });
+
+        if (!existingUser) {
+          // Create new principal user account
+          const generatedPassword = generatePasswordFromContactInfo(
+            data.contactPerson,
+            data.contactEmail,
+            data.contactPhone
+          );
+
+          const passwordHash = await bcrypt.hash(generatedPassword, 10);
+
+          const principalUser = await User.create({
+            name: data.contactPerson,
+            email: data.contactEmail,
+            passwordHash,
+            role: 'principal',
+            status: 'active',
+            entityId: entity.id,
+          }, { transaction: t });
+
+          // Assign principal role
+          try {
+            const principalRole = await Role.findOne({
+              where: { slug: 'principal' },
+              transaction: t,
+            });
+
+            if (principalRole) {
+              const now = new Date();
+              await UserRole.create({
+                userId: principalUser.id,
+                roleId: principalRole.id,
+                createdAt: now,
+                updatedAt: now,
+              }, { transaction: t });
+            }
+          } catch (roleErr) {
+            console.error('Failed to assign principal role:', roleErr);
+          }
+
+          console.log(`Principal user account created for ${entity.name}:`);
+          console.log(`Email: ${data.contactEmail}`);
+          console.log(`Password: ${generatedPassword}`);
+        } else if (existingUser.entityId !== entity.id) {
+          // User exists but for different entity - update entity link
+          await existingUser.update({
+            name: data.contactPerson,
+            entityId: entity.id,
+          }, { transaction: t });
+
+          console.log(`Principal user account linked to ${entity.name}`);
+        }
+      }
+    }
+
+    await t.commit();
+    res.json(entity);
+  } catch (err) {
+    await t.rollback();
+    console.error(err);
+    res.status(500).json({ message: 'Failed to update entity' });
+  }
+}
+
+async function getEntityTypes(req, res) {
   try {
     const entitieTypes = await EntityType.findAll({
       // include: [
@@ -164,12 +287,12 @@ async function getEntityTypes(req, res){
   }
 }
 
-async function getEntityOwnership(req, res){
+async function getEntityOwnership(req, res) {
   try {
     const entitieOwnership = await EntityOwnership.findAll({
       // include: [
-        // { model: Entity, as: 'entity' },
-        // { model: EntityOwnership, as: 'ownershipType' },
+      // { model: Entity, as: 'entity' },
+      // { model: EntityOwnership, as: 'ownershipType' },
       // ],
       order: [['name', 'ASC']],
     });
@@ -891,6 +1014,7 @@ async function bulkImportEntities(req, res) {
 module.exports = {
   listEntities,
   createEntity,
+  updateEntity,
   getEntityById,
   getEntityOwnership,
   getEntityTypes,

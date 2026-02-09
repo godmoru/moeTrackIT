@@ -1,0 +1,13 @@
+{
+    "verbose": true,
+    "ignore": [
+        "*.test.js",
+        "fixtures/*",
+        "course_data/*",
+        "database.sqlite",
+        "*.log",
+        "uploads/*",
+        "public/*"
+    ],
+    "ext": "js,json"
+}

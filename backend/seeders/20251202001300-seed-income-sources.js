@@ -30,12 +30,45 @@ module.exports = {
           createdAt: now,
           updatedAt: now,
         },
+        {
+          name: 'Sport Levy',
+          code: 'SL',
+          description: 'Termly sport levy across all schools',
+          category: 'recurring',
+          recurrence: 'termly',
+          defaultAmount: 1000,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          name: 'Workshop Fee',
+          code: 'WF',
+          description: 'Recurring workshop fee',
+          category: 'recurring',
+          recurrence: 'termly',
+          defaultAmount: 500,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          name: 'IT Infrastructure',
+          code: 'ITI',
+          description: 'Levy for IT infrastructure maintenance',
+          category: 'recurring',
+          recurrence: 'termly',
+          defaultAmount: 1500,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        },
       ],
       {}
     );
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('IncomeSources', { code: ['NSR', 'ALR'] }, {});
+    await queryInterface.bulkDelete('IncomeSources', { code: ['NSR', 'ALR', 'SL', 'WF', 'ITI'] }, {});
   },
 };

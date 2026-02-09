@@ -20,7 +20,8 @@ router.get('/export-for-update', authMiddleware, requireRole('super_admin', 'off
 router.post('/bulk-import', authMiddleware, requireRole('super_admin', 'officer'), entityController.bulkImportEntities);
 
 router.get('/:id', authMiddleware, entityController.getEntityById);
-// Only super_admin and officer can create entities
+// Only super_admin, system_admin, officer, and principal can create/update entities
 router.post('/', authMiddleware, requireRole('super_admin', 'officer', 'system_admin'), entityController.createEntity);
+router.put('/:id', authMiddleware, requireRole('super_admin', 'officer', 'system_admin', 'principal'), entityController.updateEntity);
 
 module.exports = router;

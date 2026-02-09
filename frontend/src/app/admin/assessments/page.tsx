@@ -27,9 +27,19 @@ interface EntityTypeOption {
   name: string;
 }
 
+interface IncomeSourceParameterOption {
+  key: string;
+  label: string;
+  dataType: string; // 'number' | 'enum' | 'boolean'
+  required: boolean;
+  options: any; // stringified json or object
+  calculationRole?: string;
+}
+
 interface IncomeSourceOption {
   id: number;
   name: string;
+  parameters?: IncomeSourceParameterOption[];
 }
 
 export default function AssessmentsPage() {
@@ -44,18 +54,32 @@ export default function AssessmentsPage() {
 
   const [showNewAssessment, setShowNewAssessment] = useState(false);
   const [savingNewAssessment, setSavingNewAssessment] = useState(false);
-  const [newAssessment, setNewAssessment] = useState({
+  const [newAssessment, setNewAssessment] = useState<{
+    entityId: string;
+    incomeSourceId: string;
+    assessmentPeriod: string;
+    dueDate: string;
+    parameterValues: Record<string, any>;
+  }>({
     entityId: "",
     incomeSourceId: "",
     assessmentPeriod: "",
     dueDate: "",
+    parameterValues: {},
   });
 
   const [showBulkLicense, setShowBulkLicense] = useState(false);
   const [savingBulkLicense, setSavingBulkLicense] = useState(false);
-  const [bulkForm, setBulkForm] = useState({
+  const [bulkForm, setBulkForm] = useState<{
+    incomeSourceId: string;
+    assessmentPeriod: string;
+    parameterValues: Record<string, any>;
+    dueDate: string;
+    onlyActive: boolean;
+  }>({
     incomeSourceId: "",
     assessmentPeriod: "",
+    parameterValues: {},
     dueDate: "",
     onlyActive: true,
   });
@@ -128,24 +152,15 @@ export default function AssessmentsPage() {
     }
   }
 
-  function handleBulkAnnualLicense() {
-    setBulkForm({
-      incomeSourceId: "",
-      assessmentPeriod: "",
-      dueDate: "",
-      onlyActive: true,
-    });
-    setBulkEntityTypeFilter("");
-    setSelectedEntityIds(new Set());
-    setShowBulkLicense(true);
-  }
 
-  async function submitBulkAnnualLicense() {
-    if (!bulkForm.incomeSourceId || !bulkForm.assessmentPeriod) {
+
+  async function submitMassAssessment() {
+    // Basic validation: Check if income source is selected
+    if (!bulkForm.incomeSourceId) {
       await Swal.fire({
         icon: "error",
         title: "Missing fields",
-        text: "Income Source and Assessment Year are required.",
+        text: "Income Source is required.",
         confirmButtonColor: "#b91c1c",
       });
       return;
@@ -176,7 +191,7 @@ export default function AssessmentsPage() {
     try {
       const token =
         typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
-      const res = await fetch(`${API_BASE}/assessments/bulk-annual-license`, {
+      const res = await fetch(`${API_BASE}/assessments/bulk-create`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -184,7 +199,8 @@ export default function AssessmentsPage() {
         },
         body: JSON.stringify({
           incomeSourceId,
-          assessmentPeriod: bulkForm.assessmentPeriod,
+          // assessmentPeriod: bulkForm.assessmentPeriod, // Now handled by backend/service
+          parameterValues: bulkForm.parameterValues,
           dueDate: bulkForm.dueDate || null,
           entityIds: Array.from(selectedEntityIds),
         }),
@@ -208,7 +224,7 @@ export default function AssessmentsPage() {
       await Swal.fire({
         icon: "error",
         title: "Error",
-        text: err.message || "Failed to run bulk assessments",
+        text: err.message || "Failed to run mass assessment",
         confirmButtonColor: "#b91c1c",
       });
     } finally {
@@ -222,12 +238,15 @@ export default function AssessmentsPage() {
       incomeSourceId: "",
       assessmentPeriod: "",
       dueDate: "",
+      parameterValues: {},
     });
     setShowNewAssessment(true);
   }
 
+
+
   async function submitNewAssessment() {
-    const { entityId, incomeSourceId, assessmentPeriod, dueDate } = newAssessment;
+    const { entityId, incomeSourceId, assessmentPeriod, dueDate, parameterValues } = newAssessment;
 
     if (!entityId || !incomeSourceId) {
       await Swal.fire({
@@ -266,7 +285,7 @@ export default function AssessmentsPage() {
           incomeSourceId: incomeSourceIdNum,
           assessmentPeriod: assessmentPeriod || null,
           dueDate: dueDate || null,
-          parameterValues: {},
+          parameterValues: parameterValues,
           status: "pending",
         }),
       });
@@ -414,10 +433,21 @@ export default function AssessmentsPage() {
             {canCreateAssessment && (
               <>
                 <button
-                  onClick={handleBulkAnnualLicense}
+                  onClick={() => {
+                    setBulkForm({
+                      incomeSourceId: "",
+                      assessmentPeriod: "",
+                      parameterValues: {},
+                      dueDate: "",
+                      onlyActive: true,
+                    });
+                    setBulkEntityTypeFilter("");
+                    setSelectedEntityIds(new Set());
+                    setShowBulkLicense(true);
+                  }}
                   className="rounded-md border border-green-700 px-3 py-2 text-[11px] font-semibold text-green-700 hover:bg-green-50"
                 >
-                  Mass Annual License
+                  Mass Assessment
                 </button>
                 <button
                   onClick={handleCreate}
@@ -611,22 +641,75 @@ export default function AssessmentsPage() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">
-                Assessment Year
-              </label>
-              <input
-                value={newAssessment.assessmentPeriod}
-                onChange={(e) =>
-                  setNewAssessment((prev) => ({
-                    ...prev,
-                    assessmentPeriod: e.target.value,
-                  }))
+
+            {/* Dynamic Parameters */}
+            {(() => {
+              const selectedSource = incomeSources.find(
+                (s) => String(s.id) === newAssessment.incomeSourceId
+              );
+              if (!selectedSource || !selectedSource.parameters) return null;
+
+              return selectedSource.parameters.map((param) => {
+                let optionsData: any = null;
+                if (param.options) {
+                  try {
+                    optionsData =
+                      typeof param.options === "string"
+                        ? JSON.parse(param.options)
+                        : param.options;
+                  } catch (e) {
+                    console.error("Failed to parse options for", param.key);
+                  }
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="e.g. 2025"
-              />
-            </div>
+
+                return (
+                  <div key={param.key} className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      {param.label} {param.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {param.dataType === "enum" && optionsData?.values ? (
+                      <select
+                        required={param.required}
+                        value={newAssessment.parameterValues[param.key] || ""}
+                        onChange={(e) =>
+                          setNewAssessment((prev) => ({
+                            ...prev,
+                            parameterValues: {
+                              ...prev.parameterValues,
+                              [param.key]: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select {param.label} --</option>
+                        {optionsData.values.map((val: string) => (
+                          <option key={val} value={val}>
+                            {val}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        required={param.required}
+                        type={param.dataType === "number" ? "number" : "text"}
+                        value={newAssessment.parameterValues[param.key] || ""}
+                        onChange={(e) =>
+                          setNewAssessment((prev) => ({
+                            ...prev,
+                            parameterValues: {
+                              ...prev.parameterValues,
+                              [param.key]: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      />
+                    )}
+                  </div>
+                );
+              });
+            })()}
 
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">
@@ -665,15 +748,15 @@ export default function AssessmentsPage() {
               {savingNewAssessment ? "Creating..." : "Create Assessment"}
             </button>
           </div>
-        </div>
-      </Modal>
+        </div >
+      </Modal >
 
       <Modal
         open={showBulkLicense}
         onClose={() => {
           if (!savingBulkLicense) setShowBulkLicense(false);
         }}
-        title="Run Annual License Assessments"
+        title="Run Mass Assessment"
         size="lg"
       >
         <div className="space-y-3">
@@ -701,22 +784,74 @@ export default function AssessmentsPage() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">
-                Assessment Year
-              </label>
-              <input
-                value={bulkForm.assessmentPeriod}
-                onChange={(e) =>
-                  setBulkForm((prev) => ({
-                    ...prev,
-                    assessmentPeriod: e.target.value,
-                  }))
+            {/* Dynamic Parameters for Mass Assessment */}
+            {(() => {
+              const selectedSource = incomeSources.find(
+                (s) => String(s.id) === bulkForm.incomeSourceId
+              );
+              if (!selectedSource || !selectedSource.parameters) return null;
+
+              return selectedSource.parameters.map((param) => {
+                let optionsData: any = null;
+                if (param.options) {
+                  try {
+                    optionsData =
+                      typeof param.options === "string"
+                        ? JSON.parse(param.options)
+                        : param.options;
+                  } catch (e) {
+                    console.error("Failed to parse options for", param.key);
+                  }
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="e.g. 2025"
-              />
-            </div>
+
+                return (
+                  <div key={param.key} className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      {param.label} {param.required && <span className="text-red-500">*</span>}
+                    </label>
+                    {param.dataType === "enum" && optionsData?.values ? (
+                      <select
+                        required={param.required}
+                        value={bulkForm.parameterValues[param.key] || ""}
+                        onChange={(e) =>
+                          setBulkForm((prev) => ({
+                            ...prev,
+                            parameterValues: {
+                              ...prev.parameterValues,
+                              [param.key]: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select {param.label} --</option>
+                        {optionsData.values.map((val: string) => (
+                          <option key={val} value={val}>
+                            {val}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        required={param.required}
+                        type={param.dataType === "number" ? "number" : "text"}
+                        value={bulkForm.parameterValues[param.key] || ""}
+                        onChange={(e) =>
+                          setBulkForm((prev) => ({
+                            ...prev,
+                            parameterValues: {
+                              ...prev.parameterValues,
+                              [param.key]: e.target.value,
+                            },
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      />
+                    )}
+                  </div>
+                );
+              });
+            })()}
 
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">
@@ -848,7 +983,7 @@ export default function AssessmentsPage() {
             </button>
             <button
               type="button"
-              onClick={submitBulkAnnualLicense}
+              onClick={submitMassAssessment}
               disabled={savingBulkLicense}
               className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70"
             >
@@ -955,6 +1090,6 @@ export default function AssessmentsPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </div >
   );
 }

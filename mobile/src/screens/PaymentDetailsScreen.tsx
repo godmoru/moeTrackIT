@@ -20,7 +20,7 @@ import { formatCurrency } from '../utils/format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PaymentDetail'>;
 
-const API_BASE = 'http://localhost:5000/api/v1'; // Should match api.ts
+const API_BASE = 'http://192.168.78.59:5000/api/v1'; // Should match api.ts
 
 export function PaymentDetailsScreen({ route, navigation }: Props) {
     const { paymentId } = route.params;

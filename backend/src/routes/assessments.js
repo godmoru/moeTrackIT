@@ -11,6 +11,7 @@ router.get("/", authMiddleware, assessmentController.listAssessments);
 router.get("/:id", authMiddleware, assessmentController.getAssessmentById);
 // Only super_admin and officer can create assessments
 router.post("/", authMiddleware, requireRole('super_admin', 'officer', 'hq_cashier'), assessmentController.createAssessment);
-router.post("/bulk-annual-license", authMiddleware, requireRole('super_admin', 'officer','hq_cashier'), assessmentController.bulkAnnualLicense);
+router.post("/bulk-create", authMiddleware, requireRole('super_admin', 'officer', 'hq_cashier'), assessmentController.bulkCreate);
+router.put("/:id", authMiddleware, requireRole('super_admin', 'officer', 'hq_cashier'), assessmentController.updateAssessment);
 
 module.exports = router;

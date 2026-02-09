@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -225,15 +227,14 @@ export default function ExpenditureDetailPage() {
                                     </td>
                                     <td className="px-3 py-2 text-xs capitalize">
                                         <span
-                                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
-                                                expenditure.status === "approved"
+                                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${expenditure.status === "approved"
                                                     ? "bg-green-100 text-green-700"
                                                     : expenditure.status === "rejected"
-                                                    ? "bg-red-100 text-red-700"
-                                                    : expenditure.status === "submitted"
-                                                    ? "bg-blue-100 text-blue-700"
-                                                    : "bg-yellow-100 text-yellow-700"
-                                            }`}
+                                                        ? "bg-red-100 text-red-700"
+                                                        : expenditure.status === "submitted"
+                                                            ? "bg-blue-100 text-blue-700"
+                                                            : "bg-yellow-100 text-yellow-700"
+                                                }`}
                                         >
                                             {expenditure.status || "-"}
                                         </span>

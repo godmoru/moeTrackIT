@@ -32,8 +32,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get('/api/v1/health', (_, res) => {
-  res.json({ 
-    status: 'The moeTrackIT Revenue Monitoring backend is running healthy and ready!🚀', 
+  res.json({
+    status: 'The moeTrackIT Revenue Monitoring backend is running healthy and ready!🚀',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
@@ -61,13 +61,13 @@ const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
-    
+
     // Sync models in development (use migrations in production)
     if (process.env.NODE_ENV === 'development') {
       await sequelize.sync({ alter: false });
       console.log('✅ Database models synchronized.');
     }
-    
+
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
@@ -78,3 +78,11 @@ const startServer = async () => {
 };
 
 startServer();
+
+process.on('uncaughtException', (err) => {
+  console.error('CRITICAL ERROR: Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('CRITICAL ERROR: Unhandled Rejection at:', promise, 'reason:', reason);
+});

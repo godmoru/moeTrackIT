@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { retirementsApi, expendituresApi, attachmentsApi } from '@/lib/api/expenditure.api';
 import type { Expenditure } from '@/types/expenditure.types';
 import FileUpload from '@/components/FileUpload';
 
-export default function CreateRetirementPage() {
+function CreateRetirementForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const expenditureId = searchParams.get('expenditureId');
@@ -175,5 +175,17 @@ export default function CreateRetirementPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function CreateRetirementPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-700 border-t-transparent"></div>
+            </div>
+        }>
+            <CreateRetirementForm />
+        </Suspense>
     );
 }

@@ -52,7 +52,8 @@ export default function ExpendituresPage() {
 
   const filteredExpenditures = expenditures.filter((e) => {
     if (statusFilter !== "all" && (e.status || "") !== statusFilter) return false;
-    if (categoryFilter !== "all" && (e.category?.name || "") !== categoryFilter) return false;
+    // TODO: Re-enable once category is included in Expenditure type
+    // if (categoryFilter !== "all" && (e.category?.name || "") !== categoryFilter) return false;
     if (fromDate) {
       const d = e.date ? new Date(e.date) : null;
       if (!d || d < new Date(fromDate)) return false;
@@ -67,9 +68,10 @@ export default function ExpendituresPage() {
   const uniqueStatuses = Array.from(
     new Set(expenditures.map((e) => (e.status || "").trim()).filter(Boolean)),
   ).sort();
-  const uniqueCategories = Array.from(
-    new Set(expenditures.map((e) => (e.category?.name || "").trim()).filter(Boolean)),
-  ).sort();
+  // TODO: Re-enable once category is included in Expenditure type
+  // const uniqueCategories = Array.from(
+  //   new Set(expenditures.map((e) => (e.category?.name || "").trim()).filter(Boolean)),
+  // ).sort();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -142,7 +144,8 @@ export default function ExpendituresPage() {
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-1">
+            {/* TODO: Re-enable once category is included in Expenditure type */}
+            {/* <div className="flex items-center gap-1">
               <span className="text-gray-600">Category:</span>
               <select
                 value={categoryFilter}
@@ -156,7 +159,7 @@ export default function ExpendituresPage() {
                   </option>
                 ))}
               </select>
-            </div>
+            </div> */}
             <div className="flex items-center gap-1">
               <span className="text-gray-600">From:</span>
               <input
@@ -177,7 +180,7 @@ export default function ExpendituresPage() {
             </div>
           </div>
 
-            <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
             <table className="min-w-full text-left text-xs">
               <thead className="bg-gray-50 text-gray-600">
                 <tr>
@@ -191,7 +194,7 @@ export default function ExpendituresPage() {
                   <th className="px-3 py-2 font-medium text-right">Action</th>
                 </tr>
               </thead>
-                    <tbody>
+              <tbody>
                 {filteredExpenditures.length === 0 && (
                   <tr>
                     <td className="px-3 py-2 text-xs text-gray-500" colSpan={8}>
@@ -209,7 +212,8 @@ export default function ExpendituresPage() {
                       <td className="px-3 py-2 text-xs">{dateLabel}</td>
                       <td className="px-3 py-2 text-xs">{exp.referenceNumber || "-"}</td>
                       <td className="px-3 py-2 text-xs">{exp.description || "-"}</td>
-                      <td className="px-3 py-2 text-xs">{exp.category?.name || "-"}</td>
+                      {/* TODO: Show category once it's included in Expenditure type */}
+                      <td className="px-3 py-2 text-xs">-</td>
                       <td className="px-3 py-2 text-right text-xs">
                         ₦{Number(exp.amount || 0).toLocaleString("en-NG", {
                           maximumFractionDigits: 2,
@@ -217,15 +221,14 @@ export default function ExpendituresPage() {
                       </td>
                       <td className="px-3 py-2 text-xs capitalize">
                         <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
-                            exp.status === "approved"
+                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${exp.status === "approved"
                               ? "bg-green-100 text-green-700"
                               : exp.status === "rejected"
-                              ? "bg-red-100 text-red-700"
-                              : exp.status === "submitted"
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
+                                ? "bg-red-100 text-red-700"
+                                : exp.status === "submitted"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                            }`}
                         >
                           {exp.status || "-"}
                         </span>
@@ -242,8 +245,8 @@ export default function ExpendituresPage() {
                   );
                 })}
               </tbody>
-                </table>
-            </div>
+            </table>
+          </div>
         </>
       )}
     </div>

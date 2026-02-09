@@ -7,7 +7,7 @@ const { Entity, IncomeSource, IncomeSourceParameter, Assessment } = require('../
  * @param {number} entityId
  * @param {number} incomeSourceId
  * @param {Object} parameterValues
- * @returns {Promise<{ amount: number, breakdown: Object, meta: Object }>}
+ * @returns {Promise<{ amount: number, breakdown: Object, meta: Object, periodYear: any, periodTerm: any }>}
  */
 async function calculateAssessmentAmount(entityId, incomeSourceId, parameterValues = {}) {
   const [entity, incomeSource, paramDefs] = await Promise.all([
@@ -25,6 +25,8 @@ async function calculateAssessmentAmount(entityId, incomeSourceId, parameterValu
 
   const breakdown = {};
   const meta = {};
+  let periodYear = null;
+  let periodTerm = null;
 
   // Validate required parameters
   for (const def of paramDefs) {
@@ -81,12 +83,21 @@ async function calculateAssessmentAmount(entityId, incomeSourceId, parameterValu
         // info-only parameters stored in meta
         break;
     }
+
+    if (def.calculationRole === 'period_year') {
+      periodYear = value;
+    }
+    if (def.calculationRole === 'period_term') {
+      periodTerm = value;
+    }
   }
 
   return {
     amount,
     breakdown,
     meta,
+    periodYear,
+    periodTerm,
   };
 }
 
@@ -104,11 +115,20 @@ async function createAssessmentWithCalculation({
   createdBy,
   transaction,
 }) {
-  const { amount, breakdown, meta } = await calculateAssessmentAmount(
+  const { amount, breakdown, meta, periodYear, periodTerm } = await calculateAssessmentAmount(
     entityId,
     incomeSourceId,
     parameterValues,
   );
+
+  let finalAssessmentPeriod = assessmentPeriod;
+  if (!finalAssessmentPeriod) {
+    if (periodYear && periodTerm) {
+      finalAssessmentPeriod = `${periodYear}-T${periodTerm}`;
+    } else if (periodYear) {
+      finalAssessmentPeriod = `${periodYear}`;
+    }
+  }
 
   const assessment = await Assessment.create({
     entityId,
@@ -117,7 +137,7 @@ async function createAssessmentWithCalculation({
     currency,
     status,
     dueDate,
-    assessmentPeriod,
+    assessmentPeriod: finalAssessmentPeriod,
     meta: { ...meta, breakdown },
     createdBy,
   }, { transaction });

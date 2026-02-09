@@ -30,12 +30,12 @@ export const metadata: Metadata = {
   description: "Developed by GESUSoft Technology Ltd",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/benue.png", sizes: "32x32", type: "image/png" }
+      { url: "/favicon.png", sizes: "any" },
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" }
     ],
-    shortcut: "/favicon.ico",
+    shortcut: "/favicon.png",
     apple: [
-      { url: "/benue.png", sizes: "180x180", type: "image/png" }
+      { url: "/favicon.png", sizes: "180x180", type: "image/png" }
     ],
   },
 };

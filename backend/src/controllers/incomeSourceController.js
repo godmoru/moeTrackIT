@@ -26,6 +26,25 @@ async function createIncomeSource(req, res) {
   }
 }
 
+async function getIncomeSourceById(req, res) {
+  try {
+    const { id } = req.params;
+    const source = await IncomeSource.findOne({
+      where: { id },
+      include: [{ model: IncomeSourceParameter, as: 'parameters' }],
+    });
+
+    if (!source) {
+      return res.status(404).json({ message: 'Income source not found' });
+    }
+
+    res.json(source);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch income source' });
+  }
+}
+
 async function updateIncomeSource(req, res) {
   try {
     const { id } = req.params;
@@ -99,6 +118,7 @@ async function deleteIncomeSourceParameter(req, res) {
 module.exports = {
   listIncomeSources,
   createIncomeSource,
+  getIncomeSourceById,
   updateIncomeSource,
   deleteIncomeSource,
   listIncomeSourceParameters,

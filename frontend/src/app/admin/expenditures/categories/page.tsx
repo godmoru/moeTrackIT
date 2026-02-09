@@ -256,7 +256,7 @@ export default function ExpenditureCategoriesPage() {
 
       {/* Create Modal */}
       <Modal
-        isOpen={showCreateModal}
+        open={showCreateModal}
         onClose={() => {
           setShowCreateModal(false);
           setFormData({ cat_name: "", description: "" });
@@ -311,7 +311,7 @@ export default function ExpenditureCategoriesPage() {
 
       {/* Edit Modal */}
       <Modal
-        isOpen={showEditModal}
+        open={showEditModal}
         onClose={() => {
           setShowEditModal(false);
           setSelectedCategory(null);

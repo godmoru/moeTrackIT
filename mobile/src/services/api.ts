@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import { DashboardSummary, LgaRemittance, Assessment, Payment, User } from '../types';
 
 // Update this to your backend URL
-const API_BASE = 'http://localhost:5000/api/v1';
+// Use your Mac's IP address instead of localhost for simulator
+const API_BASE = 'http://192.168.78.59:5000/api/v1';
 
 
 class ApiService {

@@ -60,6 +60,24 @@ function PaymentVerifyContent() {
     verifyPayment();
   }, [searchParams]);
 
+  async function handleViewInvoice(paymentId: number) {
+    if (typeof window === "undefined") return;
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`${API_BASE}/payments/${paymentId}/invoice.pdf`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) return;
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch {
+      // silent failure
+    }
+  }
+
   if (verifying) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -116,7 +134,7 @@ function PaymentVerifyContent() {
             </div>
             <h2 className="mt-4 text-lg font-semibold text-gray-900">Payment Successful!</h2>
             <p className="mt-2 text-sm text-gray-600">{result?.message}</p>
-            
+
             {result?.amount && (
               <div className="mt-4 rounded-md bg-green-50 p-4">
                 <div className="text-2xl font-bold text-green-700">
@@ -145,14 +163,13 @@ function PaymentVerifyContent() {
 
             {result?.paymentId && (
               <div className="mt-4">
-                <a
-                  href={`${API_BASE}/payments/${result.paymentId}/invoice.pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-green-700 hover:underline"
+                <button
+                  type="button"
+                  onClick={() => handleViewInvoice(result.paymentId!)}
+                  className="text-xs text-green-700 hover:underline bg-transparent border-0 cursor-pointer"
                 >
                   Download Receipt →
-                </a>
+                </button>
               </div>
             )}
           </>

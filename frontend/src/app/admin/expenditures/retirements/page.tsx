@@ -333,7 +333,7 @@ export default function ExpenditureRetirementsPage() {
 
       {/* Create Modal */}
       <Modal
-        isOpen={showCreateModal}
+        open={showCreateModal}
         onClose={() => {
           setShowCreateModal(false);
           setFormData({
@@ -449,7 +449,7 @@ export default function ExpenditureRetirementsPage() {
 
       {/* View Modal */}
       <Modal
-        isOpen={showViewModal}
+        open={showViewModal}
         onClose={() => {
           setShowViewModal(false);
           setSelectedRetirement(null);

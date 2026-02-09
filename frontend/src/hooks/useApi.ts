@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { APIError, handleApiError, fetchWithErrorHandling } from '@/lib/apiErrorHandler';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -24,7 +24,7 @@ export function useApi<T = any>() {
       options: UseApiOptions<T> = {}
     ) => {
       const { onSuccess, onError, showToast = true } = options;
-      
+
       setLoading(true);
       setError(null);
 
@@ -52,11 +52,11 @@ export function useApi<T = any>() {
       } catch (err) {
         const error = err as Error | APIError;
         setError(error);
-        
+
         if (showToast) {
           handleApiError(error);
         }
-        
+
         onError?.(error);
         throw error;
       } finally {

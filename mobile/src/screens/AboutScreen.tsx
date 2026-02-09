@@ -28,12 +28,12 @@ export function AboutScreen() {
             <Card style={styles.card}>
                 <Text style={styles.sectionTitle}>Developed By</Text>
                 <Text style={styles.developer}>
-                    <br />
+                    {'\n'}
                     GESUSoft Technology Ltd, Abuja - Nigeria for
                     The Benue State Ministry of Education & Knowledge Management
                 </Text>
                 <Text style={styles.copyright}>
-                    <br />  
+                    {'\n'}
                     © {new Date().getFullYear()} All Rights Reserved
                 </Text>
             </Card>

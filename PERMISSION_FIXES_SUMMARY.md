@@ -80,17 +80,17 @@ Fixed route files to properly enforce permissions:
 - ✅ All permissions properly linked to roles
 
 ### Permission Matrix
-| Operation | Principal | AEO | Super Admin |
+| Operation    | Principal | AEO | Super Admin |
 |------------|------------|-------|-------------|
-| View Expenditures | ✅ | ✅ | ✅ |
-| Create Expenditures | ✅ | ✅ | ✅ |
-| Update Expenditures | ✅ | ✅ | ✅ |
-| Delete Expenditures | ❌ | ❌ | ✅ |
+| View Expenditures    | ✅ | ✅ | ✅ |
+| Create Expenditures  | ✅ | ✅ | ✅ |
+| Update Expenditures  | ✅ | ✅ | ✅ |
+| Delete Expenditures  | ❌ | ❌ | ✅ |
 | Approve Expenditures | ✅ | ✅ | ✅ |
-| View Categories | ✅ | ✅ | ✅ |
-| Create Categories | ✅ | ✅ | ✅ |
-| Update Categories | ✅ | ✅ | ✅ |
-| Delete Categories | ❌ | ❌ | ✅ |
+| View Categories      | ✅ | ✅ | ✅ |
+| Create Categories    | ✅ | ✅ | ✅ |
+| Update Categories    | ✅ | ✅ | ✅ |
+| Delete Categories    | ❌ | ❌ | ✅ |
 
 ## 🚀 Deployment Instructions
 
