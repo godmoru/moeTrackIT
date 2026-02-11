@@ -355,7 +355,7 @@ export default function Home() {
             <p className="mt-3 text-sm text-gray-700 md:text-base">
               This platform helps the Benue State Ministry of Education and Knowledge Management and its agencies
               manage all education-related revenues in one central place. Schools and
-              vendors can be registered once, then assessed for recurring and one-time
+              vendors are registered once, then assessed for recurring and one-time
               payments over time.
             </p>
           </div>

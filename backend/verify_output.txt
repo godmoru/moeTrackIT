@@ -1,0 +1,155 @@
+🔄 Connecting to database...
+Executing (default): SELECT 1+1 AS result
+✅ Connected to database.
+Executing (default): SELECT "User"."id", "User"."name", "User"."email", "User"."passwordHash", "User"."role", "User"."status", "User"."lgaId", "User"."entityId", "User"."resetToken", "User"."resetTokenExpiry", "User"."createdAt", "User"."updatedAt", "User"."mdaId", "entity"."id" AS "entity.id", "entity"."name" AS "entity.name", "entity"."entityTypeId" AS "entity.entityTypeId", "entity"."type" AS "entity.type", "entity"."subType" AS "entity.subType", "entity"."ownership" AS "entity.ownership", "entity"."entityOwnershipId" AS "entity.entityOwnershipId", "entity"."state" AS "entity.state", "entity"."lga" AS "entity.lga", "entity"."lgaId" AS "entity.lgaId", "entity"."contactPerson" AS "entity.contactPerson", "entity"."contactPhone" AS "entity.contactPhone", "entity"."contactEmail" AS "entity.contactEmail", "entity"."status" AS "entity.status", "entity"."code" AS "entity.code", "entity"."category" AS "entity.category", "entity"."address" AS "entity.address", "entity"."createdAt" AS "entity.createdAt", "entity"."updatedAt" AS "entity.updatedAt" FROM "Users" AS "User" LEFT OUTER JOIN "Entities" AS "entity" ON "User"."entityId" = "entity"."id" WHERE "User"."role" = 'principal' LIMIT 1;
+
+👨‍🏫 Testing as Principal: apinegagondo@gmail.com (Entity ID: 8)
+Executing (default): SELECT SUM("amountPaid") AS "totalCollected" FROM "Payments" AS "Payment" WHERE "assessment"."entityId" = 8 LIMIT 1;
+Error
+    at Query.run (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/dialects/postgres/query.js:50:25)
+    at /Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async PostgresQueryInterface.select (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/dialects/abstract/query-interface.js:407:12)
+    at async Payment.findAll (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/model.js:1140:21)
+    at async Payment.findOne (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/model.js:1240:12)
+    at async Object.summary (/Users/nanogesu/Documents/dev/moeTrackIT/backend/src/controllers/reportController.js:23:25)
+    at async runVerification (/Users/nanogesu/Documents/dev/moeTrackIT/backend/verify-revenue.js:53:13) {
+  name: 'SequelizeDatabaseError',
+  parent: error: missing FROM-clause entry for table "assessment"
+      at Parser.parseErrorMessage (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:285:98)
+      at Parser.handlePacket (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:122:29)
+      at Parser.parse (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:35:38)
+      at Socket.<anonymous> (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/index.js:11:42)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 121,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '81',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '3761',
+    routine: 'errorMissingRTE',
+    sql: 'SELECT SUM("amountPaid") AS "totalCollected" FROM "Payments" AS "Payment" WHERE "assessment"."entityId" = 8 LIMIT 1;',
+    parameters: undefined
+  },
+  original: error: missing FROM-clause entry for table "assessment"
+      at Parser.parseErrorMessage (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:285:98)
+      at Parser.handlePacket (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:122:29)
+      at Parser.parse (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:35:38)
+      at Socket.<anonymous> (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/index.js:11:42)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 121,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '81',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '3761',
+    routine: 'errorMissingRTE',
+    sql: 'SELECT SUM("amountPaid") AS "totalCollected" FROM "Payments" AS "Payment" WHERE "assessment"."entityId" = 8 LIMIT 1;',
+    parameters: undefined
+  },
+  sql: 'SELECT SUM("amountPaid") AS "totalCollected" FROM "Payments" AS "Payment" WHERE "assessment"."entityId" = 8 LIMIT 1;',
+  parameters: {}
+}
+📊 Summary Report Result:
+   Total Collected: undefined
+Executing (default): SELECT sum("amountPaid") AS "sum", "assessment"."id" AS "assessment.id", "assessment"."entityId" AS "assessment.entityId", "assessment"."incomeSourceId" AS "assessment.incomeSourceId", "assessment"."amountAssessed" AS "assessment.amountAssessed", "assessment"."currency" AS "assessment.currency", "assessment"."status" AS "assessment.status", "assessment"."dueDate" AS "assessment.dueDate", "assessment"."assessmentPeriod" AS "assessment.assessmentPeriod", "assessment"."meta" AS "assessment.meta", "assessment"."createdBy" AS "assessment.createdBy", "assessment"."createdAt" AS "assessment.createdAt", "assessment"."updatedAt" AS "assessment.updatedAt" FROM "Payments" AS "Payment" INNER JOIN "Assessments" AS "assessment" ON "Payment"."assessmentId" = "assessment"."id" AND "assessment"."entityId" = 8;
+❌ Verification failed with error: Error
+    at Query.run (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/dialects/postgres/query.js:50:25)
+    at /Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async PostgresQueryInterface.rawSelect (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/dialects/abstract/query-interface.js:434:18)
+    at async Payment.aggregate (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/model.js:1277:19)
+    at async Payment.sum (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/sequelize/lib/model.js:1338:12)
+    at async runVerification (/Users/nanogesu/Documents/dev/moeTrackIT/backend/verify-revenue.js:60:37) {
+  name: 'SequelizeDatabaseError',
+  parent: error: column "assessment.id" must appear in the GROUP BY clause or be used in an aggregate function
+      at Parser.parseErrorMessage (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:285:98)
+      at Parser.handlePacket (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:122:29)
+      at Parser.parse (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:35:38)
+      at Socket.<anonymous> (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/index.js:11:42)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 180,
+    severity: 'ERROR',
+    code: '42803',
+    detail: undefined,
+    hint: undefined,
+    position: '36',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_agg.c',
+    line: '1529',
+    routine: 'substitute_grouped_columns_mutator',
+    sql: 'SELECT sum("amountPaid") AS "sum", "assessment"."id" AS "assessment.id", "assessment"."entityId" AS "assessment.entityId", "assessment"."incomeSourceId" AS "assessment.incomeSourceId", "assessment"."amountAssessed" AS "assessment.amountAssessed", "assessment"."currency" AS "assessment.currency", "assessment"."status" AS "assessment.status", "assessment"."dueDate" AS "assessment.dueDate", "assessment"."assessmentPeriod" AS "assessment.assessmentPeriod", "assessment"."meta" AS "assessment.meta", "assessment"."createdBy" AS "assessment.createdBy", "assessment"."createdAt" AS "assessment.createdAt", "assessment"."updatedAt" AS "assessment.updatedAt" FROM "Payments" AS "Payment" INNER JOIN "Assessments" AS "assessment" ON "Payment"."assessmentId" = "assessment"."id" AND "assessment"."entityId" = 8;',
+    parameters: undefined
+  },
+  original: error: column "assessment.id" must appear in the GROUP BY clause or be used in an aggregate function
+      at Parser.parseErrorMessage (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:285:98)
+      at Parser.handlePacket (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:122:29)
+      at Parser.parse (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/parser.js:35:38)
+      at Socket.<anonymous> (/Users/nanogesu/Documents/dev/moeTrackIT/backend/node_modules/pg-protocol/dist/index.js:11:42)
+      at Socket.emit (node:events:508:28)
+      at addChunk (node:internal/streams/readable:559:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:510:3)
+      at Readable.push (node:internal/streams/readable:390:5)
+      at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+    length: 180,
+    severity: 'ERROR',
+    code: '42803',
+    detail: undefined,
+    hint: undefined,
+    position: '36',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_agg.c',
+    line: '1529',
+    routine: 'substitute_grouped_columns_mutator',
+    sql: 'SELECT sum("amountPaid") AS "sum", "assessment"."id" AS "assessment.id", "assessment"."entityId" AS "assessment.entityId", "assessment"."incomeSourceId" AS "assessment.incomeSourceId", "assessment"."amountAssessed" AS "assessment.amountAssessed", "assessment"."currency" AS "assessment.currency", "assessment"."status" AS "assessment.status", "assessment"."dueDate" AS "assessment.dueDate", "assessment"."assessmentPeriod" AS "assessment.assessmentPeriod", "assessment"."meta" AS "assessment.meta", "assessment"."createdBy" AS "assessment.createdBy", "assessment"."createdAt" AS "assessment.createdAt", "assessment"."updatedAt" AS "assessment.updatedAt" FROM "Payments" AS "Payment" INNER JOIN "Assessments" AS "assessment" ON "Payment"."assessmentId" = "assessment"."id" AND "assessment"."entityId" = 8;',
+    parameters: undefined
+  },
+  sql: 'SELECT sum("amountPaid") AS "sum", "assessment"."id" AS "assessment.id", "assessment"."entityId" AS "assessment.entityId", "assessment"."incomeSourceId" AS "assessment.incomeSourceId", "assessment"."amountAssessed" AS "assessment.amountAssessed", "assessment"."currency" AS "assessment.currency", "assessment"."status" AS "assessment.status", "assessment"."dueDate" AS "assessment.dueDate", "assessment"."assessmentPeriod" AS "assessment.assessmentPeriod", "assessment"."meta" AS "assessment.meta", "assessment"."createdBy" AS "assessment.createdBy", "assessment"."createdAt" AS "assessment.createdAt", "assessment"."updatedAt" AS "assessment.updatedAt" FROM "Payments" AS "Payment" INNER JOIN "Assessments" AS "assessment" ON "Payment"."assessmentId" = "assessment"."id" AND "assessment"."entityId" = 8;',
+  parameters: {}
+}

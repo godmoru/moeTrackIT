@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { DataTable } from "@/components/ui/DataTable";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
@@ -167,52 +168,59 @@ export default function EntitiesPage() {
       )}
       {!loading && !error && (
         <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-3 py-2 font-medium">S/No</th>
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Ownership</th>
-                <th className="px-3 py-2 font-medium">State</th>
-                <th className="px-3 py-2 font-medium">LGA</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((e, index) => (
-                <tr key={e.id} className="border-t text-gray-800">
-                  <td className="px-3 py-2 text-xs">{index + 1}</td>
-                  <td className="px-3 py-2 text-xs">
+          <DataTable
+            data={items}
+            columns={[
+              {
+                header: "S/No",
+                cell: (e, index) => <span className="text-xs">{index + 1}</span>,
+              },
+              {
+                header: "Name",
+                cell: (e) => (
+                  <Link
+                    href={`/admin/institutions/${e.id}`}
+                    className="text-green-700 hover:underline font-medium text-xs"
+                  >
+                    {e.name}
+                  </Link>
+                ),
+              },
+              {
+                header: "Type",
+                cell: (e) => <span className="text-xs">{e.entityType?.name || e.subType || e.type}</span>,
+              },
+              {
+                header: "Ownership",
+                cell: (e) => <span className="text-xs">{e.ownershipType?.name || e.ownership || "-"}</span>,
+              },
+              {
+                header: "State",
+                cell: (e) => <span className="text-xs">{e.state || "-"}</span>,
+              },
+              {
+                header: "LGA",
+                cell: (e) => <span className="text-xs">{e.lga || "-"}</span>,
+              },
+              {
+                header: "Status",
+                cell: (e) => <span className="text-xs capitalize">{e.status}</span>,
+              },
+              {
+                header: <div className="text-right">Actions</div>,
+                cell: (e) => (
+                  <div className="text-right">
                     <Link
                       href={`/admin/institutions/${e.id}`}
-                      className="text-green-700 hover:underline"
-                    >
-                      {e.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {e.entityType?.name || e.subType || e.type}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {e.ownershipType?.name || e.ownership || "-"}
-                  </td>
-                  <td className="px-3 py-2 text-xs">{e.state || "-"}</td>
-                  <td className="px-3 py-2 text-xs">{e.lga || "-"}</td>
-                  <td className="px-3 py-2 text-xs capitalize">{e.status}</td>
-                  <td className="px-3 py-2 text-right text-xs">
-                    <Link
-                      href={`/admin/institutions/${e.id}`}
-                      className="rounded-md bg-green-50 px-2 py-1 font-medium text-green-800 hover:bg-green-100"
+                      className="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-800 hover:bg-green-100"
                     >
                       View
                     </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </div>
       )}
     </div>

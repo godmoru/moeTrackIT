@@ -59,7 +59,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             resizeMode="contain"
           />
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>MOE</Text>
+            <Text style={styles.logoText}>MOEKM</Text>
             <Text style={styles.logoSubtext}> RevenueTrackIT</Text>
           </View>
           <Text style={styles.title}>Welcome Back</Text>

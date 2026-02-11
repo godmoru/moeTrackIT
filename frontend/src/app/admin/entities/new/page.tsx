@@ -91,17 +91,28 @@ export default function NewEntityPage() {
   }, []);
 
   useEffect(() => {
-    // Autogenerate a simple code from the name on first entry
-    if (!name) return;
-    setCode((prev) => {
-      if (prev) return prev;
-      const base = name
-        .trim()
-        .toUpperCase()
-        .replace(/[^A-Z0-9]/g, "")
-        .slice(0, 6);
-      return base || "";
-    });
+    // Autogenerate code from name dynamically
+    if (!name) {
+      setCode("");
+      return;
+    }
+
+    const parts = name.split(",");
+    const schoolName = parts[0].trim();
+    const location = parts.length > 1 ? parts[1].trim() : "";
+
+    // Get abbreviation from first letter of each word in school name
+    const matches = schoolName.match(/\b(\w)/g);
+    const abbr = matches ? matches.join("").toUpperCase() : "";
+
+    let generatedCode = abbr;
+    if (location) {
+      // If location exists (after comma), append it
+      const loc = location.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      generatedCode = `${abbr}-${loc}`;
+    }
+
+    setCode(generatedCode);
   }, [name]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -167,7 +178,7 @@ export default function NewEntityPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-gray-900">
-          New Entity
+          New Institution (School)
           {code && (
             <span className="ml-2 text-xs font-normal text-gray-500">
               (Code: {code})

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { Modal } from "@/components/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
@@ -161,41 +162,31 @@ export default function IncomeSourcesPage() {
       )}
       {!loading && !error && (
         <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-600">
-              <tr>
-                <th className="px-3 py-2 font-medium">S/No</th>
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Code</th>
-                <th className="px-3 py-2 font-medium">Category</th>
-                <th className="px-3 py-2 font-medium">Recurrence</th>
-                <th className="px-3 py-2 font-medium">Default Amount (NGN)</th>
-                <th className="px-3 py-2 font-medium">Active</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((s, index) => (
-                <tr key={s.id} className="border-t text-gray-800">
-                  <td className="px-3 py-2 text-xs">{index+1}</td>
-                  <td className="px-3 py-2 text-xs">
-                    <Link
-                      href={`/admin/income-sources/${s.id}`}
-                      className="text-green-700 hover:underline"
-                    >
-                      {s.name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2 text-xs">{s.code}</td>
-                  <td className="px-3 py-2 text-xs capitalize">{s.category}</td>
-                  <td className="px-3 py-2 text-xs capitalize">{s.recurrence}</td>
-                  <td className="px-3 py-2 text-xs">N
-                    {Number(s.defaultAmount || 0).toLocaleString("en-NG")}
-                  </td>
-                  <td className="px-3 py-2 text-xs">{s.active ? 'Yes' : 'No'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            data={items}
+            columns={[
+              { header: "S/No", cell: (s, index) => <span className="text-xs">{index + 1}</span> },
+              {
+                header: "Name",
+                cell: (s) => (
+                  <Link
+                    href={`/admin/income-sources/${s.id}`}
+                    className="text-green-700 hover:underline text-xs"
+                  >
+                    {s.name}
+                  </Link>
+                )
+              },
+              { header: "Code", cell: (s) => <span className="text-xs">{s.code}</span> },
+              { header: "Category", cell: (s) => <span className="text-xs capitalize">{s.category}</span> },
+              { header: "Recurrence", cell: (s) => <span className="text-xs capitalize">{s.recurrence}</span> },
+              {
+                header: "Default Amount (NGN)",
+                cell: (s) => <span className="text-xs">N{Number(s.defaultAmount || 0).toLocaleString("en-NG")}</span>
+              },
+              { header: "Active", cell: (s) => <span className="text-xs">{s.active ? 'Yes' : 'No'}</span> },
+            ]}
+          />
         </div>
       )}
       <Modal

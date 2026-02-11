@@ -18,6 +18,18 @@ const createExpenditure = catchAsync(async (req, res) => {
  * Get all expenditures
  */
 const getAllExpenditures = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(200).json({
+            status: 'success',
+            items: [],
+            total: 0,
+            page: 1,
+            limit: 10,
+            totalPages: 0
+        });
+    }
+
     const result = await ExpenditureService.getAllExpenditures(req.query);
 
     res.status(200).json({
@@ -30,6 +42,14 @@ const getAllExpenditures = catchAsync(async (req, res) => {
  * Get a single expenditure
  */
 const getExpenditure = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(403).json({
+            status: 'fail',
+            message: 'You do not have permission to view expenditures'
+        });
+    }
+
     const expenditure = await ExpenditureService.getExpenditureById(
         req.params.id,
         {
@@ -126,6 +146,14 @@ const deleteExpenditure = catchAsync(async (req, res) => {
  * Get expenditure statistics
  */
 const getExpenditureStats = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(403).json({
+            status: 'fail',
+            message: 'You do not have permission to view expenditure statistics'
+        });
+    }
+
     const stats = await ExpenditureService.getExpenditureStats(req.query);
 
     res.status(200).json({

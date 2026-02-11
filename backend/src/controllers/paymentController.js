@@ -13,6 +13,7 @@ const {
   generatePaymentReference,
 } = require('../services/paystackService');
 const remitaService = require('../services/remitaService');
+const emailService = require('../services/emailService');
 
 async function listPayments(req, res) {
   try {
@@ -80,7 +81,11 @@ async function createPayment(req, res) {
         method,
         reference,
         status,
+        reference,
+        status,
         recordedBy,
+        payerEmail: req.body.payerEmail,
+        payerName: req.body.payerName,
       },
       { transaction: t },
     );
@@ -107,6 +112,45 @@ async function createPayment(req, res) {
     }
 
     await t.commit();
+
+    // Send payment receipt email
+    try {
+      const recorder = await User.findByPk(recordedBy);
+      // For manual payments, we might no have a payer email directly on the payment record if it wasn't provided (schema check needed)
+      // But typically manual payments are recorded by an officer. 
+      // The schema for Payment has payerEmail. 
+      // Let's assume req.body.payerEmail is passed or we use entity email if available.
+      // For now, looking at createPayment, it doesn't extract payerEmail. 
+      // I should update createPayment to accept payerEmail and payerName.
+
+      // Re-fetch payment with necessary details
+      const fullPayment = await Payment.findByPk(payment.id, {
+        include: [
+          {
+            model: Assessment,
+            as: 'assessment',
+            include: [{ model: IncomeSource, as: 'incomeSource' }]
+          }
+        ]
+      });
+
+      if (req.body.payerEmail) {
+        emailService.sendPaymentReceiptEmail(
+          req.body.payerEmail,
+          req.body.payerName || 'Valued Customer',
+          {
+            amount: fullPayment.amountPaid,
+            reference: fullPayment.reference,
+            date: fullPayment.paymentDate,
+            purpose: fullPayment.assessment?.incomeSource?.name || 'Assessment Payment',
+            status: fullPayment.status
+          }
+        ).catch(err => console.error('Failed to send payment email:', err));
+      }
+    } catch (emailErr) {
+      console.error('Error triggering payment email:', emailErr);
+    }
+
     res.status(201).json(payment);
   } catch (err) {
     console.error(err);
@@ -552,6 +596,21 @@ async function verifyOnlinePayment(req, res) {
 
       await t.commit();
 
+      // Send payment receipt email
+      if (payment.payerEmail) {
+        emailService.sendPaymentReceiptEmail(
+          payment.payerEmail,
+          payment.payerName || 'Valued Customer',
+          {
+            amount: payment.amountPaid,
+            reference: payment.reference,
+            date: payment.paymentDate,
+            purpose: payment.assessment?.incomeSource?.name || 'Assessment Payment',
+            status: payment.status
+          }
+        ).catch(err => console.error('Failed to send payment email:', err));
+      }
+
       return res.status(200).json({
         message: 'Payment verified successfully',
         status: 'success',
@@ -646,6 +705,32 @@ async function paystackWebhook(req, res) {
 
           await t.commit();
           console.log(`Webhook: Payment ${reference} confirmed via webhook`);
+
+          // Send payment receipt email (Re-fetch to get includes if needed, or rely on what we have)
+          // payment variable doesn't have includes, let's fetch assessment info or just use defaults
+          const fullPayment = await Payment.findByPk(payment.id, {
+            include: [
+              {
+                model: Assessment,
+                as: 'assessment',
+                include: [{ model: IncomeSource, as: 'incomeSource' }]
+              }
+            ]
+          });
+
+          if (fullPayment.payerEmail) {
+            emailService.sendPaymentReceiptEmail(
+              fullPayment.payerEmail,
+              fullPayment.payerName || 'Valued Customer',
+              {
+                amount: fullPayment.amountPaid,
+                reference: fullPayment.reference,
+                date: fullPayment.paymentDate,
+                purpose: fullPayment.assessment?.incomeSource?.name || 'Assessment Payment',
+                status: fullPayment.status
+              }
+            ).catch(err => console.error('Failed to send payment email:', err));
+          }
         } catch (err) {
           await t.rollback();
           console.error('Webhook processing error:', err);
@@ -799,18 +884,23 @@ module.exports = {
         });
       }
 
+      // Check if amount is valid
       const amountNum = Number(amount);
-      const reference = generatePaymentReference(assessmentId); // Using same ref generator
-      const description = `Payment for ${assessment.assessmentPeriod || 'Assessment'}`;
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return res.status(400).json({ message: 'Invalid payment amount' });
+      }
 
-      // Initialize with Remita
+      // Generate unique reference (keep it short for Remita if needed, but uuid is fine usually)
+      const orderId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      // Initialize payment with Remita
       const remitaResult = await remitaService.initializePayment({
         payerName: name || user.name,
         payerEmail: email,
-        payerPhone: phone || user.phoneNumber || '00000000000',
-        description,
+        payerPhone: phone || '0000000000',
+        description: `Payment for Assessment ${assessment.assessmentPeriod} - ${assessment.entity?.name}`,
         amount: amountNum,
-        orderId: reference,
+        orderId: orderId,
       });
 
       // Create pending payment record
@@ -819,11 +909,11 @@ module.exports = {
         amountPaid: amountNum,
         paymentDate: new Date(),
         method: 'remita',
-        reference, // Our internal/order ref
+        reference: orderId, // Our internal reference (Remita OrderID)
         status: 'pending',
         recordedBy: user.id,
-        // Store RRR as the provider reference
-        paystackReference: remitaResult.rrr,
+        paystackReference: remitaResult.rrr, // Storing RRR here for now (schema might need 'remitaRRR')
+        paystackAccessCode: null,
         payerEmail: email,
         payerName: name || user.name,
         paymentType: 'online',
@@ -834,10 +924,9 @@ module.exports = {
         message: 'Remita payment initialized successfully',
         paymentId: payment.id,
         rrr: remitaResult.rrr,
-        orderId: reference,
-        amount: amountNum,
+        orderId: remitaResult.orderId,
+        status: remitaResult.status,
       });
-
     } catch (err) {
       console.error('Failed to initialize Remita payment:', err);
       res.status(500).json({
@@ -848,7 +937,7 @@ module.exports = {
 
   /**
    * GET /api/v1/payments/remita/verify/:rrr
-   * Verify a payment with Remita (via RRR)
+   * Verify a Remita payment
    */
   async verifyRemitaPayment(req, res) {
     const t = await sequelize.transaction();
@@ -859,43 +948,49 @@ module.exports = {
         return res.status(400).json({ message: 'RRR is required' });
       }
 
-      // Find the pending payment by RRR (stored in paystackReference for compatibility or add new col)
-      // Note: We are using paystackReference column to store RRR to avoid schema change for now 
-      // or we should check if we should add a new column 'providerReference'.
-      // For now, let's assume 'paystackReference' holds the external reference.
+      // Find the pending payment by RRR (stored in paystackReference for now)
       const payment = await Payment.findOne({
         where: { paystackReference: rrr },
-        include: [{ model: Assessment, as: 'assessment' }],
+        include: [
+          {
+            model: Assessment,
+            as: 'assessment',
+          },
+        ],
         transaction: t,
       });
 
       if (!payment) {
         await t.rollback();
-        return res.status(404).json({ message: 'Payment not found' });
+        return res.status(404).json({ message: 'Payment record not found for this RRR' });
       }
 
       if (payment.status === 'confirmed' || payment.status === 'paid') {
         await t.rollback();
         return res.status(200).json({
           message: 'Payment already verified',
-          status: payment.status,
+          status: 'success',
           paymentId: payment.id,
         });
       }
 
+      // Verify with Remita
       const verification = await remitaService.verifyPayment(rrr);
 
-      // Remita status '00' is successful
-      if (verification.status === '00') {
-        // Update payment
+      // Status '00' or '01' indicates success in Remita (00=Success, 01=Approved)
+      if (verification.status === '00' || verification.status === '01') {
+        const amountPaid = Number(verification.amount || payment.amountPaid);
+
+        // Update payment record
         await payment.update({
           status: 'confirmed',
-          method: 'remita',
+          channel: 'remita',
           gatewayResponse: JSON.stringify(verification.raw),
-          paymentDate: verification.transactionTime ? new Date(verification.transactionTime) : new Date(),
+          paymentDate: verification.paymentDate ? new Date(verification.paymentDate) : new Date(),
+          amountPaid: amountPaid // Update amount if different? (Remita returns amount)
         }, { transaction: t });
 
-        // Update assessment
+        // Update assessment status based on total paid
         const totalPaidResult = await Payment.findOne({
           attributes: [[sequelize.fn('SUM', sequelize.col('amountPaid')), 'totalPaid']],
           where: {
@@ -914,38 +1009,32 @@ module.exports = {
           let newStatus = 'pending';
           if (totalPaid >= assessed) newStatus = 'paid';
           else if (totalPaid > 0) newStatus = 'part_paid';
+
           await assessment.update({ status: newStatus }, { transaction: t });
         }
 
         await t.commit();
+
         return res.status(200).json({
           message: 'Payment verified successfully',
           status: 'success',
           paymentId: payment.id,
-          amount: verification.amount,
+          rrr: verification.rrr,
+          amount: amountPaid,
         });
 
       } else {
-        // Failed or pending
-        if (verification.status === '021') {
-          // Transaction Pending
-          await t.rollback();
-          return res.status(200).json({
-            message: 'Transaction is still pending',
-            status: 'pending',
-            paymentId: payment.id
-          });
-        }
-
+        // Payment pending or failed
+        // '021' is pending usually, '022' etc.
         await payment.update({
-          status: 'failed',
-          gatewayResponse: JSON.stringify(verification.raw),
+          gatewayResponse: JSON.stringify(verification.raw)
         }, { transaction: t });
 
         await t.commit();
+
         return res.status(200).json({
-          message: 'Payment was not successful',
-          status: 'failed',
+          message: 'Payment verification failed or pending',
+          status: 'failed', // Simplified status for frontend
           remitaStatus: verification.status,
           paymentId: payment.id
         });
@@ -954,15 +1043,12 @@ module.exports = {
     } catch (err) {
       console.error('Failed to verify Remita payment:', err);
       await t.rollback();
-      res.status(500).json({ message: err.message || 'Failed to verify payment' });
+      res.status(500).json({
+        message: err.message || 'Failed to verify Remita payment',
+      });
     }
   },
 
-  /**
-   * POST /api/v1/payments/remita/webhook
-   * Remita Webhook Notification
-   * Remita sends JSON array of transactions
-   */
   async remitaWebhook(req, res) {
     try {
       const updates = req.body; // Expecting an array of objects

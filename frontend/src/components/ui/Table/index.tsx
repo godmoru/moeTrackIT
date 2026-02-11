@@ -225,7 +225,7 @@ const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
       <td
         ref={ref}
         className={twMerge(
-          'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+          'px-6 py-3 whitespace-nowrap text-sm text-gray-900',
           alignmentClasses[align],
           className
         )}

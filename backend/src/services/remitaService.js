@@ -48,7 +48,6 @@ async function initializePayment({ payerName, payerEmail, payerPhone, descriptio
         payerEmail: payerEmail,
         payerPhone: payerPhone,
         description: description,
-        // Optional custom fields could be added here if needed
     };
 
     const headers = {
@@ -57,27 +56,27 @@ async function initializePayment({ payerName, payerEmail, payerPhone, descriptio
     };
 
     try {
+        console.log('Initializing Remita Payment:', { url: `${REMITA_BASE_URL}/echannelsvc/merchant/api/paymentinit`, payload });
         const response = await axios.post(`${REMITA_BASE_URL}/echannelsvc/merchant/api/paymentinit`, payload, { headers });
 
-        // Check if RRR was generated successfully
-        // Remita response format varies slightly but usually has status code and RRR
-        const data = response.data;
-
-        // Remove "jsonp (" and ")" wrapping if present (some Remita endpoints return JSONP)
-        let cleanData = data;
+        let data = response.data;
+        // Handle JSONP-like response if necessary
         if (typeof data === 'string' && data.startsWith('jsonp (')) {
-            cleanData = JSON.parse(data.substring(7, data.length - 1));
+            data = JSON.parse(data.substring(7, data.length - 1));
         }
 
-        if (cleanData.statuscode === '025' && cleanData.RRR) {
+        console.log('Remita Init Response:', data);
+
+        // Remita success code usually '025' for RRR generated
+        if (data.statuscode === '025' && data.RRR) {
             return {
-                rrr: cleanData.RRR,
-                status: cleanData.statuscode,
-                statusMessage: cleanData.status,
-                orderId: cleanData.orderId
+                rrr: data.RRR,
+                status: data.statuscode,
+                statusMessage: data.status,
+                orderId: data.orderId
             };
         } else {
-            throw new Error(cleanData.status || 'Failed to generate RRR');
+            throw new Error(data.status || 'Failed to generate RRR');
         }
 
     } catch (error) {
@@ -105,16 +104,22 @@ async function verifyPayment(rrr) {
     };
 
     try {
-        const response = await axios.get(`${REMITA_BASE_URL}/echannelsvc/${REMITA_MERCHANT_ID}/${rrr}/${apiHash}/status.reg`, { headers });
+        console.log(`Verifying Remita Payment: ${rrr}`);
+        // Endpoint structure: /echannelsvc/{merchantId}/{rrr}/{hash}/status.reg
+        const url = `${REMITA_BASE_URL}/echannelsvc/${REMITA_MERCHANT_ID}/${rrr}/${apiHash}/status.reg`;
+        const response = await axios.get(url, { headers });
         const data = response.data;
 
+        console.log('Remita Verify Response:', data);
+
         return {
-            status: data.status, // e.g., '00' for successful
+            status: data.status, // '00' or '01' usually means success/approved
             message: data.message,
             rrr: data.RRR,
             amount: data.amount,
             orderId: data.orderId,
             transactionTime: data.transactiontime,
+            paymentDate: data.paymentDate,
             raw: data
         };
 

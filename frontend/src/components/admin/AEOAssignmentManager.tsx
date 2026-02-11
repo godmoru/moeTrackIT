@@ -86,7 +86,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
       setIsLoading(true);
 
       if (data.action === 'assign') {
-        await put(`/users/${userId}/lgas`, { lgaIds: [data.lgaId] });
+        await post(`/users/${userId}/lgas`, { lgaId: data.lgaId });
       } else {
         await del(`/users/${userId}/lgas/${data.lgaId}`);
       }
@@ -94,7 +94,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
       // Refresh current assignments
       const refreshed = await get(`/users/${userId}/lgas?includeHistory=1`);
       setAssignmentHistory((Array.isArray(refreshed) ? refreshed : []) as any);
-      
+
       const message = `LGA ${data.action === 'assign' ? 'assigned' : 'unassigned'} successfully`;
       toast.success(message);
       onAssignmentChange?.(true);
@@ -116,7 +116,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
 
   return (
     <div className="space-y-4 text-xs">
-      <div className="rounded-lg bg-white p-4 text-xs shadow-sm">
+      <div className="bg-white p-4 text-xs shadow-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           Manage LGA Assignments
         </h3>
@@ -130,7 +130,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
               <select
                 id="action"
                 {...register('action')}
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                className="w-full border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               >
                 <option value="assign">Assign</option>
                 <option value="unassign">Unassign</option>
@@ -144,7 +144,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
               <select
                 id="lgaId"
                 {...register('lgaId', { required: true })}
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
+                className="w-full border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:bg-gray-100 disabled:text-gray-500"
                 disabled={action === 'unassign' && currentAssignmentsList.length === 0}
               >
                 <option value="">-- Select LGA --</option>
@@ -171,11 +171,10 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
               <button
                 type="submit"
                 disabled={isLoading || (action === 'unassign' && currentAssignmentsList.length === 0)}
-                className={`w-full rounded-md px-4 py-2 text-xs font-semibold text-white disabled:opacity-70 ${
-                  action === 'assign'
-                    ? 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700'
-                    : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600'
-                }`}
+                className={`w-full px-4 py-2 text-xs font-semibold text-white disabled:opacity-70 ${action === 'assign'
+                  ? 'bg-green-700 hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700'
+                  : 'bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600'
+                  }`}
               >
                 {isLoading ? 'Processing...' : action === 'assign' ? 'Assign LGA' : 'Unassign LGA'}
               </button>
@@ -184,7 +183,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
         </form>
       </div>
 
-      <div className="rounded-lg bg-white p-4 text-xs shadow-sm">
+      <div className="bg-white p-4 text-xs shadow-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           Current LGA Assignments
         </h3>
@@ -217,7 +216,7 @@ export function AEOAssignmentManager({ userId, currentAssignments = [], onAssign
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 text-xs shadow-sm">
+      <div className="bg-white p-4 text-xs shadow-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           Past Assignments
         </h3>

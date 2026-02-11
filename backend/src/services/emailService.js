@@ -27,6 +27,11 @@ function createTransporter() {
   return nodemailer.createTransport(config);
 }
 
+const fs = require('fs');
+const path = require('path');
+
+// ... existing code ...
+
 /**
  * Send an email
  * @param {Object} options - Email options
@@ -56,17 +61,129 @@ async function sendEmail({ to, subject, text, html }) {
     console.log('Subject:', subject);
     console.log('Body:', text);
     console.log('==============================================');
+
+    // Also log to file for verification
+    if (process.env.NODE_ENV !== 'production') {
+      logEmailToFile(to, subject, text);
+    }
+
     return { messageId: 'console-log', accepted: [to] };
   }
 
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
+
+    // Log to file for verification in dev
+    if (process.env.NODE_ENV !== 'production') {
+      logEmailToFile(to, subject, text);
+    }
+
     return info;
   } catch (err) {
     console.error('Failed to send email:', err);
     throw err;
   }
+}
+
+/**
+ * Helper to log emails to a file
+ */
+function logEmailToFile(to, subject, body) {
+  const logPath = path.join(__dirname, '../../email.log');
+  const logEntry = `
+=== EMAIL LOGGED AT ${new Date().toISOString()} ===
+To: ${to}
+Subject: ${subject}
+Body:
+${body}
+================================================
+`;
+  fs.appendFile(logPath, logEntry, (err) => {
+    if (err) console.error('Failed to write email to log file:', err);
+  });
+}
+
+/**
+ * Send welcome email to new user
+ * @param {Object} user - User object
+ * @param {string} password - The raw password
+ * @param {string} roleDisplay - Display name for the role
+ * @param {string} [additionalInfo] - Extra info like assigned LGA or Entity
+ */
+async function sendWelcomeEmail(user, password, roleDisplay, additionalInfo = '') {
+  const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000/login';
+  const subject = 'Welcome to MOETrackIT - Your Account Details';
+
+  const text = `
+Hello ${user.name},
+
+Welcome to MOETrackIT! Your account has been created successfully.
+
+Here are your account details:
+Role: ${roleDisplay}
+${additionalInfo ? additionalInfo + '\n' : ''}
+Email: ${user.email}
+Password: ${password}
+
+Please log in at: ${loginUrl}
+
+IMPORTANT: We recommend changing your password after your first login.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #15803d; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9f9f9; }
+    .button { display: inline-block; background: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+    .details { background: #fff; padding: 15px; border-left: 4px solid #15803d; margin: 15px 0; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to MOETrackIT</h1>
+      <p>Education Revenue Management System</p>
+    </div>
+    <div class="content">
+      <h2>Hello ${user.name},</h2>
+      <p>Welcome to MOETrackIT! Your account has been created successfully.</p>
+      
+      <div class="details">
+        <p><strong>Role:</strong> ${roleDisplay}</p>
+        ${additionalInfo ? `<p>${additionalInfo.replace(/\n/g, '<br>')}</p>` : ''}
+        <p><strong>Email:</strong> ${user.email}</p>
+        <p><strong>Password:</strong> ${password}</p>
+      </div>
+
+      <p>Please click the button below to log in:</p>
+      <p style="text-align: center;">
+        <a href="${loginUrl}" class="button">Log In to Dashboard</a>
+      </p>
+      
+      <p><strong>IMPORTANT:</strong> We recommend changing your password after your first login.</p>
+    </div>
+    <div class="footer">
+      <p>Benue State Ministry of Education & Knowledge Management</p>
+      <p>Education Revenue Management System</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({ to: user.email, subject, text, html });
 }
 
 /**
@@ -202,6 +319,88 @@ Education Revenue Management System
 
 module.exports = {
   sendEmail,
+  sendWelcomeEmail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
+  sendPaymentReceiptEmail,
 };
+
+/**
+ * Send payment receipt email
+ * @param {string} email - Recipient email
+ * @param {string} name - Payer name
+ * @param {Object} paymentDetails - Payment details (amount, reference, date, purpose, status)
+ */
+async function sendPaymentReceiptEmail(email, name, paymentDetails) {
+  const subject = 'Payment Receipt - MOETrackIT';
+
+  const { amount, reference, date, purpose, status } = paymentDetails;
+  const formattedAmount = Number(amount).toLocaleString('en-NG', { style: 'currency', currency: 'NGN' });
+  const formattedDate = date ? new Date(date).toLocaleDateString() : new Date().toLocaleDateString();
+
+  const text = `
+Hello ${name},
+
+This is a receipt for your payment to the Benue State Ministry of Education.
+
+Payment Details:
+----------------
+Amount: ${formattedAmount}
+Reference: ${reference}
+Date: ${formattedDate}
+Purpose: ${purpose}
+Status: ${status.toUpperCase()}
+
+Thank you for your payment.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: #15803d; color: white; padding: 20px; text-align: center; }
+    .content { padding: 20px; background: #f9f9f9; }
+    .details { background: #fff; padding: 15px; border-left: 4px solid #15803d; margin: 15px 0; }
+    .footer { padding: 20px; text-align: center; font-size: 12px; color: #666; }
+    .amount { font-size: 24px; font-weight: bold; color: #15803d; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Payment Receipt</h1>
+      <p>MOETrackIT</p>
+    </div>
+    <div class="content">
+      <p>Hello ${name},</p>
+      <p>This is a receipt for your payment to the Benue State Ministry of Education.</p>
+      
+      <div class="details">
+        <p><strong>Amount Paid:</strong> <span class="amount">${formattedAmount}</span></p>
+        <p><strong>Reference:</strong> ${reference}</p>
+        <p><strong>Date:</strong> ${formattedDate}</p>
+        <p><strong>Purpose:</strong> ${purpose}</p>
+        <p><strong>Status:</strong> ${status.toUpperCase()}</p>
+      </div>
+
+      <p>Thank you for your payment.</p>
+    </div>
+    <div class="footer">
+      <p>Benue State Ministry of Education & Knowledge Management</p>
+      <p>Education Revenue Management System</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({ to: email, subject, text, html });
+}

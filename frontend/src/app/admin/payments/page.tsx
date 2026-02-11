@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/Modal";
+import { DataTable } from "@/components/ui/DataTable";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -167,70 +168,52 @@ export default function PaymentsPage() {
           </div>
 
           <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="px-3 py-2 font-medium">S/No</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">References (If Any)</th>
-                  <th className="px-3 py-2 font-medium">Recieved From</th>
-                  <th className="px-3 py-2 font-medium">Method</th>
-                  <th className="px-3 py-2 font-medium">Purpose</th>
-                  <th className="px-3 py-2 font-medium text-right">Amount (NGN)</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredPayments.length === 0 && (
-                  <tr>
-                    <td className="px-3 py-2 text-xs text-gray-500" colSpan={8}>
-                      No payments match the selected filters.
-                    </td>
-                  </tr>
-                )}
-                {filteredPayments.map((p) => {
-                  const dateLabel = p.paymentDate
-                    ? new Date(p.paymentDate).toLocaleDateString("en-NG")
-                    : "-";
-                  const payerName =
-                    p.assessment?.entity?.name ||
-                    p.recorder?.name ||
-                    "-";
-                  const purposeLabel =
-                    p.assessment?.incomeSource?.name ||
-                    p.reference ||
-                    "-";
-                  return (
-                    <tr key={p.id} className="border-t text-gray-800">
-                      <td className="px-3 py-2 text-xs">{p.id}</td>
-                      <td className="px-3 py-2 text-xs">{dateLabel}</td>
-                      <td className="px-3 py-2 text-xs">{p.reference || "-"}</td>
-                      <td className="px-3 py-2 text-xs">{payerName}</td>
-                      <td className="px-3 py-2 text-xs">{p.method || "-"}</td>
-                      <td className="px-3 py-2 text-xs">{purposeLabel}</td>
-                      <td className="px-3 py-2 text-right text-xs">
-                        ₦{Number(p.amountPaid || 0).toLocaleString("en-NG", {
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="px-3 py-2 text-xs capitalize">
-                        {p.status || "-"}
-                      </td>
-                      <td className="px-3 py-2 text-right text-xs">
-                        <button
-                          type="button"
-                          onClick={() => handleViewInvoice(p.id)}
-                          className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          View Invoice
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <DataTable
+              data={filteredPayments}
+              columns={[
+                { header: "S/No", cell: (p, index) => <span className="text-xs">{p.id}</span> },
+                {
+                  header: "Date",
+                  cell: (p) => <span className="text-xs">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-NG") : "-"}</span>
+                },
+                { header: "References (If Any)", cell: (p) => <span className="text-xs">{p.reference || "-"}</span> },
+                {
+                  header: "Recieved From",
+                  cell: (p) => <span className="text-xs">{p.assessment?.entity?.name || p.recorder?.name || "-"}</span>
+                },
+                { header: "Method", cell: (p) => <span className="text-xs">{p.method || "-"}</span> },
+                {
+                  header: "Purpose",
+                  cell: (p) => <span className="text-xs">{p.assessment?.incomeSource?.name || p.reference || "-"}</span>
+                },
+                {
+                  header: <div className="text-right">Amount (NGN)</div>,
+                  cell: (p) => (
+                    <div className="text-right text-xs">
+                      ₦{Number(p.amountPaid || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}
+                    </div>
+                  )
+                },
+                {
+                  header: "Status",
+                  cell: (p) => <span className="text-xs capitalize">{p.status || "-"}</span>
+                },
+                {
+                  header: <div className="text-right">Action</div>,
+                  cell: (p) => (
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleViewInvoice(p.id)}
+                        className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        View Invoice
+                      </button>
+                    </div>
+                  )
+                }
+              ]}
+            />
           </div>
         </>
       )}

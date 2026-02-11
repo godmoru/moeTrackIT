@@ -54,7 +54,7 @@ async function authMiddleware(req, res, next) {
         if (user?.role === 'area_education_officer') {
           try {
             const userLgas = await UserLga.findAll({
-              where: { userId: user.id },
+              where: { userId: user.id, isCurrent: true },
               attributes: ['lgaId'],
               raw: true,
             });

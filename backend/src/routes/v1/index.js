@@ -25,7 +25,9 @@ router.use('/expenditures', require('./expenditure.routes'));
 router.use('/expenditure-categories', require('./expenditureCategories.routes'));
 router.use('/retirements', require('./expenditureRetirement.routes'));
 // router.use('/attachments', require('./attachment.routes'));
-// router.use('/dashboard', require('./dashboard.routes'));
+router.use('/dashboard', require('./dashboard.routes'));
 
 module.exports = router;
+
+
 

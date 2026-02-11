@@ -10,14 +10,7 @@ import { toast } from 'sonner';
 import { UserForm } from '@/components/forms/UserForm';
 import { AEOAssignmentManager } from '@/components/admin/AEOAssignmentManager';
 import { Modal } from '@/components/Modal';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/Table';
+import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -150,114 +143,116 @@ export default function UsersPage() {
       )}
 
       <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-        <Table isLoading={isLoading} striped hoverable>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="px-3 py-2 text-[11px] font-medium text-gray-600">Name</TableHead>
-              <TableHead className="px-3 py-2 text-[11px] font-medium text-gray-600">Role</TableHead>
-              <TableHead className="px-3 py-2 text-[11px] font-medium text-gray-600">LGA</TableHead>
-              <TableHead className="px-3 py-2 text-[11px] font-medium text-gray-600">Status</TableHead>
-              <TableHead className="px-3 py-2 text-[11px] font-medium text-gray-600">Last Login</TableHead>
-              <TableHead className="px-3 py-2 text-[11px] font-medium text-gray-600">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {users.map((user) => {
-              const isActive = user.status === 'active';
-
-              return (
-                <TableRow
-                  key={user.id} // ← Safe key
-                  onClick={() => openEditModal(user)}
-                  className="cursor-pointer"
+        <DataTable
+          data={users}
+          isLoading={isLoading}
+          onRowClick={(user) => openEditModal(user)}
+          columns={[
+            {
+              header: "Name",
+              cell: (user) => (
+                <div className="flex items-center">
+                  <div className="h-10 w-10 flex-shrink-0">
+                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                      <UserIcon className="h-6 w-6 text-gray-500" />
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <div className="font-medium text-gray-900">{user.name}</div>
+                    <div className="text-gray-500 text-xs">{user.email}</div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              header: "Role",
+              cell: (user) => (
+                <div className={twMerge('text-xs px-2 py-1 rounded inline-flex font-semibold', roleColors[user.role])}>
+                  {user.role
+                    .split('_')
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ')}
+                </div>
+              ),
+            },
+            {
+              header: "LGA",
+              cell: (user) => (
+                <span className="text-[11px] text-gray-700">
+                  {user.role === 'area_education_officer'
+                    ? user.assignedLgas && user.assignedLgas.length > 0
+                      ? user.assignedLgas.map((lga) => lga.name).join(', ')
+                      : '-'
+                    : '-'}
+                </span>
+              ),
+            },
+            {
+              header: "Status",
+              cell: (user) => (
+                <span
+                  className={twMerge(
+                    'px-2 inline-flex text-[11px] leading-5 font-semibold rounded-full',
+                    user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  )}
                 >
-                  <TableCell className="px-3 py-2 text-xs">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                          <UserIcon className="h-6 w-6 text-gray-500" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                        <div className="text-gray-500 text-xs">{user.email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
+                  {user.status === 'active' ? 'Active' : 'Disabled'}
+                </span>
+              ),
+            },
+            {
+              header: "Last Login",
+              cell: (user) => (
+                <div className="text-[11px] text-gray-500">
+                  {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
+                </div>
+              ),
+            },
+            {
+              header: "Actions",
+              cell: (user) => (
+                <div className="flex space-x-3" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(user);
+                    }}
+                    className="text-green-700 hover:text-green-800"
+                    title="Edit"
+                  >
+                    <PencilIcon className="h-5 w-5" />
+                  </button>
 
-                  <TableCell className="px-3 py-2 text-xs">
-                    <Badge className={twMerge('text-xs', roleColors[user.role])}>
-                      {user.role
-                        .split('_')
-                        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(' ')}
-                    </Badge>
-                  </TableCell>
-
-                  <TableCell className="px-3 py-2 text-xs">
-                    <span className="text-[11px] text-gray-700">
-                      {user.role === 'area_education_officer'
-                        ? user.assignedLgas && user.assignedLgas.length > 0
-                          ? user.assignedLgas.map((lga) => lga.name).join(', ')
-                          : '-'
-                        : '-'}
-                    </span>
-                  </TableCell>
-
-                  <TableCell className="px-3 py-2 text-xs">
-                    <span
-                      className={twMerge(
-                        'px-2 inline-flex text-[11px] leading-5 font-semibold rounded-full',
-                        isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      )}
+                  {user.role === 'area_education_officer' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openAEOAssignment(user);
+                      }}
+                      className="text-blue-700 hover:text-blue-800"
+                      title="Manage LGA Assignments"
                     >
-                      {isActive ? 'Active' : 'Disabled'}
-                    </span>
-                  </TableCell>
+                      <MapPinIcon className="h-5 w-5" />
+                    </button>
+                  )}
 
-                  <TableCell className="px-3 py-2 text-xs">
-                    <div className="text-[11px] text-gray-500">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="px-3 py-2 text-xs">
-                    <div className="flex space-x-3" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => openEditModal(user)}
-                        className="text-green-700 hover:text-green-800"
-                        title="Edit"
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
-
-                      {user.role === 'area_education_officer' && (
-                        <button
-                          onClick={() => openAEOAssignment(user)}
-                          className="text-blue-700 hover:text-blue-800"
-                          title="Manage LGA Assignments"
-                        >
-                          <MapPinIcon className="h-5 w-5" />
-                        </button>
-                      )}
-
-                      {user.id !== currentUser?.id && (
-                        <button
-                          onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  {user.id !== currentUser?.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteUser(user.id);
+                      }}
+                      className="text-red-600 hover:text-red-900"
+                      title="Delete"
+                    >
+                      <TrashIcon className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* Edit / Create User Modal */}

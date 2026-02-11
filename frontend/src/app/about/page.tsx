@@ -38,9 +38,9 @@ export default function AboutPage() {
               About the Education Revenue Management System
             </h1>
             <p className="mt-3 max-w-2xl text-sm md:text-base text-green-50">
-              This platform helps the Benue State Ministry of Education and its agencies
+              This platform helps the Benue State Ministry of Education & Knowledge Management and its agencies
               manage all education-related revenues in one central place. Schools and vendors
-              can be registered once, then assessed for recurring and one-time payments over
+              are registered once, then assessed for recurring and one-time payments over
               time.
             </p>
           </div>
@@ -67,8 +67,8 @@ export default function AboutPage() {
                   Renewal, and Examination Fees.
                 </li>
                 <li>Generate assessments for both recurring and one-time payments.</li>
-                <li>Track payments, balances, and collection status per entity and per LGA.</li>
-                <li>Export collections and assessments for further analysis and auditing.</li>
+                <li>Track payments, balances, and collection status per school and per LGA.</li>
+                <li>Export revenue collections and assessments data for further analysis and auditing.</li>
               </ul>
             </div>
 

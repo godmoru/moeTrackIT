@@ -1,6 +1,6 @@
-import { Op } from 'sequelize';
-import AppError from '../../utils/appError.js';
-import db from '../../models/v1/index.js';
+const { Op } = require('sequelize');
+const AppError = require('../../utils/appError.js');
+const db = require('../../../models/index.js'); // Pointing to src/models/index.js via relative path
 
 class BudgetService {
   /**
@@ -11,7 +11,7 @@ class BudgetService {
    */
   static async createBudget(budgetData, userId) {
     const transaction = await db.sequelize.transaction();
-    
+
     try {
       // Check if budget with same code already exists for the MDA in the same fiscal year
       const existingBudget = await db.Budget.findOne({
@@ -52,7 +52,7 @@ class BudgetService {
    */
   static async getBudgetById(budgetId, options = {}) {
     const { includeLineItems = false } = options;
-    
+
     const include = [
       {
         model: db.Mda,
@@ -145,17 +145,17 @@ class BudgetService {
    */
   static async updateBudget(budgetId, updateData, userId) {
     const transaction = await db.sequelize.transaction();
-    
+
     try {
       const budget = await db.Budget.findByPk(budgetId, { transaction });
-      
+
       if (!budget) {
         throw new AppError('Budget not found', 404);
       }
 
       // Prevent updating certain fields
       const { mdaId, fiscalYear, code, ...safeUpdateData } = updateData;
-      
+
       // If code is being updated, check for duplicates
       if (code && code !== budget.code) {
         const existingBudget = await db.Budget.findOne({
@@ -196,10 +196,10 @@ class BudgetService {
    */
   static async deleteBudget(budgetId) {
     const transaction = await db.sequelize.transaction();
-    
+
     try {
       const budget = await db.Budget.findByPk(budgetId, { transaction });
-      
+
       if (!budget) {
         throw new AppError('Budget not found', 404);
       }
@@ -222,7 +222,7 @@ class BudgetService {
 
       // Delete the budget
       await budget.destroy({ transaction });
-      
+
       await transaction.commit();
       return true;
     } catch (error) {
@@ -239,7 +239,7 @@ class BudgetService {
    */
   static async getBudgetSummary(mdaId, fiscalYear) {
     const where = {};
-    
+
     if (mdaId) where.mdaId = mdaId;
     if (fiscalYear) where.fiscalYear = fiscalYear;
 
@@ -265,4 +265,4 @@ class BudgetService {
   }
 }
 
-export default BudgetService;
+module.exports = BudgetService;

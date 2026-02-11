@@ -8,8 +8,14 @@ const PDFDocument = require("pdfkit");
 async function summary(req, res) {
   try {
     const { from, to } = req.query;
+    const { getPaymentScopeWhere, getAssessmentScopeWhere } = require('../middleware/scope');
 
-    const wherePayments = {};
+    const paymentScope = getPaymentScopeWhere(req.user);
+    const assessmentScope = getAssessmentScopeWhere(req.user);
+
+    const wherePayments = {
+      ...paymentScope,
+    };
     if (from) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [Op.gte]: from };
     if (to) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [Op.lte]: to };
 
@@ -17,6 +23,14 @@ async function summary(req, res) {
     const totalResult = await Payment.findOne({
       attributes: [[sequelize.fn('SUM', sequelize.col('amountPaid')), 'totalCollected']],
       where: wherePayments,
+      include: [
+        {
+          model: Assessment,
+          as: 'assessment',
+          attributes: [],
+          include: [{ model: Entity, as: 'entity', attributes: [] }]
+        }
+      ],
       raw: true,
     });
 
@@ -27,19 +41,36 @@ async function summary(req, res) {
         [sequelize.fn('SUM', sequelize.col('amountPaid')), 'amount'],
       ],
       where: wherePayments,
-      group: ['assessmentId'],
+      include: [
+        {
+          model: Assessment,
+          as: 'assessment',
+          attributes: [],
+          include: [{ model: Entity, as: 'entity', attributes: [] }]
+        }
+      ],
+      // Group by Payment.assessmentId (which is the main one) and the included association PKs to satisfy Postgres
+      group: ['Payment.assessmentId', 'assessment.id', 'assessment.entity.id'],
       raw: true,
     });
 
     // For simplicity, also return counts by status from Assessments
+    const whereAssessments = {
+      ...assessmentScope,
+    };
+
     const statusCounts = await Assessment.findAll({
-      attributes: ['status', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
-      group: ['status'],
+      attributes: ['status', [sequelize.fn('COUNT', sequelize.col('Assessment.id')), 'count']],
+      where: whereAssessments,
+      include: [
+        { model: Entity, as: 'entity', attributes: [] }
+      ],
+      group: ['Assessment.status'],
       raw: true,
     });
 
     res.json({
-      totalCollected: Number(totalResult.totalCollected || 0),
+      totalCollected: Number(totalResult?.totalCollected || 0),
       byAssessment: bySource,
       statusCounts,
     });
@@ -74,6 +105,15 @@ function toCsv(rows, headers) {
 async function exportEntityAssessmentsCsv(req, res) {
   try {
     const { id } = req.params;
+    const { getEntityScopeWhere } = require('../middleware/scope');
+
+    // Check access to entity
+    const scopeWhere = getEntityScopeWhere(req.user);
+    const entity = await Entity.findOne({ where: { id, ...scopeWhere } });
+
+    if (!entity) {
+      return res.status(404).json({ message: "Entity not found or access denied" });
+    }
 
     const assessments = await Assessment.findAll({
       where: { entityId: id },
@@ -118,6 +158,15 @@ async function exportEntityAssessmentsCsv(req, res) {
 async function exportEntityPaymentsCsv(req, res) {
   try {
     const { id } = req.params;
+    const { getEntityScopeWhere } = require('../middleware/scope');
+
+    // Check access to entity
+    const scopeWhere = getEntityScopeWhere(req.user);
+    const entity = await Entity.findOne({ where: { id, ...scopeWhere } });
+
+    if (!entity) {
+      return res.status(404).json({ message: "Entity not found or access denied" });
+    }
 
     const payments = await Payment.findAll({
       include: [
@@ -226,8 +275,12 @@ async function exportEntitiesExcel(req, res) {
 async function exportPaymentsExcel(req, res) {
   try {
     const { from, to } = req.query;
+    const { getPaymentScopeWhere } = require('../middleware/scope');
+    const paymentScope = getPaymentScopeWhere(req.user);
 
-    const wherePayments = {};
+    const wherePayments = {
+      ...paymentScope
+    };
     if (from) {
       wherePayments.paymentDate = {
         ...(wherePayments.paymentDate || {}),
@@ -307,10 +360,14 @@ async function exportPaymentsExcel(req, res) {
 async function exportEntitySummaryPdf(req, res) {
   try {
     const { id } = req.params;
+    const { getEntityScopeWhere } = require('../middleware/scope');
 
-    const entity = await Entity.findByPk(id);
+    // Check access to entity
+    const scopeWhere = getEntityScopeWhere(req.user);
+    const entity = await Entity.findOne({ where: { id, ...scopeWhere } });
+
     if (!entity) {
-      return res.status(404).json({ message: "Entity not found" });
+      return res.status(404).json({ message: "Entity not found or access denied" });
     }
 
     const assessments = await Assessment.findAll({
@@ -386,8 +443,7 @@ async function exportEntitySummaryPdf(req, res) {
           ? p.paymentDate.toISOString().slice(0, 10)
           : "-";
         doc.text(
-          `${dateLabel} • ${p.method || ""} • ${
-            p.reference || ""
+          `${dateLabel} • ${p.method || ""} • ${p.reference || ""
           } • ${Number(p.amountPaid || 0).toLocaleString()}`,
         );
       });
@@ -403,8 +459,7 @@ async function exportEntitySummaryPdf(req, res) {
     } else {
       assessments.forEach((a) => {
         doc.text(
-          `${a.assessmentPeriod || "-"} • ${
-            a.incomeSource ? a.incomeSource.name : "Assessment"
+          `${a.assessmentPeriod || "-"} • ${a.incomeSource ? a.incomeSource.name : "Assessment"
           } • Status: ${a.status || "-"}`,
         );
       });
@@ -419,8 +474,14 @@ async function exportEntitySummaryPdf(req, res) {
   }
 }
 
-async function getRemittanceByLgaRows(from, to) {
-  const wherePayments = {};
+async function getRemittanceByLgaRows(req, from, to) {
+  const { getPaymentScopeWhere } = require('../middleware/scope');
+  const paymentScope = getPaymentScopeWhere(req.user);
+
+  const wherePayments = {
+    ...paymentScope
+  };
+
   if (from) {
     wherePayments.paymentDate = {
       ...(wherePayments.paymentDate || {}),
@@ -461,7 +522,7 @@ async function getRemittanceByLgaRows(from, to) {
 async function remittanceByLga(req, res) {
   try {
     const { from, to } = req.query;
-    const items = await getRemittanceByLgaRows(from, to);
+    const items = await getRemittanceByLgaRows(req, from, to);
     res.json({ items });
   } catch (err) {
     console.error(err);
@@ -472,7 +533,7 @@ async function remittanceByLga(req, res) {
 async function exportRemittanceByLgaCsv(req, res) {
   try {
     const { from, to } = req.query;
-    const items = await getRemittanceByLgaRows(from, to);
+    const items = await getRemittanceByLgaRows(req, from, to);
 
     const rows = items.map((item) => ({
       lga: item.lga,
@@ -500,7 +561,7 @@ async function exportRemittanceByLgaCsv(req, res) {
 async function exportRemittanceByLgaExcel(req, res) {
   try {
     const { from, to } = req.query;
-    const items = await getRemittanceByLgaRows(from, to);
+    const items = await getRemittanceByLgaRows(req, from, to);
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Remittance by LGA');
@@ -539,7 +600,7 @@ async function exportRemittanceByLgaExcel(req, res) {
 async function exportRemittanceByLgaPdf(req, res) {
   try {
     const { from, to } = req.query;
-    const items = await getRemittanceByLgaRows(from, to);
+    const items = await getRemittanceByLgaRows(req, from, to);
 
     const doc = new PDFDocument({ margin: 40 });
 

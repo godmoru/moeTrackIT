@@ -65,7 +65,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 flex flex-col justify-between gap-2 border-t pt-4 text-[11px] text-gray-500 md:flex-row">
-          <span> {year} Benue State Ministry of Education.</span>
+          <span> &copy; {year} Benue State Ministry of Education & Knowledge Management.</span>
           <span>Education Revenue Management System</span>
         </div>
       </div>

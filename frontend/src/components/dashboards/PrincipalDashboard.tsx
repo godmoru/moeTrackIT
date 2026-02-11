@@ -128,11 +128,10 @@ export function PrincipalDashboard() {
                   )}
                 </div>
                 <span
-                  className={`rounded-full px-2 py-1 text-xs font-medium ${
-                    entity.status === "active"
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-500 text-white"
-                  }`}
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${entity.status === "active"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-500 text-white"
+                    }`}
                 >
                   {entity.status}
                 </span>
@@ -156,10 +155,10 @@ export function PrincipalDashboard() {
               <div className="text-xs font-medium text-yellow-800">Payment History</div>
               <div className="text-[11px] text-yellow-600">View payments made</div>
             </Link>
-            <Link href="/admin/expenditures" className="rounded-lg bg-red-50 p-3 hover:bg-red-100 transition-colors">
+            {/* <Link href="/admin/expenditures" className="rounded-lg bg-red-50 p-3 hover:bg-red-100 transition-colors">
               <div className="text-xs font-medium text-red-800">Expenditures</div>
               <div className="text-[11px] text-red-600">Manage expenditures</div>
-            </Link>
+            </Link> */}
             <Link href="/admin/reports" className="rounded-lg bg-orange-50 p-3 hover:bg-orange-100 transition-colors">
               <div className="text-xs font-medium text-orange-800">Reports</div>
               <div className="text-[11px] text-orange-600">Download statements</div>
@@ -246,9 +245,8 @@ export function PrincipalDashboard() {
                     return (
                       <div
                         key={a.id}
-                        className={`flex items-center justify-between rounded-md px-3 py-2 text-xs ${
-                          isOverdue ? "bg-red-50" : "bg-gray-50"
-                        }`}
+                        className={`flex items-center justify-between rounded-md px-3 py-2 text-xs ${isOverdue ? "bg-red-50" : "bg-gray-50"
+                          }`}
                       >
                         <div>
                           <div className="font-medium text-gray-800">

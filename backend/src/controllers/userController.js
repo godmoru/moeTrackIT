@@ -2,11 +2,12 @@
 
 const bcrypt = require('bcryptjs');
 const db = require('../../models');
-const { User, Role, UserRole, UserLga, Lga, sequelize } = db;
+const emailService = require('../services/emailService');
+const { User, Role, UserRole, UserLga, Lga, Entity, sequelize } = db;
 
 async function createUser(req, res) {
   try {
-    const { name, email, password, role = 'officer', status = 'active', lgaId } = req.body;
+    const { name, email, password, role = 'officer', status = 'active', lgaId, entityId } = req.body;
 
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: 'name, email, password and role are required' });
@@ -16,12 +17,19 @@ async function createUser(req, res) {
       return res.status(400).json({ message: 'lgaId is required for area_education_officer role' });
     }
 
+    if (role === 'principal' && !entityId) {
+      return res.status(400).json({ message: 'entityId is required for principal role' });
+    }
+
     const existing = await User.findOne({ where: { email } });
     if (existing) {
       return res.status(409).json({ message: 'User with this email already exists' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+
+    // Prepare data for email
+    let additionalInfo = '';
 
     const user = await sequelize.transaction(async (t) => {
       const createdUser = await User.create(
@@ -31,6 +39,7 @@ async function createUser(req, res) {
           passwordHash,
           role,
           status,
+          entityId: entityId || null,
         },
         { transaction: t },
       );
@@ -77,10 +86,35 @@ async function createUser(req, res) {
           },
           { transaction: t },
         );
+
+        additionalInfo = `Assigned LGA: ${lga.name}`;
+      }
+
+      if (role === 'principal' || entityId) {
+        const entity = await Entity.findByPk(entityId, { transaction: t });
+        if (role === 'principal' && !entity) {
+          const err = new Error('Entity not found');
+          // @ts-ignore
+          err.status = 404;
+          throw err;
+        }
+
+        if (entity) {
+          additionalInfo = `Assigned Institution: ${entity.name}`;
+        }
       }
 
       return createdUser;
     });
+
+    // Send Welcome Email
+    try {
+      // Don't await email to prevent blocking response
+      emailService.sendWelcomeEmail(user, password, role.replace(/_/g, ' ').toUpperCase(), additionalInfo)
+        .catch(err => console.error('Failed to send welcome email:', err));
+    } catch (emailErr) {
+      console.error('Error triggering welcome email:', emailErr);
+    }
 
     res.status(201).json({
       id: user.id,
@@ -88,6 +122,7 @@ async function createUser(req, res) {
       email: user.email,
       role: user.role,
       status: user.status,
+      entityId: user.entityId,
     });
   } catch (err) {
     const status = err?.status || 500;

@@ -1,14 +1,25 @@
-import BudgetService from '../services/v1/budget.service.js';
-import BudgetLineItemService from '../services/v1/budgetLineItem.service.js';
-import ExpenditureService from '../services/v1/expenditure.service.js';
-import ExpenditureRetirementService from '../services/v1/expenditureRetirement.service.js';
-import EarlyWarningService from '../services/v1/earlyWarning.service.js';
-import { catchAsync } from '../utils/catchAsync.js';
+const BudgetService = require('../../services/v1/budget.service.js');
+const BudgetLineItemService = require('../../services/v1/budgetLineItem.service.js');
+const ExpenditureService = require('../../services/v1/expenditure.service.js');
+const ExpenditureRetirementService = require('../../services/v1/expenditureRetirement.service.js');
+const EarlyWarningService = require('../../services/v1/earlyWarning.service.js');
+const catchAsync = require('../../utils/catchAsync.js');
 
 /**
  * Get budget overview dashboard data
  */
-export const getBudgetOverview = catchAsync(async (req, res) => {
+exports.getBudgetOverview = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO - they don't see MDA budgets
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                budgets: [],
+                summary: [],
+            },
+        });
+    }
+
     const { mdaId, fiscalYear } = req.query;
 
     const budgets = await BudgetService.getAllBudgets({ mdaId, fiscalYear, limit: 100 });
@@ -26,7 +37,26 @@ export const getBudgetOverview = catchAsync(async (req, res) => {
 /**
  * Get expenditure summary dashboard data
  */
-export const getExpenditureSummary = catchAsync(async (req, res) => {
+exports.getExpenditureSummary = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                stats: {
+                    totalAmount: 0,
+                    totalCount: 0,
+                    pendingAmount: 0,
+                    pendingCount: 0,
+                    approvedAmount: 0,
+                    approvedCount: 0,
+                    rejectedAmount: 0,
+                    rejectedCount: 0
+                }
+            },
+        });
+    }
+
     const stats = await ExpenditureService.getExpenditureStats(req.query);
 
     res.status(200).json({
@@ -38,7 +68,7 @@ export const getExpenditureSummary = catchAsync(async (req, res) => {
 /**
  * Get budget utilization data
  */
-export const getBudgetUtilization = catchAsync(async (req, res) => {
+exports.getBudgetUtilization = catchAsync(async (req, res) => {
     const { budgetId, mdaId } = req.query;
 
     let lineItems;
@@ -75,7 +105,15 @@ export const getBudgetUtilization = catchAsync(async (req, res) => {
 /**
  * Get retirement status dashboard data
  */
-export const getRetirementStatus = catchAsync(async (req, res) => {
+exports.getRetirementStatus = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(200).json({
+            status: 'success',
+            data: { stats: { totalRetired: 0, count: 0 } },
+        });
+    }
+
     const stats = await ExpenditureRetirementService.getRetirementStats(req.query);
 
     res.status(200).json({
@@ -87,7 +125,15 @@ export const getRetirementStatus = catchAsync(async (req, res) => {
 /**
  * Get early warnings
  */
-export const getEarlyWarnings = catchAsync(async (req, res) => {
+exports.getEarlyWarnings = catchAsync(async (req, res) => {
+    // Restrict access for Principal and AEO
+    if (req.user.role === 'principal' || req.user.role === 'area_education_officer') {
+        return res.status(200).json({
+            status: 'success',
+            data: { warnings: [] },
+        });
+    }
+
     const { mdaId } = req.query;
 
     let warnings;
@@ -107,15 +153,19 @@ export const getEarlyWarnings = catchAsync(async (req, res) => {
 /**
  * Get MDA-specific dashboard data
  */
-export const getMdaDashboard = catchAsync(async (req, res) => {
+exports.getMdaDashboard = catchAsync(async (req, res) => {
     const { mdaId } = req.params;
     const { fiscalYear } = req.query;
+    const userRole = req.user.role;
+
+    // Expenditures should be hidden for these roles
+    const hideExpenditures = userRole === 'principal' || userRole === 'area_education_officer';
 
     // Get all dashboard data for the MDA
     const [budgets, expenditureStats, retirementStats, warnings] = await Promise.all([
         BudgetService.getAllBudgets({ mdaId, fiscalYear, limit: 10 }),
-        ExpenditureService.getExpenditureStats({ mdaId, fiscalYear }),
-        ExpenditureRetirementService.getRetirementStats({ mdaId }),
+        hideExpenditures ? Promise.resolve({ totalAmount: 0, totalCount: 0 }) : ExpenditureService.getExpenditureStats({ mdaId, fiscalYear }),
+        hideExpenditures ? Promise.resolve({ totalRetired: 0, count: 0 }) : ExpenditureRetirementService.getRetirementStats({ mdaId }),
         EarlyWarningService.getWarningsByMda(mdaId),
     ]);
 

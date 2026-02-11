@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Modal } from "@/components/Modal";
 import { useAuth } from "@/contexts/AuthContext";
+import { DataTable } from "@/components/ui/DataTable";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
@@ -522,53 +523,46 @@ export default function AssessmentsPage() {
           </div>
 
           <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="px-3 py-2 font-medium">S/No</th>
-                  <th className="px-3 py-2 font-medium">Institution</th>
-                  <th className="px-3 py-2 font-medium">Income Source</th>
-                  <th className="px-3 py-2 font-medium">Amount (NGN)</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Period</th>
-                  <th className="px-3 py-2 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.length === 0 && (
-                  <tr>
-                    <td
-                      className="px-3 py-2 text-xs text-gray-500"
-                      colSpan={5}
+            <DataTable
+              data={filteredItems}
+              columns={[
+                {
+                  header: "S/No",
+                  cell: (a, index) => <span className="text-xs">{index + 1}</span>
+                },
+                {
+                  header: "Institution",
+                  cell: (a) => <span className="text-xs">{a.entity?.name || "-"}</span>
+                },
+                {
+                  header: "Income Source",
+                  cell: (a) => <span className="text-xs">{a.incomeSource?.name || "-"}</span>
+                },
+                {
+                  header: "Amount (NGN)",
+                  cell: (a) => <span className="text-xs">{Number(a.amountAssessed || 0).toLocaleString("en-NG")}</span>
+                },
+                {
+                  header: "Status",
+                  cell: (a) => (
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${a.status === "paid"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                        }`}
                     >
-                      No assessments match the selected filters.
-                    </td>
-                  </tr>
-                )}
-                {filteredItems.map((a, index) => (
-                  <tr key={a.id} className="border-t text-gray-800">
-                    <td className="px-3 py-2 text-xs">{++index}</td>
-                    <td className="px-3 py-2 text-xs">{a.entity?.name || "-"}</td>
-                    <td className="px-3 py-2 text-xs">
-                      {a.incomeSource?.name || "-"}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {Number(a.amountAssessed || 0).toLocaleString("en-NG")}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${a.status === "paid"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                          }`}
-                      >
-                        {a.status || "-"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {a.assessmentPeriod || "-"}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-right">
+                      {a.status || "-"}
+                    </span>
+                  )
+                },
+                {
+                  header: "Period",
+                  cell: (a) => <span className="text-xs">{a.assessmentPeriod || "-"}</span>
+                },
+                {
+                  header: <div className="text-right">Action</div>,
+                  cell: (a) => (
+                    <div className="text-right">
                       {a.status !== 'paid' && (
                         <button
                           onClick={() => openPaymentModal(a)}
@@ -577,11 +571,11 @@ export default function AssessmentsPage() {
                           Pay
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  )
+                }
+              ]}
+            />
           </div>
         </>
       )}

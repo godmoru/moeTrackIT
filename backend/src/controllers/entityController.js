@@ -326,7 +326,12 @@ function buildPaymentTotalsByEntityAndYearMap(payments, years) {
 
 async function exportEntitiesCsv(req, res) {
   try {
+    const scopeWhere = getEntityScopeWhere(req.user);
+    const { getPaymentScopeWhere } = require('../middleware/scope');
+    const paymentScope = getPaymentScopeWhere(req.user);
+
     const entities = await Entity.findAll({
+      where: scopeWhere,
       include: [
         { model: EntityType, as: 'entityType' },
         { model: EntityOwnership, as: 'ownershipType' },
@@ -343,18 +348,23 @@ async function exportEntitiesCsv(req, res) {
       currentYear - 4,
     ];
 
-    const payments = await Payment.findAll({
-      where: {
-        paymentDate: {
-          [Op.gte]: new Date(currentYear - 4, 0, 1),
-          [Op.lt]: new Date(currentYear + 1, 0, 1),
-        },
+    const wherePayments = {
+      ...paymentScope,
+      paymentDate: {
+        ...(paymentScope.paymentDate || {}),
+        [Op.gte]: new Date(currentYear - 4, 0, 1),
+        [Op.lt]: new Date(currentYear + 1, 0, 1),
       },
+    };
+
+    const payments = await Payment.findAll({
+      where: wherePayments,
       include: [
         {
           model: Assessment,
           as: 'assessment',
           attributes: ['entityId'],
+          include: [{ model: Entity, as: 'entity', attributes: [] }], // Needed for scope join if applicable
         },
       ],
       attributes: ['amountPaid', 'paymentDate'],
@@ -443,8 +453,13 @@ async function exportEntitiesCsv(req, res) {
 
 async function exportEntitiesExcel(req, res) {
   try {
+    const scopeWhere = getEntityScopeWhere(req.user);
+    const { getPaymentScopeWhere } = require('../middleware/scope');
+    const paymentScope = getPaymentScopeWhere(req.user);
+
     // Reuse the same CSV data as exportEntitiesCsv, but serve as an .xls for easier opening in Excel.
     const entities = await Entity.findAll({
+      where: scopeWhere,
       include: [
         { model: EntityType, as: 'entityType' },
         { model: EntityOwnership, as: 'ownershipType' },
@@ -461,18 +476,23 @@ async function exportEntitiesExcel(req, res) {
       currentYear - 4,
     ];
 
-    const payments = await Payment.findAll({
-      where: {
-        paymentDate: {
-          [Op.gte]: new Date(currentYear - 4, 0, 1),
-          [Op.lt]: new Date(currentYear + 1, 0, 1),
-        },
+    const wherePayments = {
+      ...paymentScope,
+      paymentDate: {
+        ...(paymentScope.paymentDate || {}),
+        [Op.gte]: new Date(currentYear - 4, 0, 1),
+        [Op.lt]: new Date(currentYear + 1, 0, 1),
       },
+    };
+
+    const payments = await Payment.findAll({
+      where: wherePayments,
       include: [
         {
           model: Assessment,
           as: 'assessment',
           attributes: ['entityId'],
+          include: [{ model: Entity, as: 'entity', attributes: [] }],
         },
       ],
       attributes: ['amountPaid', 'paymentDate'],
@@ -563,7 +583,12 @@ async function exportEntitiesExcel(req, res) {
 
 async function exportEntitiesPdf(req, res) {
   try {
+    const scopeWhere = getEntityScopeWhere(req.user);
+    const { getPaymentScopeWhere } = require('../middleware/scope');
+    const paymentScope = getPaymentScopeWhere(req.user);
+
     const entities = await Entity.findAll({
+      where: scopeWhere,
       include: [
         { model: EntityType, as: 'entityType' },
         { model: EntityOwnership, as: 'ownershipType' },
@@ -580,18 +605,23 @@ async function exportEntitiesPdf(req, res) {
       currentYear - 4,
     ];
 
-    const payments = await Payment.findAll({
-      where: {
-        paymentDate: {
-          [Op.gte]: new Date(currentYear - 4, 0, 1),
-          [Op.lt]: new Date(currentYear + 1, 0, 1),
-        },
+    const wherePayments = {
+      ...paymentScope,
+      paymentDate: {
+        ...(paymentScope.paymentDate || {}),
+        [Op.gte]: new Date(currentYear - 4, 0, 1),
+        [Op.lt]: new Date(currentYear + 1, 0, 1),
       },
+    };
+
+    const payments = await Payment.findAll({
+      where: wherePayments,
       include: [
         {
           model: Assessment,
           as: 'assessment',
           attributes: ['entityId'],
+          include: [{ model: Entity, as: 'entity', attributes: [] }],
         },
       ],
       attributes: ['amountPaid', 'paymentDate'],

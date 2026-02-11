@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { expendituresApi, expenditureCategoriesApi } from "@/lib/api/expenditure.api";
 import type { Expenditure, ExpenditureCategory } from "@/types/expenditure.types";
+import { DataTable } from "@/components/ui/DataTable";
 
 export default function ExpendituresPage() {
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
@@ -181,71 +182,47 @@ export default function ExpendituresPage() {
           </div>
 
           <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
-            <table className="min-w-full text-left text-xs">
-              <thead className="bg-gray-50 text-gray-600">
-                <tr>
-                  <th className="px-3 py-2 font-medium">S/No</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Reference</th>
-                  <th className="px-3 py-2 font-medium">Description</th>
-                  <th className="px-3 py-2 font-medium">Category</th>
-                  <th className="px-3 py-2 font-medium text-right">Amount (NGN)</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredExpenditures.length === 0 && (
-                  <tr>
-                    <td className="px-3 py-2 text-xs text-gray-500" colSpan={8}>
-                      No expenditures match the selected filters.
-                    </td>
-                  </tr>
-                )}
-                {filteredExpenditures.map((exp, index) => {
-                  const dateLabel = exp.date
-                    ? new Date(exp.date).toLocaleDateString("en-NG")
-                    : "-";
-                  return (
-                    <tr key={exp.id} className="border-t text-gray-800">
-                      <td className="px-3 py-2 text-xs">{index + 1}</td>
-                      <td className="px-3 py-2 text-xs">{dateLabel}</td>
-                      <td className="px-3 py-2 text-xs">{exp.referenceNumber || "-"}</td>
-                      <td className="px-3 py-2 text-xs">{exp.description || "-"}</td>
-                      {/* TODO: Show category once it's included in Expenditure type */}
-                      <td className="px-3 py-2 text-xs">-</td>
-                      <td className="px-3 py-2 text-right text-xs">
-                        ₦{Number(exp.amount || 0).toLocaleString("en-NG", {
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="px-3 py-2 text-xs capitalize">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${exp.status === "approved"
-                              ? "bg-green-100 text-green-700"
-                              : exp.status === "rejected"
-                                ? "bg-red-100 text-red-700"
-                                : exp.status === "submitted"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                            }`}
-                        >
-                          {exp.status || "-"}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-right text-xs">
-                        <Link
-                          href={`/admin/expenditures/${exp.id}`}
-                          className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          View Details
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <DataTable
+              data={filteredExpenditures}
+              columns={[
+                { header: "S/No", cell: (e, index) => <span className="text-xs">{index + 1}</span> },
+                {
+                  header: "Date",
+                  cell: (e) => <span className="text-xs">{e.date ? new Date(e.date).toLocaleDateString("en-NG") : "-"}</span>
+                },
+                { header: "Reference", cell: (e) => <span className="text-xs">{e.referenceNumber || "-"}</span> },
+                { header: "Description", cell: (e) => <span className="text-xs">{e.description || "-"}</span> },
+                { header: "Category", cell: (e) => <span className="text-xs">-</span> },
+                {
+                  header: <div className="text-right">Amount (NGN)</div>,
+                  cell: (e) => <div className="text-right text-xs">₦{Number(e.amount || 0).toLocaleString("en-NG", { maximumFractionDigits: 2 })}</div>
+                },
+                {
+                  header: "Status",
+                  cell: (e) => (
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${getStatusColor(e.status || '')
+                        }`}
+                    >
+                      {e.status || "-"}
+                    </span>
+                  )
+                },
+                {
+                  header: <div className="text-right">Action</div>,
+                  cell: (e) => (
+                    <div className="text-right">
+                      <Link
+                        href={`/admin/expenditures/${e.id}`}
+                        className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        View Details
+                      </Link>
+                    </div>
+                  )
+                }
+              ]}
+            />
           </div>
         </>
       )}
