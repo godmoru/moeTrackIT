@@ -66,14 +66,14 @@ export function DataTable<T extends { id?: number | string }>({
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center pt-[5px]">
+            <div className="flex justify-end items-center pt-[5px]">
                 <div className="relative w-full max-w-sm">
                     <input
                         type="text"
                         placeholder="Search..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-3 pr-10 py-2 border border-gray-300 shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                        className="w-full pl-3 pr-10 py-2 pt-[5px] border border-gray-300 shadow-sm focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 sm:text-sm"
                     />
                 </div>
             </div>

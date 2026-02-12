@@ -43,8 +43,8 @@ const path = require('path');
 async function sendEmail({ to, subject, text, html }) {
   const transporter = createTransporter();
 
-  const fromName = process.env.EMAIL_FROM_NAME || 'MOETrackIT';
-  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@moetrackIT.gov.ng';
+  const fromName = process.env.EMAIL_FROM_NAME || 'MOEKMRemit';
+  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'remit@moekm.be.gov.ng';
 
   const mailOptions = {
     from: `"${fromName}" <${fromEmail}>`,
