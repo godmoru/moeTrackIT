@@ -891,9 +891,12 @@ module.exports = {
       }
 
       // Generate unique reference (keep it short for Remita if needed, but uuid is fine usually)
-      const orderId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      // Generate unique reference (numeric) - using Date.now() for uniqueness
+      const orderId = Date.now();
 
-      // Initialize payment with Remita
+      console.log('Initializing Remita Payment. Public Key Present:', !!process.env.REMITA_PUBLIC_KEY);
+
+      // Initialize payment with Remita (Just generates ID and params)
       const remitaResult = await remitaService.initializePayment({
         payerName: name || user.name,
         payerEmail: email,
@@ -912,7 +915,7 @@ module.exports = {
         reference: orderId, // Our internal reference (Remita OrderID)
         status: 'pending',
         recordedBy: user.id,
-        paystackReference: remitaResult.rrr, // Storing RRR here for now (schema might need 'remitaRRR')
+        paystackReference: orderId, // Storing OrderID here as key for lookup
         paystackAccessCode: null,
         payerEmail: email,
         payerName: name || user.name,
@@ -923,9 +926,10 @@ module.exports = {
       res.status(200).json({
         message: 'Remita payment initialized successfully',
         paymentId: payment.id,
-        rrr: remitaResult.rrr,
         orderId: remitaResult.orderId,
-        status: remitaResult.status,
+        publicKey: process.env.REMITA_PUBLIC_KEY?.trim(),
+        remitaParams: remitaResult,
+        isInline: true
       });
     } catch (err) {
       console.error('Failed to initialize Remita payment:', err);
@@ -938,19 +942,20 @@ module.exports = {
   /**
    * GET /api/v1/payments/remita/verify/:rrr
    * Verify a Remita payment
+   * Note: :rrr parameter is actually transactionId/orderId in this new flow
    */
   async verifyRemitaPayment(req, res) {
     const t = await sequelize.transaction();
     try {
-      const { rrr } = req.params;
+      const { rrr: transactionId } = req.params; // Mapping param name to logic
 
-      if (!rrr) {
-        return res.status(400).json({ message: 'RRR is required' });
+      if (!transactionId) {
+        return res.status(400).json({ message: 'Transaction ID is required' });
       }
 
-      // Find the pending payment by RRR (stored in paystackReference for now)
+      // Find the pending payment by orderId/reference
       const payment = await Payment.findOne({
-        where: { paystackReference: rrr },
+        where: { reference: transactionId }, // Changed lookup to reference which stores orderId
         include: [
           {
             model: Assessment,
@@ -962,7 +967,7 @@ module.exports = {
 
       if (!payment) {
         await t.rollback();
-        return res.status(404).json({ message: 'Payment record not found for this RRR' });
+        return res.status(404).json({ message: 'Payment record not found for this Transaction ID' });
       }
 
       if (payment.status === 'confirmed' || payment.status === 'paid') {
@@ -975,10 +980,10 @@ module.exports = {
       }
 
       // Verify with Remita
-      const verification = await remitaService.verifyPayment(rrr);
+      const verification = await remitaService.verifyPayment(transactionId);
 
-      // Status '00' or '01' indicates success in Remita (00=Success, 01=Approved)
-      if (verification.status === '00' || verification.status === '01') {
+      // Status '00' indicates success in Remita v2
+      if (verification.status === '00') {
         const amountPaid = Number(verification.amount || payment.amountPaid);
 
         // Update payment record
@@ -987,7 +992,7 @@ module.exports = {
           channel: 'remita',
           gatewayResponse: JSON.stringify(verification.raw),
           paymentDate: verification.paymentDate ? new Date(verification.paymentDate) : new Date(),
-          amountPaid: amountPaid // Update amount if different? (Remita returns amount)
+          amountPaid: amountPaid
         }, { transaction: t });
 
         // Update assessment status based on total paid

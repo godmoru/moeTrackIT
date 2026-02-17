@@ -369,7 +369,52 @@ export default function AssessmentsPage() {
       if (!res.ok) throw new Error(body.message || "Payment init failed");
 
       if (paymentMethod === "remita") {
-        if (body.rrr) {
+        // Remita Inline Flow (v2)
+        if (body.isInline && body.publicKey && body.orderId) {
+
+          // Load Remita Inline Script if not present
+          if (!window.RmPaymentEngine) {
+            const script = document.createElement('script');
+            // Use demo or live URL based on env, but typically:
+            // Demo: https://remitademo.net/payment/v1/remita-pay-inline.bundle.js
+            // Live: https://login.remita.net/payment/v1/remita-pay-inline.bundle.js
+            script.src = "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
+            script.async = true;
+            document.body.appendChild(script);
+
+            await new Promise((resolve) => script.onload = resolve);
+          }
+
+          const config = {
+            key: body.publicKey,
+            transactionId: Number(body.orderId),
+            customerId: body.remitaParams.email,
+            firstName: "Test",
+            lastName: "User",
+            email: body.remitaParams.email,
+            amount: body.remitaParams.amount,
+            currency: "NGN",
+            narration: body.remitaParams.narration,
+            onSuccess: function (response: any) {
+              console.log('Remita Success:', response);
+              verifyRemitaTransaction(response.transactionId || body.orderId);
+            },
+            onError: function (response: any) {
+              console.log('Remita Error:', response);
+              Swal.fire({ title: 'Payment Error', text: 'Transaction failed or cancelled', icon: 'error' });
+            },
+            onClose: function () {
+              console.log('Remita Window Closed');
+            }
+          };
+
+          console.log('DEBUG: Remita Config:', JSON.stringify(config, null, 2));
+          const paymentEngine = window.RmPaymentEngine.init(config);
+
+          paymentEngine.showPaymentWidget();
+          // We don't close the modal or refresh immediately; we wait for onSuccess callback
+
+        } else if (body.rrr) {
           setShowPaymentModal(false);
           await Swal.fire({
             icon: "success",
@@ -382,7 +427,7 @@ export default function AssessmentsPage() {
           });
           load();
         } else {
-          throw new Error("No RRR returned");
+          throw new Error("Invalid Remita initialization response");
         }
       } else {
         if (body.authorizationUrl) {
@@ -393,6 +438,36 @@ export default function AssessmentsPage() {
       await Swal.fire({ icon: "error", title: "Error", text: err.message });
     } finally {
       setProcessingPayment(false);
+    }
+  }
+
+  // Verification Logic
+  async function verifyRemitaTransaction(transactionId: string) {
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`${API_BASE}/payments/remita/verify/${transactionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        setShowPaymentModal(false);
+        await Swal.fire({
+          icon: 'success',
+          title: 'Payment Successful',
+          text: 'Your payment has been confirmed.',
+          confirmButtonColor: '#15803d'
+        });
+        load();
+      } else {
+        throw new Error(data.message || 'Payment verification failed');
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Verification Failed',
+        text: err.message || 'Could not verify payment status'
+      });
     }
   }
 

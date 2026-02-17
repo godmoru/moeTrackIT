@@ -21,7 +21,7 @@ const createTestAccount = async () => {
 // Create transporter
 const createTransporter = async () => {
   const account = await createTestAccount();
-  
+
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.ethereal.email',
     port: process.env.SMTP_PORT || 587,
@@ -30,7 +30,19 @@ const createTransporter = async () => {
       user: account.user,
       pass: account.pass,
     },
+    tls: {
+      rejectUnauthorized: false
+    }
   });
+
+  console.log('📧 Email Service Config:', {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    secure: process.env.SMTP_SECURE,
+    user: account.user
+  });
+
+  return transporter;
 };
 
 class EmailService {
@@ -47,7 +59,7 @@ class EmailService {
   async sendEmail(options) {
     try {
       const transporter = await createTransporter();
-      
+
       const mailOptions = {
         from: `"${process.env.EMAIL_FROM_NAME || 'Government Expenditure Tracker'}" <${process.env.EMAIL_FROM || 'noreply@example.com'}>`,
         to: options.to,
@@ -57,7 +69,7 @@ class EmailService {
       };
 
       const info = await transporter.sendMail(mailOptions);
-      
+
       // Log the preview URL for development
       if (process.env.NODE_ENV !== 'production') {
         logger.info(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
@@ -83,14 +95,14 @@ class EmailService {
    */
   async sendWelcomeEmail(to, name, token) {
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-    
+
     return this.sendEmail({
       to,
-      subject: 'Welcome to Government Expenditure Tracker',
-      text: `Hello ${name},\n\nWelcome to Government Expenditure Tracker! Please verify your email by clicking the following link:\n\n${verificationUrl}\n\nThanks,\nThe GET Team`,
+      subject: 'Welcome to MOEKMRemit',
+      text: `Hello ${name},\n\nWelcome to MOEKMRemit! Please verify your email by clicking the following link:\n\n${verificationUrl}\n\nThanks,\nThe GET Team`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <h2>Welcome to Government Expenditure Tracker, ${name}!</h2>
+          <h2>Welcome to MOEKMRemit, ${name}!</h2>
           <p>We're excited to have you on board. Please verify your email address to get started.</p>
           <p>
             <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 4px;">
@@ -115,7 +127,7 @@ class EmailService {
    */
   async sendPasswordResetEmail(to, name, token) {
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-    
+
     return this.sendEmail({
       to,
       subject: 'Password Reset Request',

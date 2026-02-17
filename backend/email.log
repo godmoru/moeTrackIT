@@ -21,3 +21,73 @@ Best regards,
 Benue State Ministry of Education
 Education Revenue Management System
 ================================================
+
+=== EMAIL LOGGED AT 2026-02-12T13:35:11.202Z ===
+To: godfrey.umoru@gesusoft.com
+Subject: Test Email from MOETrackIT
+Body:
+This is a test email to verify SMTP configuration.
+================================================
+
+=== EMAIL LOGGED AT 2026-02-12T13:41:36.515Z ===
+To: godfreyeumoru@gmail.com
+Subject: Password Reset Request - MOETrackIT
+Body:
+Hello Godfrey Umoru,
+
+You requested a password reset for your MOETrackIT account.
+
+Click the link below to reset your password:
+http://localhost:3000/reset-password?token=71aa3e3ce4e1ec7a4e1d4b7dcc476f76303a82fe0196ceb47796658a98657ffd
+
+This link will expire in 1 hour.
+
+If you did not request this password reset, please ignore this email or contact support if you have concerns.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+================================================
+
+=== EMAIL LOGGED AT 2026-02-12T13:47:35.990Z ===
+To: godfreyeumoru@gmail.com
+Subject: Password Reset Request - MOETrackIT
+Body:
+Hello Godfrey Umoru,
+
+You requested a password reset for your MOETrackIT account.
+
+Click the link below to reset your password:
+http://localhost:3000/reset-password?token=22fc62f1b7d6d6165c658c9e8ab36d127174fbdfb4ca4461bd23d3050abe302c
+
+This link will expire in 1 hour.
+
+If you did not request this password reset, please ignore this email or contact support if you have concerns.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+================================================
+
+=== EMAIL LOGGED AT 2026-02-17T14:36:33.207Z ===
+To: taroordue@gmail.com
+Subject: Payment Receipt - MOETrackIT
+Body:
+Hello St. Joseph Acadmy, Khile,
+
+This is a receipt for your payment to the Benue State Ministry of Education.
+
+Payment Details:
+----------------
+Amount: ₦500.00
+Reference: MOE-61-1771338919411-EORQ7Z
+Date: 2/17/2026
+Purpose: Assessment Payment
+Status: CONFIRMED
+
+Thank you for your payment.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+================================================

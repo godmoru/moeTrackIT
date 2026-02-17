@@ -5,6 +5,13 @@ import Swal from "sweetalert2";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
+// Add Remita Type definition stub
+declare global {
+  interface Window {
+    RmPaymentEngine: any;
+  }
+}
+
 interface Assessment {
   id: number;
   entityId: number;
@@ -154,8 +161,57 @@ export default function PayPage() {
       }
 
       if (paymentMethod === "remita") {
-        // Remita Flow
-        if (data.rrr) {
+        // Remita Inline Flow (v2)
+        if (data.isInline && data.publicKey && data.orderId) {
+
+          // Load Remita Inline Script if not present
+          if (!window.RmPaymentEngine) {
+            const script = document.createElement('script');
+            // Use demo or live URL based on env, but typically:
+            // Demo: https://remitademo.net/payment/v1/remita-pay-inline.bundle.js
+            // Live: https://login.remita.net/payment/v1/remita-pay-inline.bundle.js
+            // We'll default to Demo for now unless backend says otherwise, or hardcode.
+            // Assuming Demo based on context.
+            script.src = "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
+            script.async = true;
+            document.body.appendChild(script);
+
+            await new Promise((resolve) => script.onload = resolve);
+          }
+
+          const config = {
+            key: data.publicKey,
+            transactionId: Number(data.orderId),
+            customerId: data.remitaParams.email,
+            // firstName: data.remitaParams.firstName,
+            // lastName: data.remitaParams.lastName,
+            firstName: "Test",
+            lastName: "User",
+            email: data.remitaParams.email,
+            amount: data.remitaParams.amount,
+            currency: "NGN",
+            narration: data.remitaParams.narration,
+            onSuccess: function (response: any) {
+              console.log('Remita Success:', response);
+              verifyRemitaTransaction(response.transactionId || data.orderId);
+            },
+            onError: function (response: any) {
+              console.log('Remita Error:', response);
+              Swal.fire({ title: 'Payment Error', text: 'Transaction failed or cancelled', icon: 'error' });
+            },
+            onClose: function () {
+              console.log('Remita Window Closed');
+            }
+          };
+
+          console.log('DEBUG: Remita Config:', JSON.stringify(config, null, 2));
+          const paymentEngine = window.RmPaymentEngine.init(config);
+
+          paymentEngine.showPaymentWidget();
+          // We don't close the modal or refresh immediately; we wait for onSuccess callback
+
+        } else if (data.rrr) {
+          // Legacy RRR Flow (Fallback if backend not updated fully or using hybrid)
           await Swal.fire({
             icon: "success",
             title: "RRR Generated Successfully",
@@ -177,11 +233,10 @@ export default function PayPage() {
             showConfirmButton: false,
             showCloseButton: true,
           });
-          // Refresh assessments to show pending
           loadAssessments();
           setSelectedAssessment(null);
         } else {
-          throw new Error("No RRR received from Remita");
+          throw new Error("Invalid Remita initialization response");
         }
       } else {
         // Paystack Flow
@@ -201,6 +256,36 @@ export default function PayPage() {
       });
     } finally {
       setProcessing(null);
+    }
+  }
+
+  // Define verification function outside or inside component
+  async function verifyRemitaTransaction(transactionId: string) {
+    try {
+      const token = localStorage.getItem("authToken");
+      const res = await fetch(`${API_BASE}/payments/remita/verify/${transactionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Payment Successful',
+          text: 'Your payment has been confirmed provided.',
+          confirmButtonColor: '#15803d'
+        });
+        loadAssessments();
+        setSelectedAssessment(null);
+      } else {
+        throw new Error(data.message || 'Payment verification failed');
+      }
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Verification Failed',
+        text: err.message || 'Could not verify payment status'
+      });
     }
   }
 

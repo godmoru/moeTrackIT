@@ -16,6 +16,9 @@ function createTransporter() {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    tls: {
+      rejectUnauthorized: false
+    }
   };
 
   // If no SMTP credentials, use a test account or log to console
@@ -113,12 +116,12 @@ ${body}
  */
 async function sendWelcomeEmail(user, password, roleDisplay, additionalInfo = '') {
   const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000/login';
-  const subject = 'Welcome to MOETrackIT - Your Account Details';
+  const subject = 'Welcome to MOEKMRemit - Your Account Details';
 
   const text = `
 Hello ${user.name},
 
-Welcome to MOETrackIT! Your account has been created successfully.
+Welcome to MOEKMRemit! Your account has been created successfully.
 
 Here are your account details:
 Role: ${roleDisplay}
@@ -153,12 +156,13 @@ Education Revenue Management System
 <body>
   <div class="container">
     <div class="header">
-      <h1>Welcome to MOETrackIT</h1>
+      <img src="${loginUrl.replace('/login', '')}/favicon.png" alt="MOEKMRemit" style="max-height: 64px; margin-bottom: 16px;" />
+      <h1>Welcome to MOEKMRemit</h1>
       <p>Education Revenue Management System</p>
     </div>
     <div class="content">
       <h2>Hello ${user.name},</h2>
-      <p>Welcome to MOETrackIT! Your account has been created successfully.</p>
+      <p>Welcome to MOEKMRemit! Your account has been created successfully.</p>
       
       <div class="details">
         <p><strong>Role:</strong> ${roleDisplay}</p>
@@ -232,6 +236,7 @@ Education Revenue Management System
 <body>
   <div class="container">
     <div class="header">
+      <img src="${frontendUrl}/favicon.png" alt="MOEKMRemit" style="max-height: 64px; margin-bottom: 16px;" />
       <h1>MOETrackIT</h1>
       <p>Education Revenue Management System</p>
     </div>
@@ -296,6 +301,7 @@ Education Revenue Management System
 <body>
   <div class="container">
     <div class="header">
+      <img src="${process.env.FRONTEND_URL || 'http://localhost:3000'}/favicon.png" alt="MOEKMRemit" style="max-height: 64px; margin-bottom: 16px;" />
       <h1>MOETrackIT</h1>
       <p>Education Revenue Management System</p>
     </div>
@@ -376,6 +382,7 @@ Education Revenue Management System
 <body>
   <div class="container">
     <div class="header">
+      <img src="${process.env.FRONTEND_URL || 'http://localhost:3000'}/favicon.png" alt="MOEKMRemit" style="max-height: 64px; margin-bottom: 16px;" />
       <h1>Payment Receipt</h1>
       <p>MOETrackIT</p>
     </div>
