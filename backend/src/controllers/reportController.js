@@ -220,7 +220,11 @@ async function exportEntityPaymentsCsv(req, res) {
 
 async function exportEntitiesExcel(req, res) {
   try {
+    const { getEntityScopeWhere } = require('../middleware/scope');
+    const scopeWhere = getEntityScopeWhere(req.user);
+
     const entities = await Entity.findAll({
+      where: scopeWhere,
       order: [["name", "ASC"]],
     });
 

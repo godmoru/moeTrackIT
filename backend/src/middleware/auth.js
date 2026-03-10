@@ -19,7 +19,7 @@ async function authMiddleware(req, res, next) {
 
     // Load roles and permissions for the user so permission checks can work
     if (decoded.id) {
-      console.log(decoded);
+      console.log('Authenticating User ID:', decoded.id);
       try {
         const user = await User.findByPk(decoded.id, {
           include: [
@@ -30,6 +30,12 @@ async function authMiddleware(req, res, next) {
             },
           ],
         });
+
+        if (!user) {
+          console.warn('User not found in DB for ID:', decoded.id);
+        } else {
+          console.log('User loaded from DB:', user.id, 'Role:', user.role);
+        }
 
         const permissionCodes = new Set();
         if (user && user.Roles) {
@@ -50,21 +56,23 @@ async function authMiddleware(req, res, next) {
         req.user.lgaId = user?.lgaId || null;
         req.user.entityId = user?.entityId || null;
 
-        // Load assigned LGAs for AEOs (supports multiple LGA assignments)
         if (user?.role === 'area_education_officer') {
           try {
-            const userLgas = await UserLga.findAll({
-              where: { userId: user.id, isCurrent: true },
-              attributes: ['lgaId'],
-              raw: true,
-            });
-            req.user.assignedLgaIds = userLgas.map((ul) => ul.lgaId);
+            // AEO must have exactly one LGA.
+            // We use user.lgaId as primary, or fallback to first active assignment in UserLga
+            if (!req.user.lgaId) {
+              const userLga = await UserLga.findOne({
+                where: { userId: user.id, isCurrent: true },
+                attributes: ['lgaId'],
+              });
+              if (userLga) {
+                req.user.lgaId = userLga.lgaId;
+              }
+            }
+            console.log(`AEO Scope for User ${user.id}: LGA ${req.user.lgaId}`);
           } catch (lgaErr) {
-            console.error('Failed to load user LGA assignments:', lgaErr);
-            req.user.assignedLgaIds = [];
+            console.error('Failed to load user LGA assignment:', lgaErr);
           }
-        } else {
-          req.user.assignedLgaIds = [];
         }
       } catch (loadErr) {
         console.error('Failed to load user roles/permissions in authMiddleware:', loadErr);

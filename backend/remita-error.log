@@ -1,0 +1,3 @@
+TypeError: remitaService.generateRrr is not a function
+    at initializeRemitaPayment (/Users/nanogesu/Documents/dev/moeTrackIT/backend/src/controllers/paymentController.js:896:39)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)

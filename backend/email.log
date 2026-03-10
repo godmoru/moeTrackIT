@@ -91,3 +91,69 @@ Best regards,
 Benue State Ministry of Education
 Education Revenue Management System
 ================================================
+
+=== EMAIL LOGGED AT 2026-02-18T16:06:57.887Z ===
+To: abc@gmail.com
+Subject: Payment Receipt - MOETrackIT
+Body:
+Hello Tarhemen Ordue,
+
+This is a receipt for your payment to the Benue State Ministry of Education.
+
+Payment Details:
+----------------
+Amount: ₦1,000.00
+Reference: MOE-62-1771430786003-7O2BQX
+Date: 2/18/2026
+Purpose: Assessment Payment
+Status: CONFIRMED
+
+Thank you for your payment.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+================================================
+
+=== EMAIL LOGGED AT 2026-02-19T09:12:19.948Z ===
+To: taroordue@gmail.com
+Subject: Password Reset Request - MOETrackIT
+Body:
+Hello Tarhemen Ordue,
+
+You requested a password reset for your MOETrackIT account.
+
+Click the link below to reset your password:
+http://localhost:3000/reset-password?token=ff6341dfca3c60f85cbbd07247a40492c420c0adde5ca606f12e099d9414f49f
+
+This link will expire in 1 hour.
+
+If you did not request this password reset, please ignore this email or contact support if you have concerns.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+================================================
+
+=== EMAIL LOGGED AT 2026-02-27T15:41:11.028Z ===
+To: admin@edu.be.gov.ng
+Subject: Payment Receipt - MOETrackIT
+Body:
+Hello Methodist High School, Ogbaulu,
+
+This is a receipt for your payment to the Benue State Ministry of Education.
+
+Payment Details:
+----------------
+Amount: ₦15,000.00
+Reference: MOE-63-1772206859001-VIAYXZ
+Date: 2/27/2026
+Purpose: Assessment Payment
+Status: CONFIRMED
+
+Thank you for your payment.
+
+Best regards,
+Benue State Ministry of Education
+Education Revenue Management System
+================================================

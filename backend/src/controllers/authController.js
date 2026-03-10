@@ -27,6 +27,8 @@ async function login(req, res) {
       name: user.name,
       email: user.email,
       role: user.role,
+      lgaId: user.lgaId,
+      entityId: user.entityId,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -40,6 +42,8 @@ async function login(req, res) {
         name: user.name,
         email: user.email,
         role: user.role,
+        entityId: user.entityId,
+        lgaId: user.lgaId,
       },
     });
   } catch (err) {
@@ -310,7 +314,7 @@ async function getMe(req, res) {
       email: freshUser.email,
       role: freshUser.role,
       entityId: freshUser.entityId,
-      lgaId: freshUser.lgaId,
+      lgaId: user.lgaId || freshUser.lgaId, // Use the one from middleware which might be resolved from UserLga
     });
   } catch (err) {
     console.error(err);

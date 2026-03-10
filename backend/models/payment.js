@@ -28,6 +28,7 @@ module.exports = (sequelize, DataTypes) => {
     payerEmail: DataTypes.STRING,
     payerName: DataTypes.STRING,
     gatewayResponse: DataTypes.TEXT,
+    rrr: DataTypes.STRING,
     paymentType: {
       type: DataTypes.STRING,
       defaultValue: 'manual',

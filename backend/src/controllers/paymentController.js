@@ -890,21 +890,27 @@ module.exports = {
         return res.status(400).json({ message: 'Invalid payment amount' });
       }
 
-      // Generate unique reference (keep it short for Remita if needed, but uuid is fine usually)
-      // Generate unique reference (numeric) - using Date.now() for uniqueness
+      // Generate unique orderId for the widget
       const orderId = Date.now();
 
-      console.log('Initializing Remita Payment. Public Key Present:', !!process.env.REMITA_PUBLIC_KEY);
+      console.log('Initializing Remita Payment. Generating RRR for display. OrderId:', orderId);
 
-      // Initialize payment with Remita (Just generates ID and params)
-      const remitaResult = await remitaService.initializePayment({
-        payerName: name || user.name,
-        payerEmail: email,
-        payerPhone: phone || '0000000000',
-        description: `Payment for Assessment ${assessment.assessmentPeriod} - ${assessment.entity?.name}`,
-        amount: amountNum,
-        orderId: orderId,
-      });
+      // Generate RRR via Remita API for display purposes
+      let generatedRrr = null;
+      try {
+        const remitaResult = await remitaService.initializePayment({
+          payerName: name || user.name || 'Citizen',
+          payerEmail: email,
+          payerPhone: phone || '08012345678',
+          description: `Payment for Assessment ${assessment.assessmentPeriod} - ${assessment.entity?.name}`,
+          amount: amountNum,
+          orderId: String(orderId),
+        });
+        generatedRrr = remitaResult.rrr;
+        console.log('Remita RRR generated for display:', generatedRrr);
+      } catch (rrrError) {
+        console.error('Failed to generate RRR for display, continuing without:', rrrError.message);
+      }
 
       // Create pending payment record
       const payment = await Payment.create({
@@ -912,27 +918,40 @@ module.exports = {
         amountPaid: amountNum,
         paymentDate: new Date(),
         method: 'remita',
-        reference: orderId, // Our internal reference (Remita OrderID)
+        reference: String(orderId),
         status: 'pending',
         recordedBy: user.id,
-        paystackReference: orderId, // Storing OrderID here as key for lookup
-        paystackAccessCode: null,
+        paystackReference: String(orderId),
+        paystackAccessCode: String(orderId),
         payerEmail: email,
         payerName: name || user.name,
         paymentType: 'online',
-        gatewayResponse: JSON.stringify(remitaResult),
+        rrr: generatedRrr, // Store if generated
+        gatewayResponse: null,
       });
 
       res.status(200).json({
         message: 'Remita payment initialized successfully',
         paymentId: payment.id,
-        orderId: remitaResult.orderId,
+        orderId: orderId,
+        rrr: generatedRrr, // Include for display
         publicKey: process.env.REMITA_PUBLIC_KEY?.trim(),
-        remitaParams: remitaResult,
+        remitaParams: {
+          amount: amountNum,
+          email: email,
+          firstName: name ? name.split(' ')[0] : 'Citizen',
+          lastName: name && name.split(' ').length > 1 ? name.split(' ').slice(1).join(' ') : 'User',
+          narration: generatedRrr
+            ? `RRR: ${generatedRrr} - Payment for Assessment ${assessment.assessmentPeriod} - ${assessment.entity?.name}`
+            : `Payment for Assessment ${assessment.assessmentPeriod} - ${assessment.entity?.name}`
+        },
         isInline: true
       });
     } catch (err) {
-      console.error('Failed to initialize Remita payment:', err);
+      const fs = require('fs');
+      fs.writeFileSync('remita-error.log', err.stack || err.message);
+      console.error('Failed to initialize Remita payment. Full error:', err);
+      console.error(err.stack);
       res.status(500).json({
         message: err.message || 'Failed to initialize Remita payment',
       });
@@ -953,9 +972,18 @@ module.exports = {
         return res.status(400).json({ message: 'Transaction ID is required' });
       }
 
-      // Find the pending payment by orderId/reference
-      const payment = await Payment.findOne({
-        where: { reference: transactionId }, // Changed lookup to reference which stores orderId
+      // The frontend might pass either the orderId or the RRR.
+      // We try to find the payment by reference (orderId), rrr, or paystackReference.
+      console.log(`Searching for Remita payment with identifier: ${transactionId}`);
+
+      let payment = await Payment.findOne({
+        where: {
+          [Op.or]: [
+            { reference: transactionId },
+            { rrr: transactionId },
+            { paystackReference: transactionId }
+          ]
+        },
         include: [
           {
             model: Assessment,
@@ -979,12 +1007,17 @@ module.exports = {
         });
       }
 
-      // Verify with Remita
-      const verification = await remitaService.verifyPayment(transactionId);
+      // Verify with Remita using the id that Remita understands for this transaction.
+      // Often in the inline flow, the 'rrr' returned is the same as the 'transactionId'
+      const transactionIdToVerify = payment.rrr || transactionId || payment.reference;
 
-      // Status '00' indicates success in Remita v2
-      if (verification.status === '00') {
+      console.log(`Sending ID to remita service for verification: ${transactionIdToVerify}`);
+      const verification = await remitaService.verifyPayment(transactionIdToVerify);
+
+      // Status '00' indicates success
+      if (verification.status === '00' || verification.status === '01') {
         const amountPaid = Number(verification.amount || payment.amountPaid);
+        const actualRrr = verification.rrr || payment.rrr || transactionId;
 
         // Update payment record
         await payment.update({
@@ -992,7 +1025,8 @@ module.exports = {
           channel: 'remita',
           gatewayResponse: JSON.stringify(verification.raw),
           paymentDate: verification.paymentDate ? new Date(verification.paymentDate) : new Date(),
-          amountPaid: amountPaid
+          amountPaid: amountPaid,
+          rrr: actualRrr
         }, { transaction: t });
 
         // Update assessment status based on total paid
@@ -1031,8 +1065,10 @@ module.exports = {
       } else {
         // Payment pending or failed
         // '021' is pending usually, '022' etc.
+        const actualRrr = verification.rrr || transactionId;
         await payment.update({
-          gatewayResponse: JSON.stringify(verification.raw)
+          gatewayResponse: JSON.stringify(verification.raw),
+          rrr: actualRrr
         }, { transaction: t });
 
         await t.commit();
@@ -1065,20 +1101,20 @@ module.exports = {
 
       for (const txn of updates) {
         const { rrr, orderId } = txn;
-        if (rrr) {
-          // We trust the webhook or we verify explicitly?
-          // Best practice: take the RRR and call verification status API to be sure.
-          // So we reuse verifyRemitaPayment logic but programmatically?
-          // Or just find the payment and update if verified.
-
-          // Let's call verify internally to be safe and reuse logic.
-          // But verifyRemitaPayment expects req, res.
-          // We'll reimplement light version here.
-
+        if (orderId || rrr) {
+          const idToVerify = orderId || rrr;
           try {
-            const verification = await remitaService.verifyPayment(rrr);
-            if (verification.status === '00') {
-              const payment = await Payment.findOne({ where: { paystackReference: rrr } });
+            const verification = await remitaService.verifyPayment(idToVerify);
+            if (verification.status === '00' || verification.status === '01') {
+              const payment = await Payment.findOne({
+                where: {
+                  [Op.or]: [
+                    { reference: idToVerify },
+                    { rrr: idToVerify },
+                    { paystackReference: idToVerify }
+                  ]
+                }
+              });
               if (payment && payment.status !== 'confirmed') {
                 // Update payment and assessment (Reuse logic or extract to service)
                 // For brevity, duping logic for now or rely on user clicking "Verify" in UI

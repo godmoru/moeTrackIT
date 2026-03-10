@@ -21,13 +21,18 @@ function createTransporter() {
     }
   };
 
-  // If no SMTP credentials, use a test account or log to console
   if (!config.auth.user || !config.auth.pass) {
-    console.warn('SMTP credentials not configured. Emails will be logged to console.');
+    console.warn('CRITICAL: SMTP credentials not configured! Emails will NOT be sent to recipients. They will be logged to console and email.log for development.');
     return null;
   }
 
-  return nodemailer.createTransport(config);
+  try {
+    const transporter = nodemailer.createTransport(config);
+    return transporter;
+  } catch (err) {
+    console.error('Failed to create nodemailer transporter:', err);
+    return null;
+  }
 }
 
 const fs = require('fs');

@@ -29,12 +29,7 @@ function getEntityScopeWhere(user) {
   }
 
   if (role === 'area_education_officer') {
-    // AEO can see entities in their assigned LGAs (multiple possible)
-    const assignedLgaIds = user.assignedLgaIds || [];
-    if (assignedLgaIds.length > 0) {
-      return { lgaId: { [Op.in]: assignedLgaIds } };
-    }
-    // Fallback to legacy single lgaId if no assignedLgaIds
+    // AEO can see entities in their assigned LGA
     if (user.lgaId) {
       return { lgaId: user.lgaId };
     }
@@ -62,12 +57,7 @@ function getAssessmentScopeWhere(user) {
   }
 
   if (role === 'area_education_officer') {
-    // AEO can see assessments for entities in their assigned LGAs
-    const assignedLgaIds = user.assignedLgaIds || [];
-    if (assignedLgaIds.length > 0) {
-      return { '$entity.lgaId$': { [Op.in]: assignedLgaIds } };
-    }
-    // Fallback to legacy single lgaId
+    // AEO can see assessments for entities in their assigned LGA
     if (user.lgaId) {
       return { '$entity.lgaId$': user.lgaId };
     }
@@ -94,12 +84,7 @@ function getPaymentScopeWhere(user) {
   }
 
   if (role === 'area_education_officer') {
-    // AEO can see payments for entities in their assigned LGAs
-    const assignedLgaIds = user.assignedLgaIds || [];
-    if (assignedLgaIds.length > 0) {
-      return { '$assessment.entity.lgaId$': { [Op.in]: assignedLgaIds } };
-    }
-    // Fallback to legacy single lgaId
+    // AEO can see payments for entities in their assigned LGA
     if (user.lgaId) {
       return { '$assessment.entity.lgaId$': user.lgaId };
     }

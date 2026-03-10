@@ -11,7 +11,8 @@ const axios = require('axios');
 const REMITA_MERCHANT_ID = process.env.REMITA_MERCHANT_ID;
 const REMITA_API_KEY = process.env.REMITA_API_KEY;
 const REMITA_SERVICE_TYPE_ID = process.env.REMITA_SERVICE_TYPE_ID;
-const REMITA_BASE_URL = process.env.REMITA_BASE_URL || 'https://api-demo.remita.net'; // Demo URL default
+const REMITA_BASE_URL = process.env.REMITA_BASE_URL || 'https://demo.remita.net'; // Demo URL default
+const REMITA_INVOICE_URL = 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
 
 /**
  * Generate Remita Hash
@@ -39,72 +40,141 @@ function generateHash(orderId, amount) {
  * and return it along with the public key to the frontend.
  */
 async function initializePayment({ payerName, payerEmail, payerPhone, description, amount, orderId }) {
-    // For Inline, we don't need to call Remita API to initialize.
-    // We just return the necessary data for the frontend to call RmPaymentEngine.
-
-    return {
-        orderId: orderId,
-        amount: Number(amount),
-        firstName: payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(' ')[0],
-        lastName: payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(' ').slice(1).join(' ') || payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(' ')[0],
-        email: payerEmail,
-        phone: payerPhone,
-        narration: description.replace(/[^a-zA-Z0-9 ]/g, '')
-    };
-}
-
-/**
- * Verify a payment transaction with Remita (v2)
- * @param {string} transactionId - The Order ID or Transaction ID to verify
- * @returns {Promise<Object>} Verification result
- */
-async function verifyPayment(transactionId) {
+    const merchantId = process.env.REMITA_MERCHANT_ID;
+    const apiKey = process.env.REMITA_API_KEY;
+    const serviceTypeId = process.env.REMITA_SERVICE_TYPE_ID;
     const publicKey = process.env.REMITA_PUBLIC_KEY;
-    const privateKey = process.env.REMITA_PRIVATE_KEY;
-    const baseUrl = process.env.REMITA_BASE_URL || 'https://api-demo.remita.net';
+    const baseUrl = process.env.REMITA_BASE_URL || 'https://demo.remita.net';
 
-    if (!publicKey || !privateKey) {
-        throw new Error('Remita Public/Private Key configuration is missing');
+    if (!merchantId || !apiKey || !serviceTypeId || !publicKey) {
+        throw new Error('Remita configuration is incomplete (MerchantID, APIKey, ServiceTypeID, or PublicKey missing)');
     }
 
-    // Hash = SHA512(transactionId + privateKey)
-    const transactionHash = crypto.createHash('sha512')
-        .update(`${transactionId}${privateKey}`)
+    // Hash = SHA512(merchantId + serviceTypeId + orderId + amount + apiKey)
+    const apiHash = crypto.createHash('sha512')
+        .update(`${merchantId}${serviceTypeId}${orderId}${amount}${apiKey}`)
         .digest('hex');
+
+    const payload = {
+        serviceTypeId: serviceTypeId,
+        amount: amount,
+        orderId: orderId,
+        payerName: payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim(),
+        payerEmail: payerEmail,
+        payerPhone: payerPhone || '08012345678',
+        description: description.replace(/[^a-zA-Z0-9 ]/g, '')
+    };
 
     const headers = {
         'Content-Type': 'application/json',
-        'publicKey': publicKey,
-        'transactionHash': transactionHash
+        'Authorization': `remitaConsumerKey=${merchantId},remitaConsumerToken=${apiHash}`
     };
 
     try {
-        console.log(`Verifying Remita Payment (v2): ${transactionId}`);
-        // Endpoint: /payment/v1/payment/query/{transactionId}
-        // Note: URL structure might need adjustment based on specific Remita env (demo/live)
-        // Usually: https://remitademo.net/payment/v1/payment/query/{id}
-        const url = `${baseUrl}/payment/v1/payment/query/${transactionId}`;
+        console.log(`Generating Remita RRR Invoice for Order: ${orderId}`);
+        const url = process.env.NODE_ENV === 'production'
+            ? 'https://login.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit'
+            : 'https://demo.remita.net/remita/exapp/api/v1/send/api/echannelsvc/merchant/api/paymentinit';
+
+        const jsonpStr = await axios.post(url, payload, { headers }).then(res => res.data);
+
+        // Remita standard invoice sometimes returns JSONP string: "jsonp ({\"statuscode\":\"025\",\"RRR\":\"190799556442\",\"status\":\"Payment Reference generated\"})"
+        let data = jsonpStr;
+        if (typeof jsonpStr === 'string' && jsonpStr.startsWith('jsonp (')) {
+            const jsonStr = jsonpStr.replace('jsonp (', '').replace(')$', '').replace(/\)$/, '');
+            data = JSON.parse(jsonStr);
+        }
+
+        console.log('Remita RRR Generation Response:', data);
+
+        if (data.statuscode !== '025' && data.statuscode !== '00') {
+            throw new Error(data.status || 'Failed to generate RRR');
+        }
+
+        return {
+            rrr: data.RRR,
+            orderId: orderId, // Our internal orderId
+            amount: Number(amount),
+            firstName: payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(' ')[0],
+            lastName: payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(' ').slice(1).join(' ') || payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim().split(' ')[0],
+            email: payerEmail,
+            phone: payerPhone,
+            narration: description.replace(/[^a-zA-Z0-9 ]/g, ''),
+            publicKey: publicKey,
+            merchantId: merchantId,
+            serviceTypeId: serviceTypeId
+        };
+
+    } catch (error) {
+        console.error('Remita RRR Generation Error:', error.response?.data || error.message);
+        throw new Error(`Failed to initialize payment with Remita: ${error.response?.data?.status || error.message}`);
+    }
+}
+
+/**
+ * Verify a payment transaction with Remita
+ * @param {string} transactionId - The transactionId (orderId or RRR) to verify
+ * @returns {Promise<Object>} Verification result
+ */
+async function verifyPayment(transactionId) {
+    const merchantId = process.env.REMITA_MERCHANT_ID;
+    const apiKey = process.env.REMITA_API_KEY;
+
+    // Explicit production base URL if not in demo mode
+    const isProduction = process.env.NODE_ENV === 'production';
+    let baseUrl = process.env.REMITA_BASE_URL ||
+        (isProduction ? 'https://login.remita.net' : 'https://demo.remita.net');
+
+    // Fix for Remita API url mismatch. The API URL returning 404 when it's api.remita.net
+    if (baseUrl.includes('api.remita.net')) {
+        baseUrl = 'https://login.remita.net';
+    }
+
+    // Make sure we use the correct domain for demo
+    if (!isProduction && baseUrl.includes('demo.remita.net')) {
+        baseUrl = 'https://remitademo.net';
+    }
+
+    if (!merchantId || !apiKey) {
+        throw new Error('Remita MerchantID or APIKey configuration is missing');
+    }
+
+    // Hash = SHA512(transactionId + apiKey + merchantId)
+    // Works for both RRR and OrderId status checks in Remita standard integration
+    const transactionHash = crypto.createHash('sha512')
+        .update(`${transactionId}${apiKey}${merchantId}`)
+        .digest('hex');
+
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    try {
+        console.log(`Verifying Remita Payment for TransactionId/RRR: ${transactionId}`);
+        // Endpoint: /remita/exapp/api/v1/send/api/echannelsvc/{merchantId}/{transactionId}/{hash}/status.reg
+        const url = `${baseUrl}/remita/exapp/api/v1/send/api/echannelsvc/${merchantId}/${transactionId}/${transactionHash}/status.reg`;
+
+        console.log(`Verification URL: ${url}`);
 
         const response = await axios.get(url, { headers });
         const data = response.data;
 
-        console.log('Remita Verify Response:', data);
+        console.log('Remita Verify Response Detail:', JSON.stringify(data, null, 2));
 
-        // Map response to standard format
+        // Note: For this endpoint, '00' or '01' is typically success
         return {
-            status: data.responseCode, // '00' is success
-            message: data.responseMsg,
-            rrr: data.RRR || data.paymentReference,
+            status: String(data.status),
+            message: data.message,
+            rrr: data.rrr || data.RRR || transactionId,
             amount: data.amount,
             orderId: data.orderId,
-            transactionTime: data.paymentDate,
-            paymentDate: data.paymentDate,
+            paymentDate: data.paymentDate || new Date(),
             raw: data
         };
 
     } catch (error) {
         console.error('Remita Verification Error:', error.response?.data || error.message);
-        throw new Error('Failed to verify payment with Remita');
+        throw new Error(`Failed to verify payment with Remita: ${error.message}`);
     }
 }
 
