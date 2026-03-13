@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = await api.getToken();
       if (token) {
+        // First set basic info from token to show UI quickly
         const decoded = jwtDecode<JwtPayload>(token);
-        console.log('Decoded Token:', decoded); // Debug log
         setUser({
           id: decoded.id,
           email: decoded.email,
@@ -47,27 +47,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           lgaId: decoded.lgaId || decoded.lga_id,
           entityId: decoded.entityId || decoded.entity_id,
         });
+
+        try {
+          // Then fetch full profile for assignedLgaIds etc.
+          const profile = await api.getProfile();
+          setUser(profile);
+        } catch (profileErr) {
+          console.warn('Failed to fetch full profile, continuing with token data:', profileErr);
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       await api.clearToken();
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   }
 
   async function login(email: string, password: string) {
-    const { token, user: userData } = await api.login(email, password);
-    const decoded = jwtDecode<JwtPayload>(token);
-    console.log('Decoded Token (Login):', decoded); // Debug log
-    setUser({
-      id: decoded.id,
-      email: decoded.email,
-      role: decoded.role,
-      name: decoded.name || userData?.name || decoded.email,
-      lgaId: decoded.lgaId || decoded.lga_id,
-      entityId: decoded.entityId || decoded.entity_id,
-    });
+    const { token } = await api.login(email, password);
+    // After login, fetch full profile
+    const profile = await api.getProfile();
+    setUser(profile);
   }
 
   async function logout() {

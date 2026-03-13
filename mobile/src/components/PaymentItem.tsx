@@ -39,8 +39,15 @@ export function PaymentItem({ payment, onPress }: PaymentItemProps) {
       </View>
       <View style={styles.amountContainer}>
         <Text style={styles.amount}>{formatCurrency(payment.amountPaid)}</Text>
-        <View style={styles.methodBadge}>
-          <Text style={styles.methodText}>{payment.method}</Text>
+        <View style={styles.badgeRow}>
+          <View style={styles.methodBadge}>
+            <Text style={styles.methodText}>{payment.method}</Text>
+          </View>
+          {payment.status === 'pending' && (
+            <View style={[styles.statusBadge, styles.pendingBadge]}>
+                <Text style={styles.statusText}>Pending</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -107,5 +114,24 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     textTransform: 'capitalize',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  pendingBadge: {
+    backgroundColor: '#fffbeb',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#b45309',
   },
 });

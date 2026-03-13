@@ -34,9 +34,12 @@ export function DashboardScreen() {
       let lgaId: number | undefined;
       let entityId: number | undefined;
 
+      console.log('Dashboard User Context:', user);
+
       // Determine scope based on role
       if (user?.role === 'area_education_officer') {
         lgaId = user.lgaId;
+        console.log('Resolved AEO LGA ID:', lgaId);
       } else if (['principal', 'cashier'].includes(user?.role || '')) {
         entityId = user?.entityId;
       }
@@ -49,7 +52,9 @@ export function DashboardScreen() {
 
         // Only fetch LGA data if not restricted to entity (or if needed)
         // Entity users probably don't need "Top LGAs" list, or it should be empty/hidden.
-        !entityId ? api.getLgaRemittance(from, to) : Promise.resolve({ items: [] }),
+        (!entityId && !['principal', 'cashier'].includes(user?.role || ''))
+          ? api.getLgaRemittance(from, to)
+          : Promise.resolve({ items: [] }),
 
         // Payments might need filtering too? api.getPayments supports it now?
         // If api.getPayments doesn't support lgaId/entityId params yet, we might see all payments.

@@ -371,6 +371,10 @@ async function paymentInvoice(req, res) {
     );
     doc.text(`Method: ${payment.method || '-'}`, { width: leftColWidth });
     doc.text(`Reference / Purpose: ${payment.reference || '-'}`, { width: leftColWidth });
+    if (payment.rrr) {
+      doc.font("Helvetica-Bold").text(`Remita RRR: ${payment.rrr}`, { width: leftColWidth });
+      doc.font("Helvetica");
+    }
     if (recorder || recorder === 0) {
       const recName = recorder.name || '';
       const recEmail = recorder.email || '';

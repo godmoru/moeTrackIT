@@ -20,7 +20,6 @@ import { formatCurrency } from '../utils/format';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PaymentDetail'>;
 
-const API_BASE = 'http://192.168.78.59:5000/api/v1'; // Should match api.ts
 
 export function PaymentDetailsScreen({ route, navigation }: Props) {
     const { paymentId } = route.params;
@@ -45,6 +44,30 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
         }
     }
 
+    async function handleVerifyPayment() {
+        if (!payment) return;
+        try {
+            setLoading(true);
+            let result;
+            if (payment.method === 'remita' || payment.rrr) {
+                result = await api.verifyRemitaPayment(payment.rrr || payment.reference || '');
+            } else {
+                result = await api.verifyPaystackPayment(payment.reference || '');
+            }
+
+            if (result.status === 'success' || result.status === 'paid' || result.status === '00' || result.status === '01') {
+                Alert.alert('Success', 'Payment verified and confirmed!');
+                loadPayment(); // Reload data
+            } else {
+                Alert.alert('Pending', `Payment status: ${result.message || 'Pending'}`);
+            }
+        } catch (error: any) {
+            Alert.alert('Verification Error', error.message || 'Could not verify payment');
+        } finally {
+            setLoading(false);
+        }
+    }
+
     async function handleDownloadReceipt() {
         if (!payment) return;
 
@@ -55,7 +78,7 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
 
             if (Platform.OS === 'web') {
                 // Web implementation using fetch and Blob
-                const response = await fetch(`${API_BASE}/payments/${payment.id}/invoice.pdf`, {
+                const response = await fetch(`${api.API_BASE}/payments/${payment.id}/invoice.pdf`, {
                     headers: headers as any,
                 });
 
@@ -77,7 +100,7 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
             const fileUri = `${FileSystem.documentDirectory}receipt_${payment.id}.pdf`;
 
             const downloadRes = await FileSystem.downloadAsync(
-                `${API_BASE}/payments/${payment.id}/invoice.pdf`,
+                `${api.API_BASE}/payments/${payment.id}/invoice.pdf`,
                 fileUri,
                 { headers }
             );
@@ -117,9 +140,15 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
                         {formatCurrency(payment.amountPaid)}
                     </Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: '#dcfce7' }]}>
-                    <Text style={[styles.statusText, { color: '#166534' }]}>
-                        Successful
+                <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: payment.status === 'paid' || payment.status === 'confirmed' ? '#dcfce7' : (payment.status === 'failed' ? '#fee2e2' : '#fef3c7') }
+                ]}>
+                    <Text style={[
+                        styles.statusText,
+                        { color: payment.status === 'paid' || payment.status === 'confirmed' ? '#166534' : (payment.status === 'failed' ? '#991b1b' : '#92400e') }
+                    ]}>
+                        {payment.status || 'Pending'}
                     </Text>
                 </View>
             </View>
@@ -138,6 +167,13 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
                     <Text style={styles.label}>Reference</Text>
                     <Text style={styles.value}>{payment.reference || '-'}</Text>
                 </View>
+
+                {payment.rrr && (
+                    <View style={styles.row}>
+                        <Text style={styles.label}>Remita RRR</Text>
+                        <Text style={[styles.value, { fontWeight: '700', color: '#ea580c' }]}>{payment.rrr}</Text>
+                    </View>
+                )}
 
                 <View style={styles.row}>
                     <Text style={styles.label}>Method</Text>
@@ -171,10 +207,20 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
             </View>
 
             <View style={styles.footer}>
+                {payment.status === 'pending' && (
+                    <View style={{ marginBottom: 12 }}>
+                        <Button
+                            title="Verify Payment Status"
+                            onPress={handleVerifyPayment}
+                            variant="secondary"
+                            leftIcon={<Ionicons name="refresh-outline" size={20} color="#059669" />}
+                        />
+                    </View>
+                )}
                 <Button
                     title={downloading ? 'Downloading...' : 'Download Receipt'}
                     onPress={handleDownloadReceipt}
-                    disabled={downloading}
+                    disabled={downloading || payment.status === 'pending'}
                     leftIcon={<Ionicons name="download-outline" size={20} color="white" />}
                 />
             </View>

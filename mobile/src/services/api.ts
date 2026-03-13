@@ -4,7 +4,7 @@ import { DashboardSummary, LgaRemittance, Assessment, Payment, User } from '../t
 
 // Update this to your backend URL
 // Use your Mac's IP address instead of localhost for simulator
-const API_BASE = 'http://192.168.78.59:5000/api/v1';
+const API_BASE = 'http://192.168.1.93:5000/api/v1';
 
 
 class ApiService {
@@ -46,15 +46,6 @@ class ApiService {
     }
   }
 
-  async clearToken() {
-    this.token = null;
-    if (Platform.OS === 'web') {
-      localStorage.removeItem('authToken');
-    } else {
-      await SecureStore.deleteItemAsync('authToken');
-    }
-  }
-
   async getToken(): Promise<string | null> {
     if (!this.token) {
       if (Platform.OS === 'web') {
@@ -64,6 +55,15 @@ class ApiService {
       }
     }
     return this.token;
+  }
+
+  async clearToken() {
+    this.token = null;
+    if (Platform.OS === 'web') {
+      localStorage.removeItem('authToken');
+    } else {
+      await SecureStore.deleteItemAsync('authToken');
+    }
   }
 
   // Auth
@@ -254,6 +254,64 @@ class ApiService {
     return res.json();
   }
 
+  async initializePayment(data: {
+    assessmentId: number;
+    amount: number;
+    email: string;
+    name?: string;
+  }): Promise<{ authorizationUrl: string; reference: string; paymentId: number }> {
+    const res = await fetch(`${API_BASE}/payments/initialize`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Failed to initialize Paystack payment');
+    }
+    return res.json();
+  }
+
+  async initializeRemitaPayment(data: {
+    assessmentId: number;
+    amount: number;
+    email: string;
+    name?: string;
+  }): Promise<{ rrr?: string; paymentUrl?: string; isInline?: boolean; orderId?: string; publicKey?: string; remitaParams?: any }> {
+    const res = await fetch(`${API_BASE}/payments/remita/initialize`, {
+      method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Failed to initialize Remita payment');
+    }
+    return res.json();
+  }
+
+  async verifyRemitaPayment(rrr: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/payments/remita/verify/${rrr}`, {
+      headers: await this.getHeaders(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Remita verification failed');
+    }
+    return res.json();
+  }
+
+  async verifyPaystackPayment(reference: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/payments/verify/${reference}`, {
+      headers: await this.getHeaders(),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || 'Paystack verification failed');
+    }
+    return res.json();
+  }
+
   // Assessments
   async getAssessments(params?: {
     page?: number;
@@ -292,7 +350,7 @@ class ApiService {
 
   // User
   async getProfile(): Promise<User> {
-    const res = await fetch(`${API_BASE}/users/me`, {
+    const res = await fetch(`${API_BASE}/auth/me`, {
       headers: await this.getHeaders(),
     });
     if (!res.ok) {

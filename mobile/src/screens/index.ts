@@ -16,3 +16,6 @@ export * from './AboutScreen';
 export * from './ReportsScreen';
 export * from './ReportDetailsScreen';
 export { UsersScreen } from './UsersScreen';
+export { RecordPaymentScreen } from './RecordPaymentScreen';
+export { PaymentWebViewScreen } from './PaymentWebViewScreen';
+export { PaymentSuccessScreen } from './PaymentSuccessScreen';

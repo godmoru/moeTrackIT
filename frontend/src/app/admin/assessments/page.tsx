@@ -97,6 +97,7 @@ export default function AssessmentsPage() {
   const [payerName, setPayerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"paystack" | "remita">("remita");
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
 
   async function load() {
     setLoading(true);
@@ -368,6 +369,8 @@ export default function AssessmentsPage() {
       const body = await res.json();
       if (!res.ok) throw new Error(body.message || "Payment init failed");
 
+      setPaymentData(body);
+
       if (paymentMethod === "remita") {
         // Remita Inline Flow (v2)
         if (body.isInline && body.publicKey && body.orderId) {
@@ -385,19 +388,54 @@ export default function AssessmentsPage() {
             await new Promise((resolve) => script.onload = resolve);
           }
 
+          const narrationWithRrr = body.remitaParams?.narration || `RRR: ${body.rrr} - Payment for Assessment`;
+
           const config = {
             key: body.publicKey,
-            transactionId: Number(body.orderId),
-            customerId: body.remitaParams.email,
-            firstName: "Test",
-            lastName: "User",
-            email: body.remitaParams.email,
-            amount: body.remitaParams.amount,
-            currency: "NGN",
-            narration: body.remitaParams.narration,
-            onSuccess: function (response: any) {
-              console.log('Remita Success:', response);
-              verifyRemitaTransaction(response.transactionId || body.orderId);
+            transactionId: body.rrr, // Set RRR as transaction identifier to display it
+            rrr: body.rrr,
+            processRrr: true,
+            title: `RRR: ${body.rrr}`, // Experimental: override header
+            paymentTitle: `RRR: ${body.rrr}`, // Experimental: override header
+            amount: body.remitaParams?.amount,
+            email: body.remitaParams?.email,
+            first_name: body.remitaParams?.firstName,
+            last_name: body.remitaParams?.lastName,
+            narration: narrationWithRrr,
+            description: narrationWithRrr,
+            extendedData: {
+              customFields: [
+                { name: "rrr", value: body.rrr },
+                { name: "narration", value: narrationWithRrr },
+                { name: "orderId", value: String(body.orderId) }
+              ]
+            },
+            onSuccess: async function (response: any) {
+              console.log('Remita Success Callback Response:', response);
+              // Priority: RRR from response -> initial body.rrr -> transactionId
+              const rrr = response.RRR || response.rrr || body.rrr || response.transactionId;
+              const paymentRef = response.paymentReference;
+
+              await Swal.fire({
+                icon: 'info',
+                title: 'Payment Processing',
+                html: `
+                  <div class="text-left">
+                    <p class="mb-2"><strong>Remita Retrieval Reference (RRR):</strong></p>
+                    <div class="bg-orange-50 p-2 rounded text-center font-mono text-lg font-bold text-orange-700 mb-3">
+                      ${rrr || 'N/A'}
+                    </div>
+                    <p class="text-sm text-gray-600 mb-1"><strong>Payment Reference:</strong> ${paymentRef || 'N/A'}</p>
+                    <p class="text-xs text-gray-500 mt-3">Verifying payment status...</p>
+                  </div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 3000,
+                timerProgressBar: true
+              });
+
+              verifyRemitaTransaction(rrr || String(body.orderId), paymentRef);
             },
             onError: function (response: any) {
               console.log('Remita Error:', response);
@@ -408,9 +446,10 @@ export default function AssessmentsPage() {
             }
           };
 
-          console.log('DEBUG: Remita Config:', JSON.stringify(config, null, 2));
+          console.log('DEBUG: Final Remita Config for Assessments Page:', JSON.stringify(config, null, 2));
           const paymentEngine = window.RmPaymentEngine.init(config);
 
+          // ...
           paymentEngine.showPaymentWidget();
           // We don't close the modal or refresh immediately; we wait for onSuccess callback
 
@@ -442,10 +481,13 @@ export default function AssessmentsPage() {
   }
 
   // Verification Logic
-  async function verifyRemitaTransaction(transactionId: string) {
+  async function verifyRemitaTransaction(transactionId: string, rrr?: string) {
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch(`${API_BASE}/payments/remita/verify/${transactionId}`, {
+      const url = rrr
+        ? `${API_BASE}/payments/remita/verify/${transactionId}?rrr=${rrr}`
+        : `${API_BASE}/payments/remita/verify/${transactionId}`;
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -1142,9 +1184,55 @@ export default function AssessmentsPage() {
             </div>
           </div>
 
+          {/* Display RRR and Details after initialization */}
+          {paymentData && paymentMethod === "remita" && (
+            <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="bg-orange-100 p-4 rounded-lg border-2 border-orange-300 text-center shadow-sm relative overflow-hidden">
+                <div className="text-[10px] text-orange-800 font-bold mb-1 uppercase tracking-wider">Payment Reference (RRR)</div>
+                <div
+                  className="font-mono text-2xl font-bold text-orange-700 tracking-[0.2em] bg-white/50 py-2 rounded border border-orange-200 cursor-pointer hover:bg-white transition-colors"
+                  onClick={() => {
+                    navigator.clipboard.writeText(paymentData.rrr);
+                    Swal.fire({
+                      toast: true,
+                      position: 'top-end',
+                      icon: 'success',
+                      title: 'RRR Copied!',
+                      showConfirmButton: false,
+                      timer: 1500
+                    });
+                  }}
+                  title="Click to copy"
+                >
+                  {paymentData.rrr}
+                </div>
+                <div className="text-[9px] text-orange-600 mt-2 font-medium">Click to copy RRR</div>
+              </div>
+
+              <div className="rounded-md bg-orange-50 p-3 border border-orange-200">
+                <div className="text-[11px] font-bold text-orange-800 mb-2 pb-1 border-b border-orange-100">Payment Summary</div>
+                <div className="space-y-2">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] text-orange-600 font-bold uppercase tracking-tight">Narration</span>
+                    <span className="text-[10px] text-gray-800 font-medium leading-relaxed">
+                      {paymentData.remitaParams?.narration || 'Payment for Assessment'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] bg-white/30 p-1.5 rounded">
+                    <span className="text-gray-600 font-medium">Amount:</span>
+                    <span className="font-bold text-gray-900 text-sm">₦{Number(paymentData.remitaParams?.amount || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <button
-              onClick={() => setShowPaymentModal(false)}
+              onClick={() => {
+                setShowPaymentModal(false);
+                setPaymentData(null);
+              }}
               className="rounded border border-gray-300 px-3 py-2 text-xs font-medium hover:bg-gray-50"
             >
               Cancel
@@ -1152,9 +1240,16 @@ export default function AssessmentsPage() {
             <button
               onClick={handleInitiatePayment}
               disabled={processingPayment}
-              className="rounded bg-green-700 px-4 py-2 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70"
+              className="w-full rounded bg-green-700 px-4 py-3 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70 shadow-md transition-all active:scale-[0.98]"
             >
-              {processingPayment ? "Procesing..." : "Pay Now"}
+              {processingPayment ? (
+                "Processing..."
+              ) : (
+                <>
+                  Pay Now ₦{Number(paymentAmount || 0).toLocaleString()}
+                  {paymentData?.rrr && <span className="block text-[10px] font-normal opacity-80 mt-0.5 tracking-wider">RRR: {paymentData.rrr}</span>}
+                </>
+              )}
             </button>
           </div>
         </div>

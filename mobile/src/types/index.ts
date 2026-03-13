@@ -44,11 +44,15 @@ export interface Payment {
   assessmentId: number;
   amountPaid: number;
   paymentDate: string;
-  method: 'cash' | 'transfer' | 'pos' | 'cheque';
+  method: string;
   reference?: string;
+  status: 'pending' | 'confirmed' | 'paid' | 'failed';
   recordedBy: number;
   assessment?: Assessment;
   recorder?: User;
+  rrr?: string;
+  paystackReference?: string;
+  paymentType?: string;
 }
 
 export interface DashboardSummary {
@@ -76,6 +80,9 @@ export type RootStackParamList = {
   About: undefined;
   Reports: undefined;
   ReportDetails: { reportId: string; title: string };
+  RecordPayment: { assessmentId: number; amount?: number; incomeSource?: string };
+  PaymentWebView: { url: string; gateway: 'paystack' | 'remita'; reference?: string; assessmentId: number };
+  PaymentSuccess: { gateway: 'paystack' | 'remita'; reference?: string; assessmentId: number; amount?: number };
 };
 
 export type MainTabParamList = {

@@ -14,7 +14,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.godfreyeu.moetrackITmobile"
+      "bundleIdentifier": "com.godfreyeu.moetrackITmobile",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "moetrack"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,6 +37,7 @@
     "plugins": [
       "expo-secure-store"
     ],
+    "scheme": "moetrack",
     "extra": {
       "eas": {
         "projectId": "5e8fb3b6-47ea-4533-a677-abccd7d53e64"

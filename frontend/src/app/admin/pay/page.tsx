@@ -40,7 +40,8 @@ export default function PayPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [payerEmail, setPayerEmail] = useState("");
   const [payerName, setPayerName] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"paystack" | "remita">("remita"); // Default to Remita as requested
+  const [paymentMethod, setPaymentMethod] = useState<"paystack" | "remita">("remita");
+  const [paymentData, setPaymentData] = useState<any>(null); // Store payment init response
 
   // Filter state for AEOs with multiple schools
   const [lgaFilter, setLgaFilter] = useState<string>("");
@@ -93,6 +94,7 @@ export default function PayPage() {
   function handleSelectAssessment(assessment: Assessment) {
     setSelectedAssessment(assessment);
     setPaymentAmount(assessment.balance.toString());
+    setPaymentData(null); // Reset payment data when selecting new assessment
   }
 
   async function handleInitiatePayment() {
@@ -160,18 +162,44 @@ export default function PayPage() {
         throw new Error(data.message || "Failed to initialize payment");
       }
 
+      // Store payment data for display
+      setPaymentData(data);
+
+      // DEBUG: Log the full response
+      console.log('DEBUG: Backend Response:', data);
+      console.log('DEBUG: RRR from backend:', data.rrr);
+
       if (paymentMethod === "remita") {
         // Remita Inline Flow (v2)
         if (data.isInline && data.publicKey && data.orderId) {
 
+          // Show RRR first before opening widget
+          if (data.rrr) {
+            await Swal.fire({
+              icon: 'info',
+              title: 'Remita Payment Reference',
+              html: `
+                <div class="text-center">
+                  <p class="text-sm text-gray-600 mb-3">Your Remita Retrieval Reference (RRR):</p>
+                  <div class="bg-orange-100 p-4 rounded-lg border-2 border-orange-300 mb-3">
+                    <div class="font-mono text-2xl font-bold text-orange-700 tracking-widest">
+                      ${data.rrr}
+                    </div>
+                  </div>
+                  <p class="text-xs text-orange-600">Save this number for your records</p>
+                  <p class="text-xs text-gray-500 mt-2">Click OK to proceed to payment</p>
+                </div>
+              `,
+              confirmButtonText: 'Proceed to Payment',
+              confirmButtonColor: '#ea580c',
+              allowOutsideClick: false
+            });
+          }
+
           // Load Remita Inline Script if not present
           if (!window.RmPaymentEngine) {
             const script = document.createElement('script');
-            // Use demo or live URL based on env, but typically:
-            // Demo: https://remitademo.net/payment/v1/remita-pay-inline.bundle.js
-            // Live: https://login.remita.net/payment/v1/remita-pay-inline.bundle.js
-            // We'll default to Demo for now unless backend says otherwise, or hardcode.
-            // Assuming Demo based on context.
+            // Using the modern demo domain
             script.src = "https://remitademo.net/payment/v1/remita-pay-inline.bundle.js";
             script.async = true;
             document.body.appendChild(script);
@@ -179,21 +207,47 @@ export default function PayPage() {
             await new Promise((resolve) => script.onload = resolve);
           }
 
-          const config = {
-            key: data.publicKey,
-            transactionId: Number(data.orderId),
-            customerId: data.remitaParams.email,
-            // firstName: data.remitaParams.firstName,
-            // lastName: data.remitaParams.lastName,
-            firstName: "Test",
-            lastName: "User",
-            email: data.remitaParams.email,
-            amount: data.remitaParams.amount,
-            currency: "NGN",
-            narration: data.remitaParams.narration,
-            onSuccess: function (response: any) {
-              console.log('Remita Success:', response);
-              verifyRemitaTransaction(response.transactionId || data.orderId);
+          // Prepare config exactly as specified in "Checkout with Remita Invoice (RRR)" doc
+          const config: any = {
+            key: data.publicKey?.trim(),
+            processRrr: true,
+            transactionId: data.rrr, // This must be the RRR generated from backend
+            amount: Number(paymentAmount),
+            email: data.remitaParams?.email,
+            firstName: data.remitaParams?.firstName,
+            lastName: data.remitaParams?.lastName,
+            narration: data.remitaParams?.narration,
+            extendedData: {
+              customFields: [
+                { name: "rrr", value: data.rrr },
+                { name: "orderId", value: String(data.orderId) }
+              ]
+            },
+            onSuccess: async function (response: any) {
+              console.log('Remita Success Callback Response:', response);
+              // In "Checkout with RRR" mode, the transactionId/paymentReference IS the RRR
+              const rrr = response.paymentReference || response.transactionId || response.RRR || response.rrr || data.rrr;
+              const idToVerify = rrr;
+
+              await Swal.fire({
+                icon: 'info',
+                title: 'Payment Processing',
+                html: `
+                  <div class="text-left">
+                    <p class="mb-2"><strong>Payment Verification:</strong></p>
+                    <div class="bg-orange-50 p-2 rounded text-center font-mono text-lg font-bold text-orange-700 mb-3">
+                      ${idToVerify}
+                    </div>
+                    <p class="text-xs text-gray-500 mt-3">Verifying payment status...</p>
+                  </div>
+                `,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 3000,
+                timerProgressBar: true
+              });
+
+              verifyRemitaTransaction(idToVerify, idToVerify);
             },
             onError: function (response: any) {
               console.log('Remita Error:', response);
@@ -204,7 +258,7 @@ export default function PayPage() {
             }
           };
 
-          console.log('DEBUG: Remita Config:', JSON.stringify(config, null, 2));
+          console.log('DEBUG: Final Remita Config being passed to widget:', JSON.stringify(config, null, 2));
           const paymentEngine = window.RmPaymentEngine.init(config);
 
           paymentEngine.showPaymentWidget();
@@ -260,10 +314,13 @@ export default function PayPage() {
   }
 
   // Define verification function outside or inside component
-  async function verifyRemitaTransaction(transactionId: string) {
+  async function verifyRemitaTransaction(transactionId: string, rrr?: string) {
     try {
       const token = localStorage.getItem("authToken");
-      const res = await fetch(`${API_BASE}/payments/remita/verify/${transactionId}`, {
+      const url = rrr
+        ? `${API_BASE}/payments/remita/verify/${transactionId}?rrr=${rrr}`
+        : `${API_BASE}/payments/remita/verify/${transactionId}`;
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -563,6 +620,75 @@ export default function PayPage() {
                       />
                     </div>
 
+                    {/* Payment Gateway Selector */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-gray-700 mb-2">
+                        Payment Gateway
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Remita Option */}
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("remita")}
+                          className={`flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all ${paymentMethod === "remita"
+                            ? "border-orange-500 bg-orange-50"
+                            : "border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50/50"
+                            }`}
+                        >
+                          <span className="text-lg font-bold text-orange-600">R</span>
+                          <span className="mt-0.5 text-[10px] font-semibold text-gray-700">Remita</span>
+                          {paymentMethod === "remita" && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-medium text-orange-700">
+                              ✓ Selected
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Paystack Option */}
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("paystack")}
+                          className={`flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all ${paymentMethod === "paystack"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
+                            }`}
+                        >
+                          <span className="text-lg font-bold text-blue-600">P</span>
+                          <span className="mt-0.5 text-[10px] font-semibold text-gray-700">Paystack</span>
+                          {paymentMethod === "paystack" && (
+                            <span className="mt-1 inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-medium text-blue-700">
+                              ✓ Selected
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Display RRR after payment initialization */}
+                    {paymentData && paymentMethod === "remita" && paymentData.rrr && (
+                      <div className="bg-orange-100 p-4 rounded-lg border-2 border-orange-300 text-center shadow-sm">
+                        <div className="text-[11px] text-orange-800 font-bold mb-2 uppercase tracking-tight">Payment Reference (RRR)</div>
+                        <div
+                          className="font-mono text-2xl font-bold text-orange-700 tracking-[0.2em] bg-white/50 py-2 rounded border border-orange-200 cursor-pointer hover:bg-white transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(paymentData.rrr);
+                            Swal.fire({
+                              toast: true,
+                              position: 'top-end',
+                              icon: 'success',
+                              title: 'RRR Copied to clipboard',
+                              showConfirmButton: false,
+                              timer: 2000
+                            });
+                          }}
+                          title="Click to copy RRR"
+                        >
+                          {paymentData.rrr}
+                        </div>
+                        <div className="text-[10px] text-orange-600 mt-2 font-medium italic">Click the number above to copy</div>
+                      </div>
+                    )}
+
                     <button
                       type="button"
                       onClick={handleInitiatePayment}
@@ -572,7 +698,10 @@ export default function PayPage() {
                       {processing === selectedAssessment.id ? (
                         "Processing..."
                       ) : (
-                        <>Pay ₦{Number(paymentAmount || 0).toLocaleString()}</>
+                        <>
+                          Pay ₦{Number(paymentAmount || 0).toLocaleString()}
+                          {paymentData?.rrr && <span className="block text-[10px] opacity-80 font-normal mt-0.5">RRR: {paymentData.rrr}</span>}
+                        </>
                       )}
                     </button>
 
@@ -584,6 +713,27 @@ export default function PayPage() {
                       Cancel
                     </button>
                   </div>
+
+                  {/* Full Payment Details after initialization */}
+                  {paymentData && paymentMethod === "remita" && (
+                    <div className="rounded-md bg-orange-50 p-4 border border-orange-200 shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
+                      <div className="text-[12px] font-bold text-orange-800 mb-3 border-b border-orange-200 pb-1">Payment Information</div>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="block text-[10px] uppercase tracking-wider text-orange-600 font-bold">Narration / Purpose</span>
+                          <span className="block mt-1 text-[11px] font-semibold text-gray-900 leading-relaxed">
+                            {paymentData.remitaParams?.narration || 'Payment for Assessment'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center bg-white/40 p-2 rounded">
+                          <span className="text-[11px] text-gray-600 font-medium">Total Amount:</span>
+                          <span className="font-bold text-gray-900 text-sm">
+                            ₦{Number(paymentData.remitaParams?.amount || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="rounded-md bg-blue-50 p-3 text-[10px] text-blue-800">
                     <strong>Secure Payment:</strong> You will be redirected to complete your payment securely via {paymentMethod === 'remita' ? 'Remita' : 'Paystack'}.

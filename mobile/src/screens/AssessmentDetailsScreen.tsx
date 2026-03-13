@@ -12,6 +12,7 @@ import { RootStackParamList } from '../types';
 import { api } from '../services/api';
 import { Assessment } from '../types';
 import { formatCurrency } from '../utils/format';
+import { Button } from '../components'; // Import Button component
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssessmentDetail'>;
 
@@ -114,7 +115,22 @@ export function AssessmentDetailsScreen({ route, navigation }: Props) {
                     {assessment.incomeSource?.description || 'No description available.'}
                 </Text>
             </View>
-        </ScrollView>
+
+            {
+                assessment.status !== 'paid' && (
+                    <View style={styles.footer}>
+                        <Button
+                            title="Record Payment"
+                            onPress={() => navigation.navigate('RecordPayment', {
+                                assessmentId: assessment.id,
+                                amount: assessment.amountAssessed, // Pass amount
+                                incomeSource: assessment.incomeSource?.name,
+                            })}
+                        />
+                    </View>
+                )
+            }
+        </ScrollView >
     );
 }
 
@@ -203,5 +219,8 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#4b5563',
         lineHeight: 20,
+    },
+    footer: {
+        marginTop: 24,
     },
 });

@@ -26,6 +26,9 @@ import {
   ReportsScreen,
   ReportDetailsScreen,
   UsersScreen,
+  RecordPaymentScreen,
+  PaymentWebViewScreen,
+  PaymentSuccessScreen,
 } from '../screens';
 import { RootStackParamList, MainTabParamList } from '../types';
 
@@ -34,7 +37,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 function MainTabs() {
   const { user } = useAuth();
-  
+
   return (
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({
@@ -209,6 +212,21 @@ export function AppNavigator() {
               name="ReportDetails"
               component={ReportDetailsScreen}
               options={{ title: 'Report Details', headerShown: true }}
+            />
+            <Stack.Screen
+              name="RecordPayment"
+              component={RecordPaymentScreen}
+              options={{ title: 'Pay Assessment', headerShown: true }}
+            />
+            <Stack.Screen
+              name="PaymentWebView"
+              component={PaymentWebViewScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="PaymentSuccess"
+              component={PaymentSuccessScreen}
+              options={{ headerShown: false, gestureEnabled: false }}
             />
           </>
         ) : (

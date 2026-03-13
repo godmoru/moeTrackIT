@@ -19,6 +19,8 @@ interface Payment {
     entity?: { name: string };
     incomeSource?: { name?: string | null };
   };
+  gatewayResponse?: string | null;
+  rrr?: string | null;
   recorder?: { name?: string | null; email?: string | null };
 }
 
@@ -77,6 +79,48 @@ export default function PaymentsPage() {
       window.open(url, "_blank");
     } catch {
       // silent failure for now
+    }
+  }
+
+  async function handleVerifyRemita(payment: Payment) {
+    try {
+      const token = localStorage.getItem("authToken");
+      const identifier = payment.rrr || payment.reference || String(payment.id);
+
+      const res = await fetch(`${API_BASE}/payments/remita/verify/${identifier}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Verification failed");
+
+      if (data.status === "success") {
+        const Swal = (await import("sweetalert2")).default;
+        await Swal.fire({
+          icon: "success",
+          title: "Payment Verified",
+          text: "The payment has been successfully confirmed.",
+        });
+        // Refresh list
+        window.location.reload();
+      } else {
+        const Swal = (await import("sweetalert2")).default;
+        await Swal.fire({
+          icon: "warning",
+          title: "Verification Incomplete",
+          text: data.message || "The payment status is still pending or was not successful.",
+        });
+      }
+    } catch (err: any) {
+      const Swal = (await import("sweetalert2")).default;
+      await Swal.fire({
+        icon: "error",
+        title: "Verification Error",
+        text: err.message || "Failed to verify payment",
+      });
     }
   }
 
@@ -176,7 +220,16 @@ export default function PaymentsPage() {
                   header: "Date",
                   cell: (p) => <span className="text-xs">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("en-NG") : "-"}</span>
                 },
-                { header: "References (If Any)", cell: (p) => <span className="text-xs">{p.reference || "-"}</span> },
+                {
+                  header: "References (If Any)",
+                  cell: (p) => (
+                    <div className="text-xs">
+                      {p.rrr && <div className="font-bold text-orange-700">RRR: {p.rrr}</div>}
+                      {p.reference && <div className={p.rrr ? "text-[10px] text-gray-400 mt-0.5" : "text-gray-600"}>{p.rrr ? `Ref: ${p.reference}` : p.reference}</div>}
+                      {!p.rrr && !p.reference && "-"}
+                    </div>
+                  )
+                },
                 {
                   header: "Recieved From",
                   cell: (p) => <span className="text-xs">{p.assessment?.entity?.name || p.recorder?.name || "-"}</span>
@@ -201,7 +254,16 @@ export default function PaymentsPage() {
                 {
                   header: <div className="text-right">Action</div>,
                   cell: (p) => (
-                    <div className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {p.status !== "confirmed" && p.status !== "paid" && p.method === "remita" && (
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyRemita(p)}
+                          className="rounded-md bg-orange-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-orange-700"
+                        >
+                          Verify
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => handleViewInvoice(p.id)}

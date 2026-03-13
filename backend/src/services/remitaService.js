@@ -122,17 +122,16 @@ async function verifyPayment(transactionId) {
 
     // Explicit production base URL if not in demo mode
     const isProduction = process.env.NODE_ENV === 'production';
-    let baseUrl = process.env.REMITA_BASE_URL ||
-        (isProduction ? 'https://login.remita.net' : 'https://demo.remita.net');
+    let baseUrl = process.env.REMITA_BASE_URL;
+
+    // Default if not provided in .env
+    if (!baseUrl) {
+        baseUrl = isProduction ? 'https://login.remita.net' : 'https://remitademo.net';
+    }
 
     // Fix for Remita API url mismatch. The API URL returning 404 when it's api.remita.net
     if (baseUrl.includes('api.remita.net')) {
         baseUrl = 'https://login.remita.net';
-    }
-
-    // Make sure we use the correct domain for demo
-    if (!isProduction && baseUrl.includes('demo.remita.net')) {
-        baseUrl = 'https://remitademo.net';
     }
 
     if (!merchantId || !apiKey) {
