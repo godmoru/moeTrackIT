@@ -75,6 +75,7 @@ export interface Expenditure {
     retirement?: ExpenditureRetirement;
     lineItem?: BudgetLineItem;
     mda?: MDA;
+    expenditureCategory?: ExpenditureCategory;
 }
 
 // Expenditure Retirement Types

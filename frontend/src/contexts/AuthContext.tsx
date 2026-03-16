@@ -12,7 +12,9 @@ interface User {
   email: string;
   role: UserRole;
   name: string;
-  // Add other user properties as needed
+  permissions?: string[];
+  entityId?: string;
+  lgaId?: string;
 }
 
 interface AuthContextType {
@@ -117,9 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    // If you have a permissions system, implement the check here
-    // For now, we'll just check the role
-    return true;
+    // Super admin has all permissions
+    if (user.role === 'super_admin') return true;
+    
+    return user.permissions?.includes(permission) || false;
   };
 
   const value = {

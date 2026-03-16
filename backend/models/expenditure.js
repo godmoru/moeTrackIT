@@ -55,7 +55,7 @@ module.exports = (sequelize, DataTypes) => {
             // Expenditure belongs to one category
             Expenditure.belongsTo(models.ExpenditureCategory, {
                 foreignKey: 'expenditureCategoryId',
-                as: 'categoryId'
+                as: 'expenditureCategory'
             });
         }
 
@@ -114,10 +114,10 @@ module.exports = (sequelize, DataTypes) => {
                 primaryKey: true,
             },
             expenditureCategoryId: {
-                type: DataTypes.UUID,
+                type: DataTypes.INTEGER,
                 allowNull: false,
                 references: {
-                    model: 'ExpenditureCategory',
+                    model: 'ExpenditureCategories',
                     key: 'id'
                 }
             },

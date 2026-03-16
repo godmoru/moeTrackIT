@@ -4,6 +4,7 @@ const { Assessment, Payment, IncomeSource, Entity, sequelize } = require("../../
 const { Op } = require("sequelize");
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
+const path = require("path");
 
 async function summary(req, res) {
   try {
@@ -663,6 +664,295 @@ async function exportRemittanceByLgaPdf(req, res) {
   }
 }
 
+async function exportAssessmentsExcel(req, res) {
+  try {
+    const {
+      lga,
+      assessmentYear,
+      assessmentTerm,
+      status,
+      incomeSourceId,
+      entityTypeId,
+      search
+    } = req.query;
+
+    const { getAssessmentScopeWhere } = require('../middleware/scope');
+    const scopeWhere = getAssessmentScopeWhere(req.user);
+
+    const whereAssessments = {
+      ...scopeWhere
+    };
+
+    if (assessmentYear) whereAssessments.assessmentYear = assessmentYear;
+    if (assessmentTerm) whereAssessments.assessmentTerm = assessmentTerm;
+    if (status) whereAssessments.status = status;
+    if (incomeSourceId) whereAssessments.incomeSourceId = incomeSourceId;
+
+    const entityWhere = {};
+    if (lga) entityWhere.lga = lga;
+    if (entityTypeId) entityWhere.entityTypeId = entityTypeId;
+    if (search) {
+      entityWhere[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { code: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const assessments = await Assessment.findAll({
+      where: whereAssessments,
+      include: [
+        {
+          model: Entity,
+          as: "entity",
+          where: Object.keys(entityWhere).length > 0 ? entityWhere : undefined,
+          required: Object.keys(entityWhere).length > 0
+        },
+        { model: IncomeSource, as: "incomeSource" },
+        {
+          model: Payment,
+          as: "payments",
+          where: { status: { [Op.in]: ['confirmed', 'paid'] } },
+          required: false
+        }
+      ],
+      order: [
+        [{ model: Entity, as: 'entity' }, 'name', 'ASC'],
+        ['assessmentYear', 'DESC'],
+        ['assessmentTerm', 'DESC']
+      ],
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Assessments");
+
+    sheet.columns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "Entity Name", key: "entityName", width: 35 },
+      { header: "LGA", key: "lga", width: 20 },
+      { header: "Code", key: "code", width: 15 },
+      { header: "Income Source", key: "incomeSource", width: 30 },
+      { header: "Period", key: "period", width: 15 },
+      { header: "Year", key: "year", width: 10 },
+      { header: "Term", key: "term", width: 10 },
+      { header: "Amount Assessed", key: "amount", width: 18 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "RRR", key: "rrr", width: 20 },
+      { header: "Paid At", key: "paidAt", width: 20 },
+      { header: "Created At", key: "createdAt", width: 20 },
+    ];
+
+    assessments.forEach((a) => {
+      const successfulPayment = a.payments && a.payments.length > 0 ? a.payments[0] : null;
+
+      sheet.addRow({
+        id: a.id,
+        entityName: a.entity?.name || "",
+        lga: a.entity?.lga || "",
+        code: a.entity?.code || "",
+        incomeSource: a.incomeSource?.name || "",
+        period: a.assessmentPeriod || "",
+        year: a.assessmentYear || "",
+        term: a.assessmentTerm || "",
+        amount: Number(a.amountAssessed || 0),
+        status: a.status || "",
+        rrr: successfulPayment ? (successfulPayment.rrr || "-") : "-",
+        paidAt: successfulPayment && successfulPayment.paymentDate
+          ? successfulPayment.paymentDate.toISOString().split('T')[0]
+          : "-",
+        createdAt: a.createdAt ? a.createdAt.toISOString() : "",
+      });
+    });
+
+    sheet.getRow(1).font = { bold: true };
+
+    // Add number format to Amount column
+    sheet.getColumn('amount').numFmt = '#,##0.00';
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="assessments-export.xlsx"',
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("Assessment Export Error:", err);
+    res.status(500).json({ message: "Failed to export assessments Excel" });
+  }
+}
+
+async function exportAssessmentsPdf(req, res) {
+  try {
+    const {
+      lga,
+      assessmentYear,
+      assessmentTerm,
+      status,
+      incomeSourceId,
+      entityTypeId,
+      search
+    } = req.query;
+
+    const { getAssessmentScopeWhere } = require('../middleware/scope');
+    const scopeWhere = getAssessmentScopeWhere(req.user);
+
+    const whereAssessments = {
+      ...scopeWhere
+    };
+
+    if (assessmentYear) whereAssessments.assessmentYear = assessmentYear;
+    if (assessmentTerm) whereAssessments.assessmentTerm = assessmentTerm;
+    if (status) whereAssessments.status = status;
+    if (incomeSourceId) whereAssessments.incomeSourceId = incomeSourceId;
+
+    const entityWhere = {};
+    if (lga) entityWhere.lga = lga;
+    if (entityTypeId) entityWhere.entityTypeId = entityTypeId;
+    if (search) {
+      entityWhere[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        { code: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    const assessments = await Assessment.findAll({
+      where: whereAssessments,
+      include: [
+        {
+          model: Entity,
+          as: "entity",
+          where: Object.keys(entityWhere).length > 0 ? entityWhere : undefined,
+          required: Object.keys(entityWhere).length > 0
+        },
+        { model: IncomeSource, as: "incomeSource" },
+        {
+          model: Payment,
+          as: "payments",
+          where: { status: { [Op.in]: ['confirmed', 'paid'] } },
+          required: false
+        }
+      ],
+      order: [
+        [{ model: Entity, as: 'entity' }, 'name', 'ASC'],
+        ['assessmentYear', 'DESC'],
+        ['assessmentTerm', 'DESC']
+      ],
+    });
+
+    const doc = new PDFDocument({
+      margin: 40,
+      layout: 'landscape',
+      size: 'A4'
+    });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="assessments-export.pdf"',
+    );
+
+    doc.pipe(res);
+
+    // Header with Logo
+    const logoPath = path.join(__dirname, "../../../frontend/public/benue.png");
+    try {
+      doc.image(logoPath, {
+        fit: [60, 60],
+        align: 'center',
+        x: (doc.page.width / 2) - 30
+      });
+      // doc.moveDown(0.5);
+    } catch (e) {
+      console.warn("Logo not found at", logoPath, "- skipping logo in PDF");
+    }
+
+    doc.fontSize(14).font('Helvetica-Bold').text("Benue State Ministry of Education", { align: "center" });
+    doc.moveDown(0.2);
+    doc.fontSize(10).font('Helvetica').text("Education Revenue Management System", { align: "center" });
+    doc.moveDown(1.5);
+
+    doc.fontSize(18).font('Helvetica-Bold').text("Assessments Report", { align: "center" });
+    doc.moveDown(1);
+
+    if (assessmentYear || lga) {
+      let filterText = "Filters: ";
+      if (lga) filterText += `LGA: ${lga} | `;
+      if (assessmentYear) filterText += `Year: ${assessmentYear} | `;
+      if (assessmentTerm) filterText += `Term: ${assessmentTerm}`;
+      doc.fontSize(10).text(filterText.trim().replace(/ \|$/, ""));
+      doc.moveDown(0.5);
+    }
+
+    // Table Header
+    doc.fontSize(9).font('Helvetica-Bold');
+    const startY = doc.y;
+    doc.text("Institution", 40, startY, { width: 180 });
+    doc.text("LGA", 225, startY, { width: 80 });
+    doc.text("Income Source", 310, startY, { width: 120 });
+    doc.text("Period", 435, startY, { width: 60 });
+    doc.text("Amount (NGN)", 500, startY, { width: 80, align: 'right' });
+    doc.text("Status", 590, startY, { width: 60 });
+    doc.text("RRR", 655, startY, { width: 80 });
+    doc.text("Paid At", 740, startY, { width: 80 });
+
+    doc.moveDown(0.5);
+    doc.moveTo(40, doc.y).lineTo(780, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    doc.font('Helvetica');
+    let y = doc.y;
+    const lineHeight = 16;
+    let totalAmount = 0;
+
+    assessments.forEach((a) => {
+      if (y > doc.page.height - 60) {
+        doc.addPage();
+        y = 60;
+      }
+
+      const amount = Number(a.amountAssessed || 0);
+      totalAmount += amount;
+
+      // Find successful payment if any
+      const successfulPayment = a.payments && a.payments.length > 0 ? a.payments[0] : null;
+      const rrr = successfulPayment ? (successfulPayment.rrr || "-") : "-";
+      const paidAt = successfulPayment && successfulPayment.paymentDate
+        ? successfulPayment.paymentDate.toISOString().split('T')[0]
+        : "-";
+
+      doc.fontSize(8).text(a.entity?.name.slice(0, 40) || "-", 40, y, { width: 180 });
+      doc.text(a.entity?.lga || "-", 225, y, { width: 80 });
+      doc.text(a.incomeSource?.name.slice(0, 30) || "-", 310, y, { width: 120 });
+      doc.text(a.assessmentPeriod || "-", 435, y, { width: 60 });
+      doc.text(amount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), 500, y, { width: 80, align: 'right' });
+      doc.text((a.status || "-").toUpperCase(), 590, y, { width: 60 });
+      doc.text(rrr, 655, y, { width: 80 });
+      doc.text(paidAt, 740, y, { width: 80 });
+
+      y += lineHeight;
+    });
+
+    doc.moveDown(1);
+    doc.moveTo(40, y).lineTo(780, y).stroke();
+    doc.moveDown(0.5);
+    y += 10;
+    doc.fontSize(10).font('Helvetica-Bold');
+    doc.text("TOTAL", 40, y);
+    doc.text(totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), 500, y, { width: 80, align: 'right' });
+
+    doc.end();
+  } catch (err) {
+    console.error("Assessment PDF Export Error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Failed to export assessments PDF" });
+    }
+  }
+}
+
 module.exports = {
   summary,
   remittanceByLga,
@@ -673,5 +963,7 @@ module.exports = {
   exportEntityPaymentsCsv,
   exportEntitiesExcel,
   exportPaymentsExcel,
+  exportAssessmentsExcel,
+  exportAssessmentsPdf,
   exportEntitySummaryPdf,
 };

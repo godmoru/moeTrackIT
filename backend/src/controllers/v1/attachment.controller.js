@@ -1,10 +1,12 @@
-import AttachmentService from '../services/v1/attachment.service.js';
-import { catchAsync } from '../utils/catchAsync.js';
+'use strict';
+
+const AttachmentService = require('../../services/v1/attachment.service.js');
+const catchAsync = require('../../utils/catchAsync.js');
 
 /**
  * Upload an attachment for an expenditure
  */
-export const uploadAttachment = catchAsync(async (req, res) => {
+const uploadAttachment = catchAsync(async (req, res) => {
     const { documentType, description } = req.body;
     const attachment = await AttachmentService.uploadAttachment(
         req.file,
@@ -24,7 +26,7 @@ export const uploadAttachment = catchAsync(async (req, res) => {
 /**
  * Upload an attachment for a retirement
  */
-export const uploadRetirementAttachment = catchAsync(async (req, res) => {
+const uploadRetirementAttachment = catchAsync(async (req, res) => {
     const { documentType, description } = req.body;
     const attachment = await AttachmentService.uploadRetirementAttachment(
         req.file,
@@ -44,7 +46,7 @@ export const uploadRetirementAttachment = catchAsync(async (req, res) => {
 /**
  * Get attachments for an expenditure
  */
-export const getAttachmentsByExpenditure = catchAsync(async (req, res) => {
+const getAttachmentsByExpenditure = catchAsync(async (req, res) => {
     const attachments = await AttachmentService.getAttachmentsByExpenditure(
         req.params.expenditureId
     );
@@ -58,7 +60,7 @@ export const getAttachmentsByExpenditure = catchAsync(async (req, res) => {
 /**
  * Get attachments for a retirement
  */
-export const getAttachmentsByRetirement = catchAsync(async (req, res) => {
+const getAttachmentsByRetirement = catchAsync(async (req, res) => {
     const attachments = await AttachmentService.getAttachmentsByRetirement(
         req.params.retirementId
     );
@@ -72,7 +74,7 @@ export const getAttachmentsByRetirement = catchAsync(async (req, res) => {
 /**
  * Download an attachment
  */
-export const downloadAttachment = catchAsync(async (req, res) => {
+const downloadAttachment = catchAsync(async (req, res) => {
     const { filePath, fileName, fileType } = await AttachmentService.getFileDownloadPath(
         req.params.id
     );
@@ -85,7 +87,7 @@ export const downloadAttachment = catchAsync(async (req, res) => {
 /**
  * Download a retirement attachment
  */
-export const downloadRetirementAttachment = catchAsync(async (req, res) => {
+const downloadRetirementAttachment = catchAsync(async (req, res) => {
     const { filePath, fileName, fileType } = await AttachmentService.getRetirementFileDownloadPath(
         req.params.id
     );
@@ -98,7 +100,7 @@ export const downloadRetirementAttachment = catchAsync(async (req, res) => {
 /**
  * Delete an attachment
  */
-export const deleteAttachment = catchAsync(async (req, res) => {
+const deleteAttachment = catchAsync(async (req, res) => {
     await AttachmentService.deleteAttachment(req.params.id, req.user.id);
 
     res.status(204).json({
@@ -110,7 +112,7 @@ export const deleteAttachment = catchAsync(async (req, res) => {
 /**
  * Delete a retirement attachment
  */
-export const deleteRetirementAttachment = catchAsync(async (req, res) => {
+const deleteRetirementAttachment = catchAsync(async (req, res) => {
     await AttachmentService.deleteRetirementAttachment(req.params.id, req.user.id);
 
     res.status(204).json({
@@ -118,3 +120,14 @@ export const deleteRetirementAttachment = catchAsync(async (req, res) => {
         data: null,
     });
 });
+
+module.exports = {
+    uploadAttachment,
+    uploadRetirementAttachment,
+    getAttachmentsByExpenditure,
+    getAttachmentsByRetirement,
+    downloadAttachment,
+    downloadRetirementAttachment,
+    deleteAttachment,
+    deleteRetirementAttachment,
+};

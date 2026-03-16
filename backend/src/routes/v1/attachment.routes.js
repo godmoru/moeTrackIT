@@ -1,20 +1,21 @@
-import express from 'express';
-import { protect } from '../../middleware/v1/auth.middleware.js';
-import { hasPermission } from '../../middleware/v1/authorize.middleware.js';
-import { uploadSingle, handleUploadError } from '../../middleware/v1/upload.middleware.js';
-import * as attachmentController from '../../controllers/v1/attachment.controller.js';
+'use strict';
+
+const express = require('express');
+const { authMiddleware, requirePermission } = require('../../middleware/auth.js');
+const { uploadSingle, handleUploadError } = require('../../middleware/v1/upload.middleware.js');
+const attachmentController = require('../../controllers/v1/attachment.controller.js');
 
 const router = express.Router();
 
 // Apply authentication to all routes
-router.use(protect);
+router.use(authMiddleware);
 
 // Expenditure attachment routes
 router
     .route('/expenditures/:expenditureId')
-    .get(hasPermission('expenditure:read'), attachmentController.getAttachmentsByExpenditure)
+    .get(requirePermission('expenditure:read'), attachmentController.getAttachmentsByExpenditure)
     .post(
-        hasPermission('expenditure:create'),
+        requirePermission('attachment:create'),
         uploadSingle,
         handleUploadError,
         attachmentController.uploadAttachment
@@ -23,9 +24,9 @@ router
 // Retirement attachment routes
 router
     .route('/retirements/:retirementId')
-    .get(hasPermission('retirement:read'), attachmentController.getAttachmentsByRetirement)
+    .get(requirePermission('retirement:read'), attachmentController.getAttachmentsByRetirement)
     .post(
-        hasPermission('retirement:create'),
+        requirePermission('attachment:create'),
         uploadSingle,
         handleUploadError,
         attachmentController.uploadRetirementAttachment
@@ -34,13 +35,13 @@ router
 // Individual attachment routes
 router
     .route('/:id')
-    .get(hasPermission('expenditure:read'), attachmentController.downloadAttachment)
-    .delete(hasPermission('expenditure:create'), attachmentController.deleteAttachment);
+    .get(requirePermission('attachment:read'), attachmentController.downloadAttachment)
+    .delete(requirePermission('attachment:delete'), attachmentController.deleteAttachment);
 
 // Individual retirement attachment routes
 router
     .route('/retirements/attachments/:id')
-    .get(hasPermission('retirement:read'), attachmentController.downloadRetirementAttachment)
-    .delete(hasPermission('retirement:create'), attachmentController.deleteRetirementAttachment);
+    .get(requirePermission('attachment:read'), attachmentController.downloadRetirementAttachment)
+    .delete(requirePermission('attachment:delete'), attachmentController.deleteRetirementAttachment);
 
-export default router;
+module.exports = router;

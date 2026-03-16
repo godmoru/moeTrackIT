@@ -14,10 +14,10 @@ router.get('/export.csv', authMiddleware, entityController.exportEntitiesCsv);
 router.get('/export.xlsx', authMiddleware, entityController.exportEntitiesExcel);
 router.get('/export.pdf', authMiddleware, entityController.exportEntitiesPdf);
 
-// Bulk import/export endpoints (super_admin and officer only)
-router.get('/export-template', authMiddleware, requireRole('super_admin', 'officer'), entityController.downloadImportTemplate);
-router.get('/export-for-update', authMiddleware, requireRole('super_admin', 'officer'), entityController.exportForBulkUpdate);
-router.post('/bulk-import', authMiddleware, requireRole('super_admin', 'officer'), entityController.bulkImportEntities);
+// Bulk import/export endpoints (super_admin, system_admin, and officer)
+router.get('/export-template', authMiddleware, requireRole('super_admin', 'system_admin', 'officer'), entityController.downloadImportTemplate);
+router.get('/export-for-update', authMiddleware, requireRole('super_admin', 'system_admin', 'officer'), entityController.exportForBulkUpdate);
+router.post('/bulk-import', authMiddleware, requireRole('super_admin', 'system_admin', 'officer'), entityController.bulkImportEntities);
 
 router.get('/:id', authMiddleware, entityController.getEntityById);
 // Only super_admin, system_admin, officer, and principal can create/update entities

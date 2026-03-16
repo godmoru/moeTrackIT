@@ -1,14 +1,11 @@
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+'use strict';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../../uploads');
+const uploadsDir = path.join(__dirname, '../../../../uploads');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -76,13 +73,13 @@ const upload = multer({
 });
 
 // Middleware for single file upload
-export const uploadSingle = upload.single('file');
+const uploadSingle = upload.single('file');
 
 // Middleware for multiple file uploads
-export const uploadMultiple = upload.array('files', 5); // Max 5 files
+const uploadMultiple = upload.array('files', 5); // Max 5 files
 
 // Error handling middleware for multer
-export const handleUploadError = (err, req, res, next) => {
+const handleUploadError = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({
@@ -112,4 +109,8 @@ export const handleUploadError = (err, req, res, next) => {
     next();
 };
 
-export default { uploadSingle, uploadMultiple, handleUploadError };
+module.exports = {
+    uploadSingle,
+    uploadMultiple,
+    handleUploadError
+};

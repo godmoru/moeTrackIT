@@ -97,25 +97,27 @@ export default function ExpendituresPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center space-x-4">
           <h1 className="text-lg font-semibold text-gray-900">Expenditures</h1>
-          <Link
-            href="/admin/expenditures/categories"
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            Manage Categories
-          </Link>
-          <Link
-            href="/admin/expenditures/retirements"
-            className="rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
-          >
-            Retirements
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/expenditures/categories"
+              className="rounded-md border border-blue-600 px-3 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+            >
+              Manage Categories
+            </Link>
+            <Link
+              href="/admin/expenditures/retirements"
+              className="rounded-md border border-purple-600 px-3 py-2 text-xs font-semibold text-purple-600 hover:bg-purple-50 transition-colors"
+            >
+              Retirements
+            </Link>
+          </div>
         </div>
         <Link
           href="/admin/expenditures/create"
-          className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+          className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 transition-colors text-center"
         >
           + Create Expenditure
         </Link>
@@ -129,40 +131,24 @@ export default function ExpendituresPage() {
 
       {!loading && !error && (
         <>
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <span className="text-gray-600">Status:</span>
+          <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-[11px]">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">Status:</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               >
-                <option value="all">All</option>
+                <option value="all">All Statuses</option>
                 {uniqueStatuses.map((s) => (
-                  <option key={s} value={s}>
+                  <option key={s} value={s} className="capitalize">
                     {s}
                   </option>
                 ))}
               </select>
             </div>
-            {/* TODO: Re-enable once category is included in Expenditure type */}
-            {/* <div className="flex items-center gap-1">
-              <span className="text-gray-600">Category:</span>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-              >
-                <option value="all">All</option>
-                {uniqueCategories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div> */}
-            <div className="flex items-center gap-1">
-              <span className="text-gray-600">From:</span>
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">From:</span>
               <input
                 type="date"
                 value={fromDate}
@@ -170,8 +156,8 @@ export default function ExpendituresPage() {
                 className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               />
             </div>
-            <div className="flex items-center gap-1">
-              <span className="text-gray-600">To:</span>
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">To:</span>
               <input
                 type="date"
                 value={toDate}

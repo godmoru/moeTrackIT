@@ -22,6 +22,35 @@ async function login(req, res) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Load roles and permissions
+    const { Role, Permission } = require('../../models');
+    const userWithRoles = await User.findByPk(user.id, {
+      include: [
+        {
+          model: Role,
+          as: 'Roles',
+          include: [{ model: Permission, as: 'permissions' }],
+        },
+      ],
+    });
+
+    const permissionCodes = new Set();
+    if (userWithRoles && userWithRoles.Roles) {
+      userWithRoles.Roles.forEach((role) => {
+        if (role.permissions) {
+          role.permissions.forEach((p) => permissionCodes.add(p.code));
+        }
+      });
+    } else if (user.role) {
+      const legacyRole = await Role.findOne({
+        where: { slug: user.role },
+        include: [{ model: Permission, as: 'permissions' }]
+      });
+      if (legacyRole && legacyRole.permissions) {
+        legacyRole.permissions.forEach(p => permissionCodes.add(p.code));
+      }
+    }
+
     const payload = {
       id: user.id,
       name: user.name,
@@ -29,6 +58,7 @@ async function login(req, res) {
       role: user.role,
       lgaId: user.lgaId,
       entityId: user.entityId,
+      permissions: Array.from(permissionCodes),
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
@@ -44,6 +74,7 @@ async function login(req, res) {
         role: user.role,
         entityId: user.entityId,
         lgaId: user.lgaId,
+        permissions: payload.permissions,
       },
     });
   } catch (err) {
@@ -314,7 +345,8 @@ async function getMe(req, res) {
       email: freshUser.email,
       role: freshUser.role,
       entityId: freshUser.entityId,
-      lgaId: user.lgaId || freshUser.lgaId, // Use the one from middleware which might be resolved from UserLga
+      lgaId: user.lgaId || freshUser.lgaId,
+      permissions: user.permissions || [],
     });
   } catch (err) {
     console.error(err);

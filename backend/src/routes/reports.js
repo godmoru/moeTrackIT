@@ -58,6 +58,20 @@ router.get(
   reportController.exportPaymentsExcel,
 );
 
+router.get(
+  "/assessments.xlsx",
+  authMiddleware,
+  requireRole("super_admin", "officer", "area_education_officer", "hq_cashier"),
+  reportController.exportAssessmentsExcel,
+);
+
+router.get(
+  "/assessments.pdf",
+  authMiddleware,
+  requireRole("super_admin", "officer", "area_education_officer", "hq_cashier"),
+  reportController.exportAssessmentsPdf,
+);
+
 // Per-entity reports - all authenticated roles (scope filtering applies)
 router.get(
   "/institutions/:id/assessments.csv",

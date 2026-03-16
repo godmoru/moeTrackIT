@@ -13,6 +13,7 @@ export default function RetirementDetailPage() {
     const [retirement, setRetirement] = useState<ExpenditureRetirement | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState<"overview" | "evidence">("overview");
 
     useEffect(() => {
         if (params.id) {
@@ -127,180 +128,238 @@ export default function RetirementDetailPage() {
     ];
 
     return (
-        <div className="p-6 max-w-5xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <Link href="/admin/retirements" className="text-green-600 hover:text-green-700 text-sm mb-2 inline-block">
-                    ← Back to Retirements
-                </Link>
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">{retirement.retirementNumber}</h1>
-                        <p className="text-gray-600 mt-1">Retirement Details</p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(retirement.status)}`}>
+        <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h1 className="text-lg font-semibold text-gray-900">
+                        Retirement Details
+                    </h1>
+                    {retirement.retirementNumber && (
+                        <p className="text-xs text-gray-500">Number: {retirement.retirementNumber}</p>
+                    )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${getStatusColor(retirement.status)}`}
+                    >
                         {retirement.status.replace('_', ' ')}
                     </span>
+                    <Link
+                        href="/admin/retirements"
+                        className="rounded-md bg-gray-100 px-3 py-1 font-medium text-gray-700 hover:bg-gray-200"
+                    >
+                        Back to list
+                    </Link>
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left Column - Details */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Basic Information */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Retirement Information</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-600">Amount Retired</p>
-                                <p className="text-lg font-semibold text-gray-900">₦{retirement.amountRetired.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-600">Balance Unretired</p>
-                                <p className="text-lg font-semibold text-gray-900">₦{retirement.balanceUnretired.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-600">Retirement Date</p>
-                                <p className="text-gray-900">{new Date(retirement.retirementDate).toLocaleDateString()}</p>
-                            </div>
-                            <div className="col-span-2">
-                                <p className="text-sm text-gray-600">Purpose</p>
-                                <p className="text-gray-900">{retirement.purpose}</p>
-                            </div>
-                            {retirement.remarks && (
-                                <div className="col-span-2">
-                                    <p className="text-sm text-gray-600">Remarks</p>
-                                    <p className="text-gray-900">{retirement.remarks}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+            <div className="space-y-4">
+                <div className="flex gap-2 border-b border-gray-200 text-xs">
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("overview")}
+                        className={`border-b-2 px-3 py-2 font-medium ${activeTab === "overview"
+                            ? "border-green-700 text-green-700"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                            }`}
+                    >
+                        Overview
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("evidence")}
+                        className={`border-b-2 px-3 py-2 font-medium ${activeTab === "evidence"
+                            ? "border-green-700 text-green-700"
+                            : "border-transparent text-gray-500 hover:text-gray-700"
+                            }`}
+                    >
+                        Evidence
+                    </button>
+                </div>
 
-                    {/* Expenditure Details */}
-                    {retirement.expenditure && (
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Related Expenditure</h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-sm text-gray-600">Reference Number</p>
-                                    <Link
-                                        href={`/admin/expenditures/${retirement.expenditure.id}`}
-                                        className="text-green-600 hover:text-green-700"
-                                    >
-                                        {retirement.expenditure.referenceNumber}
-                                    </Link>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-600">Expenditure Amount</p>
-                                    <p className="text-gray-900">₦{retirement.expenditure.amount.toLocaleString()}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Rejection Reason */}
-                    {retirement.status === 'rejected' && retirement.rejectionReason && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                            <h3 className="text-sm font-semibold text-red-900 mb-2">Rejection Reason</h3>
-                            <p className="text-red-800">{retirement.rejectionReason}</p>
-                        </div>
-                    )}
-
-                    {/* Attachments */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Evidence Documents</h2>
-                        {retirement.attachments && retirement.attachments.length > 0 ? (
-                            <div className="space-y-2 mb-4">
-                                {retirement.attachments.map((attachment) => (
-                                    <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                                        <div>
-                                            <p className="font-medium text-gray-900">{attachment.fileName}</p>
-                                            <p className="text-sm text-gray-600 capitalize">{attachment.documentType.replace('_', ' ')}</p>
-                                        </div>
-                                        <button
-                                            onClick={() => window.open(`/api/v1/attachments/retirements/attachments/${attachment.id}`, '_blank')}
-                                            className="text-green-600 hover:text-green-700 text-sm"
-                                        >
-                                            Download
-                                        </button>
+                {activeTab === "overview" && (
+                    <div className="space-y-4 text-xs">
+                        <div className="grid gap-4 md:grid-cols-3">
+                            <div className="rounded-lg bg-white p-4 shadow-sm md:col-span-2">
+                                <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                    Retirement Information
+                                </h2>
+                                <dl className="grid gap-4 md:grid-cols-2">
+                                    <div className="col-span-2">
+                                        <dt className="text-gray-500">Purpose</dt>
+                                        <dd className="font-medium text-gray-900">{retirement.purpose}</dd>
                                     </div>
-                                ))}
+                                    <div>
+                                        <dt className="text-gray-500">Amount Retired</dt>
+                                        <dd className="font-semibold text-green-700">₦{retirement.amountRetired.toLocaleString()}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-gray-500">Balance Unretired</dt>
+                                        <dd className="font-semibold text-gray-900">₦{retirement.balanceUnretired.toLocaleString()}</dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-gray-500">Date</dt>
+                                        <dd className="font-medium text-gray-900">{new Date(retirement.retirementDate).toLocaleDateString()}</dd>
+                                    </div>
+                                    {retirement.remarks && (
+                                        <div className="col-span-2">
+                                            <dt className="text-gray-500">Remarks</dt>
+                                            <dd className="font-medium text-gray-900">{retirement.remarks}</dd>
+                                        </div>
+                                    )}
+                                </dl>
                             </div>
-                        ) : (
-                            <p className="text-gray-500 text-sm mb-4">No evidence documents uploaded yet</p>
+
+                            <div className="rounded-lg bg-white p-4 shadow-sm">
+                                <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                    Related Expenditure
+                                </h2>
+                                {retirement.expenditure ? (
+                                    <dl className="space-y-3">
+                                        <div>
+                                            <dt className="text-gray-500">Reference Number</dt>
+                                            <dd>
+                                                <Link
+                                                    href={`/admin/expenditures/${retirement.expenditure.id}`}
+                                                    className="font-medium text-green-700 hover:underline"
+                                                >
+                                                    {retirement.expenditure.referenceNumber}
+                                                </Link>
+                                            </dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-gray-500">Expenditure Amount</dt>
+                                            <dd className="font-medium text-gray-900">₦{retirement.expenditure.amount.toLocaleString()}</dd>
+                                        </div>
+                                    </dl>
+                                ) : (
+                                    <p className="text-gray-500 italic">No linked expenditure</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {retirement.status === 'rejected' && retirement.rejectionReason && (
+                            <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+                                <h3 className="text-xs font-semibold text-red-900 uppercase tracking-wide mb-2">Rejection Reason</h3>
+                                <p className="text-red-800">{retirement.rejectionReason}</p>
+                            </div>
                         )}
 
-                        {/* File Upload - Only for draft status */}
-                        {retirement.status === 'draft' && (
-                            <FileUpload
-                                onUpload={handleFileUpload}
-                                documentTypes={documentTypes}
-                            />
-                        )}
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {/* Actions Card */}
+                            <div className="rounded-lg bg-white p-4 shadow-sm border border-gray-100">
+                                <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                    Available Actions
+                                </h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {retirement.status === 'draft' && (
+                                        <button
+                                            onClick={handleSubmit}
+                                            disabled={actionLoading}
+                                            className="rounded-md bg-green-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-green-800 disabled:opacity-50"
+                                        >
+                                            {actionLoading ? 'Submitting...' : 'Submit for Review'}
+                                        </button>
+                                    )}
+
+                                    {retirement.status === 'under_review' && (
+                                        <>
+                                            <button
+                                                onClick={handleApprove}
+                                                disabled={actionLoading}
+                                                className="rounded-md bg-green-700 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-green-800 disabled:opacity-50"
+                                            >
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={handleReject}
+                                                disabled={actionLoading}
+                                                className="rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                            >
+                                                Reject
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Metadata Card */}
+                            <div className="rounded-lg bg-white p-4 shadow-sm border border-gray-100">
+                                <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                    Status Information
+                                </h2>
+                                <dl className="grid grid-cols-2 gap-3 text-[11px]">
+                                    <div>
+                                        <dt className="text-gray-500">Created At</dt>
+                                        <dd className="font-medium text-gray-900">{new Date(retirement.createdAt).toLocaleString()}</dd>
+                                    </div>
+                                    {retirement.reviewedAt && (
+                                        <div>
+                                            <dt className="text-gray-500">Reviewed At</dt>
+                                            <dd className="font-medium text-gray-900">{new Date(retirement.reviewedAt).toLocaleString()}</dd>
+                                        </div>
+                                    )}
+                                    {retirement.approvedAt && (
+                                        <div>
+                                            <dt className="text-gray-500">Approved At</dt>
+                                            <dd className="font-medium text-gray-900">{new Date(retirement.approvedAt).toLocaleString()}</dd>
+                                        </div>
+                                    )}
+                                </dl>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
 
-                {/* Right Column - Actions & Info */}
-                <div className="space-y-6">
-                    {/* Actions */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
-                        <div className="space-y-2">
+                {activeTab === "evidence" && (
+                    <div className="space-y-4 text-xs">
+                        <div className="rounded-lg bg-white p-4 shadow-sm border border-gray-100">
+                            <h2 className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                Evidence Documents
+                            </h2>
+                            
+                            {retirement.attachments && retirement.attachments.length > 0 ? (
+                                <div className="divide-y divide-gray-100">
+                                    {retirement.attachments.map((attachment: any) => (
+                                        <div key={attachment.id} className="flex items-center justify-between py-2.5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-50 rounded">
+                                                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-medium text-gray-900">{attachment.fileName}</p>
+                                                    <p className="text-[10px] text-gray-500 capitalize">{attachment.documentType.replace('_', ' ')}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => window.open(`/api/v1/attachments/retirements/attachments/${attachment.id}`, '_blank')}
+                                                    className="text-[10px] text-green-700 hover:text-green-800 font-semibold border border-green-200 px-2.5 py-1 rounded hover:bg-green-50"
+                                                >
+                                                    View Document
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[11px] text-gray-500 italic py-4">No evidence documents uploaded yet</p>
+                            )}
+
                             {retirement.status === 'draft' && (
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={actionLoading}
-                                    className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
-                                >
-                                    Submit for Review
-                                </button>
-                            )}
-
-                            {retirement.status === 'under_review' && (
-                                <>
-                                    <button
-                                        onClick={handleApprove}
-                                        disabled={actionLoading}
-                                        className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400"
-                                    >
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={handleReject}
-                                        disabled={actionLoading}
-                                        className="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-400"
-                                    >
-                                        Reject
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Metadata */}
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Information</h2>
-                        <div className="space-y-3 text-sm">
-                            <div>
-                                <p className="text-gray-600">Created</p>
-                                <p className="text-gray-900">{new Date(retirement.createdAt).toLocaleString()}</p>
-                            </div>
-                            {retirement.reviewedAt && (
-                                <div>
-                                    <p className="text-gray-600">Reviewed</p>
-                                    <p className="text-gray-900">{new Date(retirement.reviewedAt).toLocaleString()}</p>
-                                </div>
-                            )}
-                            {retirement.approvedAt && (
-                                <div>
-                                    <p className="text-gray-600">Approved</p>
-                                    <p className="text-gray-900">{new Date(retirement.approvedAt).toLocaleString()}</p>
+                                <div className="mt-6 pt-6 border-t border-gray-100">
+                                    <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Upload New Evidence</h3>
+                                    <FileUpload 
+                                        onUpload={handleFileUpload} 
+                                        documentTypes={documentTypes}
+                                    />
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

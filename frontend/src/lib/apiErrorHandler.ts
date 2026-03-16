@@ -19,9 +19,12 @@ export const handleApiError = (error: any) => {
     // Handle specific error statuses
     switch (error.status) {
       case 401:
-        // Handle unauthorized (e.g., redirect to login)
-        toast.error('Session expired. Please log in again.');
-        // Redirect to login or refresh token logic here
+        // Handle unauthorized (redirect to login without toast as per user request)
+        localStorage.removeItem('authToken');
+        // Only redirect if we are not already on the login page
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
         break;
       case 403:
         // Handle forbidden access

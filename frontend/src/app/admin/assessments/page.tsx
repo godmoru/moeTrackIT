@@ -98,6 +98,7 @@ export default function AssessmentsPage() {
   const [selectedEntityIds, setSelectedEntityIds] = useState<Set<number>>(new Set());
   const { hasRole } = useAuth();
   const canCreateAssessment = hasRole(['super_admin', 'admin', 'hq_cashier']);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -536,6 +537,76 @@ export default function AssessmentsPage() {
     }
   }
 
+  async function handleExport() {
+    try {
+      const token = localStorage.getItem("authToken");
+      
+      const params = new URLSearchParams();
+      if (activeIncomeSourceId !== "all") params.append("incomeSourceId", String(activeIncomeSourceId));
+      if (activeYear !== "all") params.append("assessmentYear", activeYear);
+      
+      const url = `${API_BASE}/reports/assessments.xlsx?${params.toString()}`;
+      
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", `assessments-${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Export Failed",
+        text: err.message || "Failed to export assessments"
+      });
+    }
+  }
+
+  async function handleExportPdf() {
+    try {
+      const token = localStorage.getItem("authToken");
+      
+      const params = new URLSearchParams();
+      if (activeIncomeSourceId !== "all") params.append("incomeSourceId", String(activeIncomeSourceId));
+      if (activeYear !== "all") params.append("assessmentYear", activeYear);
+      
+      const url = `${API_BASE}/reports/assessments.pdf?${params.toString()}`;
+      
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.setAttribute("download", `assessments-${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Export Failed",
+        text: err.message || "Failed to export assessments"
+      });
+    }
+  }
+
   useEffect(() => {
     load();
   }, []);
@@ -571,6 +642,52 @@ export default function AssessmentsPage() {
         <div className="flex gap-2">
 
           <div className="flex gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12 a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showExportDropdown && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowExportDropdown(false)}
+                  ></div>
+                  <div className="absolute right-0 mt-1 w-32 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-20">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          handleExport();
+                          setShowExportDropdown(false);
+                        }}
+                        className="flex w-full items-center px-4 py-2 text-[11px] text-gray-700 hover:bg-gray-100"
+                      >
+                        Excel Spreadsheet
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleExportPdf();
+                          setShowExportDropdown(false);
+                        }}
+                        className="flex w-full items-center px-4 py-2 text-[11px] text-gray-700 hover:bg-gray-100"
+                      >
+                        PDF Document
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             {canCreateAssessment && (
               <>
                 <button

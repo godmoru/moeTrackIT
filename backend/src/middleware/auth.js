@@ -21,7 +21,7 @@ async function authMiddleware(req, res, next) {
     if (decoded.id) {
       console.log('Authenticating User ID:', decoded.id);
       try {
-        const user = await User.findByPk(decoded.id, {
+        let user = await User.findByPk(decoded.id, {
           include: [
             {
               model: Role,
@@ -38,7 +38,9 @@ async function authMiddleware(req, res, next) {
         }
 
         const permissionCodes = new Set();
-        if (user && user.Roles) {
+        
+        // Use associated Roles first (Many-to-Many)
+        if (user && user.Roles && user.Roles.length > 0) {
           user.Roles.forEach((role) => {
             if (role.permissions) {
               role.permissions.forEach((perm) => {
@@ -48,6 +50,22 @@ async function authMiddleware(req, res, next) {
               });
             }
           });
+        } 
+        // Fallback: If no associated UserRoles, but the User table has a role slug
+        else if (user && user.role) {
+          console.log(`Fallback: Loading permissions for legacy role slug "${user.role}"`);
+          const legacyRole = await Role.findOne({
+            where: { slug: user.role },
+            include: [{ model: Permission, as: 'permissions' }]
+          });
+          
+          if (legacyRole && legacyRole.permissions) {
+            legacyRole.permissions.forEach(perm => {
+              if (perm && perm.code) {
+                permissionCodes.add(perm.code);
+              }
+            });
+          }
         }
 
         req.user.permissions = Array.from(permissionCodes);

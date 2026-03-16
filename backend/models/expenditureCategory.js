@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
         {
             id: {
                 type: DataTypes.INTEGER,
-                defaultValue: DataTypes.INTEGER,
+                autoIncrement: true,
                 primaryKey: true,
             },
             

@@ -93,6 +93,11 @@ class ExpenditureService {
                 as: 'approver',
                 attributes: ['id', 'name', 'email'],
             },
+            {
+                model: db.ExpenditureCategory,
+                as: 'expenditureCategory',
+                attributes: ['id', 'cat_name', 'reference'],
+            },
         ];
 
         if (includeAttachments) {
@@ -185,6 +190,11 @@ class ExpenditureService {
                     model: db.User,
                     as: 'creator',
                     attributes: ['id', 'name'],
+                },
+                {
+                    model: db.ExpenditureCategory,
+                    as: 'expenditureCategory',
+                    attributes: ['id', 'cat_name'],
                 },
             ],
             order: [[sortBy, sortOrder]],

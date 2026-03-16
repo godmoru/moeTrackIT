@@ -4,6 +4,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { Entity, EntityType, EntityOwnership, Assessment, Payment, User, Role, UserRole, sequelize } = require('../../models');
 const { Op } = require('sequelize');
+const ExcelJS = require("exceljs");
 const PDFDocument = require('pdfkit');
 const { getEntityScopeWhere } = require('../middleware/scope');
 
@@ -807,49 +808,80 @@ async function exportEntitiesPdf(req, res) {
  * GET /api/v1/entities/export-template
  * Download a CSV template for bulk import
  */
+/**
+ * GET /api/v1/entities/export-template
+ * Download an Excel template for bulk import
+ */
 async function downloadImportTemplate(req, res) {
   try {
-    // Fetch entity types and ownerships for reference
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Import Template");
+
+    // Fetch reference data for instructions
     const entityTypes = await EntityType.findAll({ order: [['name', 'ASC']] });
     const ownerships = await EntityOwnership.findAll({ order: [['name', 'ASC']] });
 
-    const header = [
-      'id',
-      'name',
-      'code',
-      'entityTypeId',
-      'entityOwnershipId',
-      'state',
-      'lga',
-      'lgaId',
-      'address',
-      'contactPerson',
-      'contactPhone',
-      'contactEmail',
-      'status',
-      'category',
+    sheet.columns = [
+      { header: "Name (Required)", key: "name", width: 30 },
+      { header: "Code", key: "code", width: 15 },
+      { header: "Entity Type (Name)", key: "entityTypeName", width: 25 },
+      { header: "Ownership (Name)", key: "ownershipName", width: 25 },
+      { header: "LGA Name", key: "lga", width: 25 },
+      { header: "Address", key: "address", width: 40 },
+      { header: "Contact Person", key: "contactPerson", width: 25 },
+      { header: "Contact Phone", key: "contactPhone", width: 20 },
+      { header: "Contact Email", key: "contactEmail", width: 25 },
+      { header: "Student Population", key: "studentPopulation", width: 20 },
+      { header: "Status (active/inactive)", key: "status", width: 15 },
     ];
 
-    // Add reference rows as comments
-    const typeRef = `# Entity Types: ${entityTypes.map((t) => `${t.id}=${t.name}`).join(', ')}`;
-    const ownerRef = `# Ownership Types: ${ownerships.map((o) => `${o.id}=${o.name}`).join(', ')}`;
-    const instructions = [
-      '# BULK IMPORT TEMPLATE FOR ENTITIES',
-      '# Instructions:',
-      '# - Leave "id" empty for new entities, or provide existing ID to update',
-      '# - entityTypeId and entityOwnershipId should be numeric IDs (see references below)',
-      '# - status should be: active, inactive, or suspended',
-      '# - Remove these comment lines before importing',
-      typeRef,
-      ownerRef,
-      '',
+    // Style the header
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
+
+    // Add sample row
+    sheet.addRow({
+      name: "Sample Institution Name",
+      code: "SCH001",
+      entityTypeName: entityTypes.length > 0 ? entityTypes[0].name : "Primary School",
+      ownershipName: ownerships.length > 0 ? ownerships[0].name : "Public",
+      lga: "Makurdi",
+      address: "No 1 Education Way",
+      contactPerson: "John Doe",
+      contactPhone: "08012345678",
+      contactEmail: "principal@example.com",
+      studentPopulation: 500,
+      status: "active"
+    });
+
+    // Add instructions sheet
+    const helpSheet = workbook.addWorksheet("Instructions & References");
+    helpSheet.columns = [
+      { header: "Category", key: "cat", width: 20 },
+      { header: "Available Options", key: "options", width: 80 }
     ];
+    helpSheet.getRow(1).font = { bold: true };
 
-    const csv = [...instructions, header.join(',')].join('\n');
+    helpSheet.addRow({ cat: "Entity Types", options: entityTypes.map(t => t.name).join(", ") });
+    helpSheet.addRow({ cat: "Ownership", options: ownerships.map(o => o.name).join(", ") });
+    helpSheet.addRow({ cat: "Status", options: "active, inactive, suspended" });
+    helpSheet.addRow({ cat: "Note", options: "Please use exact names for Entity Types and Ownership as listed here." });
 
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="entities-import-template.csv"');
-    res.send(csv);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="institutions-import-template.xlsx"',
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to generate import template' });
@@ -943,100 +975,136 @@ async function bulkImportEntities(req, res) {
       return res.status(400).json({ message: 'No data provided for import' });
     }
 
+    const { Lga } = require('../../models');
+
+    // Pre-fetch all reference data for faster lookups
+    const [entityTypes, ownerships, lgas, roles] = await Promise.all([
+      EntityType.findAll({ transaction: t }),
+      EntityOwnership.findAll({ transaction: t }),
+      Lga.findAll({ transaction: t }),
+      Role.findAll({ transaction: t })
+    ]);
+
+    const typeMap = new Map(entityTypes.map(it => [it.name.toLowerCase(), it.id]));
+    const ownerMap = new Map(ownerships.map(it => [it.name.toLowerCase(), it.id]));
+    const lgaMap = new Map(lgas.map(it => [it.name.toLowerCase(), it]));
+    const principalRole = roles.find(r => r.slug === 'principal');
+
     const results = {
       created: 0,
       updated: 0,
       errors: [],
     };
 
-    // Validate entity types and ownerships exist
-    const entityTypes = await EntityType.findAll({ transaction: t });
-    const ownerships = await EntityOwnership.findAll({ transaction: t });
-    const typeIds = new Set(entityTypes.map((t) => t.id));
-    const ownerIds = new Set(ownerships.map((o) => o.id));
-
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 1;
 
       try {
-        // Skip empty rows
-        if (!row.name || row.name.trim() === '') {
-          continue;
-        }
+        const name = row.name || row["Name (Required)"];
+        if (!name || String(name).trim() === '') continue;
 
-        // Validate required fields
-        if (!row.name) {
-          results.errors.push({ row: rowNum, error: 'Name is required' });
-          continue;
-        }
+        // Resolve Type ID
+        const typeName = row.entityTypeName || row["Entity Type (Name)"];
+        const entityTypeId = typeName ? typeMap.get(String(typeName).toLowerCase()) : null;
 
-        // Validate entityTypeId if provided
-        if (row.entityTypeId && !typeIds.has(Number(row.entityTypeId))) {
-          results.errors.push({ row: rowNum, error: `Invalid entityTypeId: ${row.entityTypeId}` });
-          continue;
-        }
+        // Resolve Ownership ID
+        const ownerName = row.ownershipName || row["Ownership (Name)"];
+        const entityOwnershipId = ownerName ? ownerMap.get(String(ownerName).toLowerCase()) : null;
 
-        // Validate entityOwnershipId if provided
-        if (row.entityOwnershipId && !ownerIds.has(Number(row.entityOwnershipId))) {
-          results.errors.push({ row: rowNum, error: `Invalid entityOwnershipId: ${row.entityOwnershipId}` });
-          continue;
-        }
+        // Resolve LGA
+        const lgaNameInput = row.lga || row["LGA Name"];
+        const lgaObj = lgaNameInput ? lgaMap.get(String(lgaNameInput).toLowerCase()) : null;
 
-        // Prepare entity data
         const entityData = {
-          name: row.name.trim(),
-          code: row.code?.trim() || null,
-          entityTypeId: row.entityTypeId ? Number(row.entityTypeId) : null,
-          entityOwnershipId: row.entityOwnershipId ? Number(row.entityOwnershipId) : null,
-          state: row.state?.trim() || null,
-          lga: row.lga?.trim() || null,
-          lgaId: row.lgaId ? Number(row.lgaId) : null,
-          address: row.address?.trim() || null,
-          contactPerson: row.contactPerson?.trim() || null,
-          contactPhone: row.contactPhone?.trim() || null,
-          contactEmail: row.contactEmail?.trim() || null,
-          status: row.status?.trim() || 'active',
-          category: row.category?.trim() || null,
+          name: String(name).trim(),
+          code: String(row.code || row["Code"] || "").trim() || null,
+          entityTypeId,
+          entityOwnershipId,
+          lga: lgaObj ? lgaObj.name : (lgaNameInput || null),
+          lgaId: lgaObj ? lgaObj.id : null,
+          address: String(row.address || row["Address"] || "").trim() || null,
+          contactPerson: String(row.contactPerson || row["Contact Person"] || "").trim() || null,
+          contactPhone: String(row.contactPhone || row["Contact Phone"] || "").trim() || null,
+          contactEmail: String(row.contactEmail || row["Contact Email"] || "").trim() || null,
+          studentPopulation: Number(row.studentPopulation || row["Student Population"] || 0),
+          status: String(row.status || row["Status (active/inactive)"] || 'active').toLowerCase().trim(),
+          state: row.state || "Benue",
         };
 
-        if (row.id && row.id !== '') {
-          // Update existing entity
-          const existing = await Entity.findByPk(Number(row.id), { transaction: t });
-          if (!existing) {
-            results.errors.push({ row: rowNum, error: `Entity with ID ${row.id} not found` });
+        let entity;
+        const existingId = row.id || row["ID"];
+        
+        if (existingId && existingId !== '') {
+          entity = await Entity.findByPk(Number(existingId), { transaction: t });
+          if (!entity) {
+            results.errors.push({ row: rowNum, error: `Entity with ID ${existingId} not found` });
             continue;
           }
-          await existing.update(entityData, { transaction: t });
+          await entity.update(entityData, { transaction: t });
           results.updated++;
         } else {
-          // Create new entity
-          await Entity.create(entityData, { transaction: t });
+          entity = await Entity.create(entityData, { transaction: t });
           results.created++;
+
+          // Auto-create principal user account for NEW entities if contact info is present
+          if (entity.contactPerson && entity.contactEmail && entity.contactPhone) {
+            const existingUser = await User.findOne({ 
+              where: { email: entity.contactEmail }, 
+              transaction: t 
+            });
+
+            if (!existingUser) {
+              const generatedPassword = generatePasswordFromContactInfo(
+                entity.contactPerson,
+                entity.contactEmail,
+                entity.contactPhone
+              );
+              const passwordHash = await bcrypt.hash(generatedPassword, 10);
+
+              const principalUser = await User.create({
+                name: entity.contactPerson,
+                email: entity.contactEmail,
+                passwordHash,
+                role: 'principal',
+                status: 'active',
+                entityId: entity.id,
+              }, { transaction: t });
+
+              if (principalRole) {
+                await UserRole.create({
+                  userId: principalUser.id,
+                  roleId: principalRole.id,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                }, { transaction: t });
+              }
+              console.log(`Auto-created principal for ${entity.name}: ${entity.contactEmail} / ${generatedPassword}`);
+            }
+          }
         }
       } catch (rowErr) {
         results.errors.push({ row: rowNum, error: rowErr.message });
       }
     }
 
-    // If there are critical errors, rollback
+    // Rollback ONLY if everything failed and there are errors
     if (results.errors.length > 0 && results.created === 0 && results.updated === 0) {
       await t.rollback();
       return res.status(400).json({
-        message: 'Import failed - no records processed',
+        message: 'Import failed - all rows had errors',
         ...results,
       });
     }
 
     await t.commit();
-
     res.status(200).json({
-      message: `Import completed: ${results.created} created, ${results.updated} updated`,
+      message: `Import completed: ${results.created} created, ${results.updated} updated. ${results.errors.length} errors.`,
       ...results,
     });
   } catch (err) {
     console.error('Bulk import error:', err);
-    await t.rollback();
+    if (t) await t.rollback();
     res.status(500).json({ message: 'Failed to import entities: ' + err.message });
   }
 }
