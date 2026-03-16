@@ -13,14 +13,28 @@ const REVENUE_ROLES = ["super_admin", "admin", "officer", "cashier", "account_of
 // Navigation items with role-based visibility
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", title: "Overview", roles: ALL_ROLES },
-  { href: "/admin/assessments", label: "Assessments", title: "Assessments management", roles: ALL_ROLES },
-  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources", roles: ADMIN_ROLES.concat(["officer"]) },
+  { href: "/admin/income", label: "Income", title: "Income management", roles: ALL_ROLES, hasSubmenu: true },
   { href: "/admin/institutions", label: "Institutions", title: "Institution directory", roles: ALL_ROLES },
-  { href: "/admin/revenue", label: "Revenue & Collections", title: "Revenue summary", roles: REVENUE_ROLES },
+  { href: "/admin/expenditures", label: "Expenditures", title: "Expenditure management", roles: ADMIN_ROLES, hasSubmenu: true },
   { href: "/admin/payments", label: "Payments", title: "Payments list", roles: ALL_ROLES },
   { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas", roles: ADMIN_ROLES.concat(["officer", "area_education_officer"]) },
   { href: "/admin/reports", label: "Reports", title: "Reporting and analytics", roles: ALL_ROLES },
   { href: "/admin/control-panel", label: "Control Panel", title: "Users, roles and settings", roles: ADMIN_ROLES },
+];
+
+// Income sub-menu items
+const incomeSubItems = [
+  { href: "/admin/assessments", label: "Assessments", title: "Assessments management" },
+  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources" },
+];
+
+// Expenditure sub-menu items
+const expenditureSubItems = [
+  { href: "/admin/expenditures", label: "All Expenditures", title: "View all expenditures" },
+  { href: "/admin/expenditures/categories", label: "Categories", title: "Manage expenditure categories" },
+  { href: "/admin/expenditures/retirements", label: "Retirements", title: "Expenditure retirements" },
+  { href: "/admin/budgets", label: "Budget", title: "Manage expenditure budget" },
+  { href: "/admin/budget-line-items", label: "Budget Line Items", title: "Manage budget line items" },
 ];
 
 function NavIcon({ href }: { href: string }) {
@@ -42,10 +56,13 @@ function NavIcon({ href }: { href: string }) {
     );
   }
 
-  if (href.startsWith("/admin/assessments")) {
+  if (href.startsWith("/admin/income")) {
     return (
       <svg {...baseProps}>
-        <path d="M5 5h14M5 12h14M5 19h8" />
+        <rect x="1" y="4" width="22" height="16" rx="2" />
+        <line x1="1" y1="10" x2="22" y2="10" />
+        <line x1="1" y1="15" x2="22" y2="15" />
+        <circle cx="5" cy="7" r="1" fill="currentColor" />
       </svg>
     );
   }
@@ -53,8 +70,8 @@ function NavIcon({ href }: { href: string }) {
   if (href.startsWith("/admin/income-sources")) {
     return (
       <svg {...baseProps}>
-        <circle cx="12" cy="12" r="4" />
-        <path d="M4 12h2m12 0h2M12 4v2m0 12v2" />
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
       </svg>
     );
   }
@@ -71,6 +88,15 @@ function NavIcon({ href }: { href: string }) {
     return (
       <svg {...baseProps}>
         <path d="M4 19h16M6 16l3-4 3 3 4-6 2 3" />
+      </svg>
+    );
+  }
+
+  if (href.startsWith("/admin/expenditures")) {
+    return (
+      <svg {...baseProps}>
+        <path d="M4 12h16M4 8h16M4 16h16M6 4v16M14 4v16" />
+        <text x="12" y="14" fontSize="10" fontWeight="bold" textAnchor="middle" fill="currentColor">₦</text>
       </svg>
     );
   }
@@ -138,6 +164,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [incomeExpanded, setIncomeExpanded] = useState(false);
+  const [expendituresExpanded, setExpendituresExpanded] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
@@ -190,19 +218,81 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 space-y-1">
           {navItems.filter((item) => canSeeNavItem(item)).map((item) => {
             const active = pathname.startsWith(item.href);
+            const isIncome = item.href === "/admin/income";
+            const isExpenditures = item.href === "/admin/expenditures";
+            
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={item.title}
-                className={`block rounded-md px-3 py-2 text-xs font-medium transition-colors ${active ? "bg-green-700 text-white" : "text-green-100 hover:bg-green-700/60"
-                  }`}
-              >
-                <span className="flex items-center gap-2">
-                  <NavIcon href={item.href} />
-                  <span>{item.label}</span>
-                </span>
-              </Link>
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  title={item.title}
+                  onClick={(e) => {
+                    if (isIncome || isExpenditures) {
+                      e.preventDefault();
+                      if (isIncome) {
+                        setIncomeExpanded(!incomeExpanded);
+                      } else {
+                        setExpendituresExpanded(!expendituresExpanded);
+                      }
+                    }
+                  }}
+                  className={`block rounded-md px-3 py-2 text-xs font-medium transition-colors ${active ? "bg-green-700 text-white" : "text-green-100 hover:bg-green-700/60"
+                    }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <NavIcon href={item.href} />
+                    <span>{item.label}</span>
+                    {(isIncome || isExpenditures) && (
+                      <svg 
+                        className={`ml-auto h-3 w-3 transition-transform ${(isIncome ? incomeExpanded : expendituresExpanded) ? "rotate-180" : ""}`} 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    )}
+                  </span>
+                </Link>
+                {/* Income Sub-menu */}
+                {isIncome && incomeExpanded && (
+                  <div className="ml-4 mt-1 space-y-1 border-l border-green-700 pl-3">
+                    {incomeSubItems.map((subItem) => {
+                      const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                      return (
+                        <Link
+                          key={subItem.href}
+                          href={subItem.href}
+                          title={subItem.title}
+                          className={`block rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors ${subActive ? "bg-green-700/50 text-white" : "text-green-200 hover:bg-green-700/40 hover:text-white"
+                            }`}
+                        >
+                          {subItem.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Expenditures Sub-menu */}
+                {isExpenditures && expendituresExpanded && (
+                  <div className="ml-4 mt-1 space-y-1 border-l border-green-700 pl-3">
+                    {expenditureSubItems.map((subItem) => {
+                      const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                      return (
+                        <Link
+                          key={subItem.href}
+                          href={subItem.href}
+                          title={subItem.title}
+                          className={`block rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors ${subActive ? "bg-green-700/50 text-white" : "text-green-200 hover:bg-green-700/40 hover:text-white"
+                            }`}
+                        >
+                          {subItem.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
@@ -255,22 +345,86 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <nav className="mt-3 space-y-1 border-t pt-3 text-xs md:hidden">
               {navItems.filter((item) => canSeeNavItem(item)).map((item) => {
                 const active = pathname.startsWith(item.href);
+                const isIncome = item.href === "/admin/income";
+                const isExpenditures = item.href === "/admin/expenditures";
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`block rounded-md px-3 py-2 font-medium transition-colors ${active
-                        ? "bg-green-100 text-green-800"
-                        : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    onClick={() => setMobileNavOpen(false)}
-                    title={item.title}
-                  >
-                    <span className="flex items-center gap-2">
-                      <NavIcon href={item.href} />
-                      <span>{item.label}</span>
-                    </span>
-                  </Link>
+                  <div key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`block rounded-md px-3 py-2 font-medium transition-colors ${active
+                          ? "bg-green-100 text-green-800"
+                          : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      onClick={(e) => {
+                        if (isIncome || isExpenditures) {
+                          e.preventDefault();
+                          if (isIncome) {
+                            setIncomeExpanded(!incomeExpanded);
+                          } else {
+                            setExpendituresExpanded(!expendituresExpanded);
+                          }
+                        } else {
+                          setMobileNavOpen(false);
+                        }
+                      }}
+                      title={item.title}
+                    >
+                      <span className="flex items-center gap-2">
+                        <NavIcon href={item.href} />
+                        <span>{item.label}</span>
+                        {(isIncome || isExpenditures) && (
+                          <svg 
+                            className={`ml-auto h-3 w-3 transition-transform ${(isIncome ? incomeExpanded : expendituresExpanded) ? "rotate-180" : ""}`} 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
+                      </span>
+                    </Link>
+                    {/* Mobile Income Sub-menu */}
+                    {isIncome && incomeExpanded && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-gray-200 pl-3">
+                        {incomeSubItems.map((subItem) => {
+                          const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              title={subItem.title}
+                              onClick={() => setMobileNavOpen(false)}
+                              className={`block rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors ${subActive ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"
+                                }`}
+                            >
+                              {subItem.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {/* Mobile Expenditures Sub-menu */}
+                    {isExpenditures && expendituresExpanded && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-gray-200 pl-3">
+                        {expenditureSubItems.map((subItem) => {
+                          const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
+                          return (
+                            <Link
+                              key={subItem.href}
+                              href={subItem.href}
+                              title={subItem.title}
+                              onClick={() => setMobileNavOpen(false)}
+                              className={`block rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors ${subActive ? "bg-green-50 text-green-700" : "text-gray-600 hover:bg-gray-50"
+                                }`}
+                            >
+                              {subItem.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </nav>
@@ -283,7 +437,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {/* Main quick links */}
           {[
             { label: "Dashboard", href: "/admin/dashboard" },
-            { label: "Assessments", href: "/admin/assessments" },
+            { label: "Income", href: "/admin/income" },
             { label: "Payments", href: "/admin/payments" },
           ].map((link) => {
             const active = pathname.startsWith(link.href);

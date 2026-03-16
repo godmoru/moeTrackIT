@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Modal } from "@/components/Modal";
+import { useAuth } from "@/contexts/AuthContext";
 import { expenditureCategoriesApi } from "@/lib/api/expenditure.api";
 import type { ExpenditureCategory, ExpenditureCategoryFormData } from "@/types/expenditure.types";
+import { DataTable } from "@/components/ui/DataTable";
 
 export default function ExpenditureCategoriesPage() {
   const [categories, setCategories] = useState<ExpenditureCategory[]>([]);
@@ -12,6 +14,9 @@ export default function ExpenditureCategoriesPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const { hasRole } = useAuth();
+  const canManage = hasRole(["super_admin", "admin", "system_admin"]);
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -119,140 +124,130 @@ export default function ExpenditureCategoriesPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       active: "bg-green-100 text-green-800",
       suspended: "bg-red-100 text-red-800",
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || "bg-gray-100 text-gray-800"}`}>
+      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[status] || "bg-gray-100 text-gray-800"}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-700 border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Expenditure Categories</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Create Category
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <input
-              type="text"
-              placeholder="Search categories..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Categories Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading categories...</p>
-          </div>
-        ) : error ? (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-4">{error}</div>
-            <button
-              onClick={loadCategories}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Retry
-            </button>
-          </div>
-        ) : categories.length === 0 ? (
-          <div className="p-8 text-center text-gray-600">
-            No categories found. Create your first category to get started.
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reference
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {categories.map((category) => (
-                <tr key={category.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {category.reference}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {category.cat_name}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <div className="max-w-xs truncate">{category.description}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {getStatusBadge(category.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(category.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button
-                      onClick={() => openEditModal(category)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(category)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-lg font-semibold text-gray-900">Expenditure Categories</h1>
+        {canManage && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 transition-colors"
+          >
+            + Create Category
+          </button>
         )}
       </div>
+
+      {error && (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && (
+        <>
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-[11px]">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">Search:</span>
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+            </div>
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Categories Table */}
+          <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
+            <DataTable
+              data={categories}
+              columns={[
+                {
+                  header: "S/No",
+                  cell: (_, index) => <span className="text-xs">{index + 1}</span>,
+                },
+                {
+                  header: "Reference",
+                  cell: (c) => <span className="text-xs font-medium">{c.reference}</span>,
+                },
+                {
+                  header: "Name",
+                  cell: (c) => <span className="text-xs">{c.cat_name}</span>,
+                },
+                {
+                  header: "Description",
+                  cell: (c) => <span className="text-xs max-w-xs truncate">{c.description}</span>,
+                },
+                {
+                  header: "Status",
+                  cell: (c) => getStatusBadge(c.status),
+                },
+                {
+                  header: "Created",
+                  cell: (c) => <span className="text-xs">{new Date(c.createdAt).toLocaleDateString()}</span>,
+                },
+                ...(canManage
+                  ? [
+                      {
+                        header: <div className="text-right">Actions</div>,
+                        cell: (c: ExpenditureCategory) => (
+                          <div className="text-right space-x-1">
+                            <button
+                              onClick={() => openEditModal(c)}
+                              className="rounded-md bg-green-50 px-2 py-1 text-[10px] font-medium text-green-800 hover:bg-green-100"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(c)}
+                              className="rounded-md bg-red-50 px-2 py-1 text-[10px] font-medium text-red-800 hover:bg-red-100"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        </>
+      )}
 
       {/* Create Modal */}
       <Modal
@@ -265,44 +260,44 @@ export default function ExpenditureCategoriesPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Category Name *
             </label>
             <input
               type="text"
               value={formData.cat_name}
               onChange={(e) => setFormData({ ...formData, cat_name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter category name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Description *
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter category description"
             />
           </div>
         </div>
-        <div className="mt-6 flex justify-end space-x-3">
+        <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={() => {
               setShowCreateModal(false);
               setFormData({ cat_name: "", description: "" });
             }}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-50"
           >
             {saving ? "Creating..." : "Create Category"}
           </button>
@@ -321,45 +316,45 @@ export default function ExpenditureCategoriesPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Category Name *
             </label>
             <input
               type="text"
               value={formData.cat_name}
               onChange={(e) => setFormData({ ...formData, cat_name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter category name"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Description *
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter category description"
             />
           </div>
         </div>
-        <div className="mt-6 flex justify-end space-x-3">
+        <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={() => {
               setShowEditModal(false);
               setSelectedCategory(null);
               setFormData({ cat_name: "", description: "" });
             }}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             onClick={handleEdit}
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-50"
           >
             {saving ? "Updating..." : "Update Category"}
           </button>

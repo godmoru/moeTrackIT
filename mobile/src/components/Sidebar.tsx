@@ -63,9 +63,14 @@ export function Sidebar(props: DrawerContentComponentProps) {
                         <Text style={styles.menuText}>Dashboard</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Assessments')}>
-                        <Ionicons name="document-text-outline" size={22} color="#4b5563" />
-                        <Text style={styles.menuText}>Assessments</Text>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Income')}>
+                        <Ionicons name="card-outline" size={22} color="#4b5563" />
+                        <Text style={styles.menuText}>Income</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Expenditures')}>
+                        <Ionicons name="cash-outline" size={22} color="#4b5563" />
+                        <Text style={styles.menuText}>Expenditures</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Payments')}>

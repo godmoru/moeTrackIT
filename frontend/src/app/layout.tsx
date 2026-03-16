@@ -17,25 +17,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// export const metadata: Metadata = {
-//   title: "MOETrackIT - Revenue Monitor",
-//   description: "Developed by GESUSoft Technology Ltd",
-//   icons: {
-//     icon: "/benue.png",
-//   },
-// };
-
 export const metadata: Metadata = {
   title: "MOETrackIT - Revenue Monitor",
   description: "Developed by GESUSoft Technology Ltd",
   icons: {
     icon: [
-      { url: "/favicon.png", sizes: "any" },
-      { url: "/favicon.png", sizes: "32x32", type: "image/png" }
+      { url: "/benue.png", sizes: "any" },
+      { url: "/benue.png", sizes: "32x32", type: "image/png" }
     ],
-    shortcut: "/favicon.png",
+    shortcut: "/benue.png",
     apple: [
-      { url: "/favicon.png", sizes: "180x180", type: "image/png" }
+      { url: "/benue.png", sizes: "180x180", type: "image/png" }
     ],
   },
 };

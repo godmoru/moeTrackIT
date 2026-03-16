@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Modal } from "@/components/Modal";
+import { useAuth } from "@/contexts/AuthContext";
 import { retirementsApi, expendituresApi } from "@/lib/api/expenditure.api";
 import type { ExpenditureRetirement, Expenditure, RetirementFormData } from "@/types/expenditure.types";
+import { DataTable } from "@/components/ui/DataTable";
 
 export default function ExpenditureRetirementsPage() {
   const [retirements, setRetirements] = useState<ExpenditureRetirement[]>([]);
@@ -13,6 +15,10 @@ export default function ExpenditureRetirementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const { hasRole } = useAuth();
+  const canManage = hasRole(["super_admin", "admin", "system_admin"]);
+  const canApprove = hasRole(["super_admin", "admin", "system_admin"]);
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -42,7 +48,7 @@ export default function ExpenditureRetirementsPage() {
 
       const [retirementsResponse, expendituresResponse] = await Promise.all([
         retirementsApi.getAll(params),
-        expendituresApi.getAll({ status: 'approved', limit: 1000 }), // Get approved expenditures for retirement
+        expendituresApi.getAll({ status: 'approved', limit: 1000 }),
       ]);
 
       setRetirements(retirementsResponse.data.items);
@@ -151,7 +157,7 @@ export default function ExpenditureRetirementsPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const styles = {
+    const styles: Record<string, string> = {
       draft: "bg-gray-100 text-gray-800",
       submitted: "bg-yellow-100 text-yellow-800",
       under_review: "bg-blue-100 text-blue-800",
@@ -160,176 +166,157 @@ export default function ExpenditureRetirementsPage() {
       completed: "bg-purple-100 text-purple-800",
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || "bg-gray-100 text-gray-800"}`}>
-        {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}
+      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${styles[status] || "bg-gray-100 text-gray-800"}`}>
+        {status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
       </span>
     );
   };
 
   const getAvailableExpenditures = () => {
     return expenditures.filter(exp => {
-      // Filter out expenditures that already have retirements
       const hasRetirement = retirements.some(ret => ret.expenditureId === exp.id);
       return !hasRetirement;
     });
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-700 border-t-transparent"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Expenditure Retirements</h1>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Create Retirement
-        </button>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-lg font-semibold text-gray-900">Expenditure Retirements</h1>
+        {canManage && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 transition-colors"
+          >
+            + Create Retirement
+          </button>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <input
-              type="text"
-              placeholder="Search retirements..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="under_review">Under Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {error && (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      )}
 
-      {/* Retirements Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading retirements...</p>
+      {!loading && !error && (
+        <>
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-lg shadow-sm border border-gray-100 text-[11px]">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">Search:</span>
+              <input
+                type="text"
+                placeholder="Search retirements..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+            </div>
+            <div className="flex items-center gap-2 border-l border-gray-200 pl-3">
+              <span className="font-medium text-gray-500 uppercase tracking-wider text-[10px]">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="all">All Status</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="under_review">Under Review</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
           </div>
-        ) : error ? (
-          <div className="p-8 text-center">
-            <div className="text-red-600 mb-4">{error}</div>
-            <button
-              onClick={loadData}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Retry
-            </button>
-          </div>
-        ) : retirements.length === 0 ? (
-          <div className="p-8 text-center text-gray-600">
-            No retirements found. Create your first retirement to get started.
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Retirement Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Expenditure
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount Retired
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Purpose
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {retirements.map((retirement) => (
-                <tr key={retirement.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {retirement.retirementNumber}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {retirement.expenditure?.referenceNumber || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${retirement.amountRetired.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    <div className="max-w-xs truncate">{retirement.purpose}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {getStatusBadge(retirement.status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(retirement.retirementDate).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex space-x-2">
+
+          {/* Retirements Table */}
+          <div className="overflow-x-auto rounded-lg bg-white shadow-sm">
+            <DataTable
+              data={retirements}
+              columns={[
+                {
+                  header: "S/No",
+                  cell: (_, index) => <span className="text-xs">{index + 1}</span>,
+                },
+                {
+                  header: "Retirement No",
+                  cell: (r) => <span className="text-xs font-medium">{r.retirementNumber}</span>,
+                },
+                {
+                  header: "Expenditure Ref",
+                  cell: (r) => <span className="text-xs">{r.expenditure?.referenceNumber || 'N/A'}</span>,
+                },
+                {
+                  header: "Amount",
+                  cell: (r) => <span className="text-xs">₦{Number(r.amountRetired || 0).toLocaleString('en-NG')}</span>,
+                },
+                {
+                  header: "Purpose",
+                  cell: (r) => <span className="text-xs max-w-xs truncate">{r.purpose}</span>,
+                },
+                {
+                  header: "Status",
+                  cell: (r) => getStatusBadge(r.status),
+                },
+                {
+                  header: "Date",
+                  cell: (r) => <span className="text-xs">{new Date(r.retirementDate).toLocaleDateString()}</span>,
+                },
+                {
+                  header: <div className="text-right">Actions</div>,
+                  cell: (r) => (
+                    <div className="text-right flex justify-end gap-1 flex-wrap">
                       <button
                         onClick={() => {
-                          setSelectedRetirement(retirement);
+                          setSelectedRetirement(r);
                           setShowViewModal(true);
                         }}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="rounded-md bg-green-50 px-2 py-1 text-[10px] font-medium text-green-800 hover:bg-green-100"
                       >
                         View
                       </button>
-                      {retirement.status === 'draft' && (
+                      {canManage && r.status === 'draft' && (
                         <button
-                          onClick={() => handleSubmit(retirement)}
-                          className="text-green-600 hover:text-green-900"
+                          onClick={() => handleSubmit(r)}
+                          className="rounded-md bg-blue-50 px-2 py-1 text-[10px] font-medium text-blue-800 hover:bg-blue-100"
                         >
                           Submit
                         </button>
                       )}
-                      {(retirement.status === 'under_review' || retirement.status === 'submitted') && (
+                      {canApprove && (r.status === 'under_review' || r.status === 'submitted') && (
                         <>
                           <button
-                            onClick={() => handleApprove(retirement)}
-                            className="text-green-600 hover:text-green-900"
+                            onClick={() => handleApprove(r)}
+                            className="rounded-md bg-green-50 px-2 py-1 text-[10px] font-medium text-green-800 hover:bg-green-100"
                           >
                             Approve
                           </button>
                           <button
-                            onClick={() => handleReject(retirement)}
-                            className="text-red-600 hover:text-red-900"
+                            onClick={() => handleReject(r)}
+                            className="rounded-md bg-red-50 px-2 py-1 text-[10px] font-medium text-red-800 hover:bg-red-100"
                           >
                             Reject
                           </button>
                         </>
                       )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        </>
+      )}
 
       {/* Create Modal */}
       <Modal
@@ -348,7 +335,7 @@ export default function ExpenditureRetirementsPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Expenditure *
             </label>
             <select
@@ -361,67 +348,67 @@ export default function ExpenditureRetirementsPage() {
                   amountRetired: expenditure?.amount || 0,
                 });
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
             >
               <option value="">Select an expenditure</option>
               {getAvailableExpenditures().map((exp) => (
                 <option key={exp.id} value={exp.id}>
-                  {exp.referenceNumber} - ${exp.amount.toLocaleString()} - {exp.description}
+                  {exp.referenceNumber} - ₦{Number(exp.amount || 0).toLocaleString('en-NG')} - {exp.description}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Amount to Retire *
             </label>
             <input
               type="number"
               value={formData.amountRetired}
               onChange={(e) => setFormData({ ...formData, amountRetired: parseFloat(e.target.value) || 0 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter amount"
               min="0"
               step="0.01"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Retirement Date *
             </label>
             <input
               type="date"
               value={formData.retirementDate}
               onChange={(e) => setFormData({ ...formData, retirementDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Purpose *
             </label>
             <textarea
               value={formData.purpose}
               onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={3}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter purpose of retirement"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">
               Remarks
             </label>
             <textarea
               value={formData.remarks}
               onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={2}
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               placeholder="Enter additional remarks (optional)"
             />
           </div>
         </div>
-        <div className="mt-6 flex justify-end space-x-3">
+        <div className="mt-6 flex justify-end gap-2">
           <button
             onClick={() => {
               setShowCreateModal(false);
@@ -433,14 +420,14 @@ export default function ExpenditureRetirementsPage() {
                 retirementDate: new Date().toISOString().split('T')[0],
               });
             }}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-50"
           >
             {saving ? "Creating..." : "Create Retirement"}
           </button>
@@ -457,48 +444,48 @@ export default function ExpenditureRetirementsPage() {
         title="Retirement Details"
       >
         {selectedRetirement && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-medium text-gray-700">Retirement Number</h3>
-              <p className="text-sm text-gray-900">{selectedRetirement.retirementNumber}</p>
+          <div className="space-y-3 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Retirement Number</h3>
+                <p className="text-sm text-gray-900">{selectedRetirement.retirementNumber}</p>
+              </div>
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Status</h3>
+                <div className="mt-0.5">{getStatusBadge(selectedRetirement.status)}</div>
+              </div>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Expenditure</h3>
-              <p className="text-sm text-gray-900">
-                {selectedRetirement.expenditure?.referenceNumber || 'N/A'}
-              </p>
+              <h3 className="text-xs font-medium text-gray-500">Expenditure</h3>
+              <p className="text-sm text-gray-900">{selectedRetirement.expenditure?.referenceNumber || 'N/A'}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Amount Retired</h3>
+                <p className="text-sm text-gray-900">₦{Number(selectedRetirement.amountRetired || 0).toLocaleString('en-NG')}</p>
+              </div>
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Balance Unretired</h3>
+                <p className="text-sm text-gray-900">₦{Number(selectedRetirement.balanceUnretired || 0).toLocaleString('en-NG')}</p>
+              </div>
             </div>
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Amount Retired</h3>
-              <p className="text-sm text-gray-900">${selectedRetirement.amountRetired.toLocaleString()}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-700">Balance Unretired</h3>
-              <p className="text-sm text-gray-900">${selectedRetirement.balanceUnretired.toLocaleString()}</p>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-700">Purpose</h3>
+              <h3 className="text-xs font-medium text-gray-500">Purpose</h3>
               <p className="text-sm text-gray-900">{selectedRetirement.purpose}</p>
             </div>
             {selectedRetirement.remarks && (
               <div>
-                <h3 className="text-sm font-medium text-gray-700">Remarks</h3>
+                <h3 className="text-xs font-medium text-gray-500">Remarks</h3>
                 <p className="text-sm text-gray-900">{selectedRetirement.remarks}</p>
               </div>
             )}
             <div>
-              <h3 className="text-sm font-medium text-gray-700">Status</h3>
-              <div className="mt-1">{getStatusBadge(selectedRetirement.status)}</div>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-700">Retirement Date</h3>
-              <p className="text-sm text-gray-900">
-                {new Date(selectedRetirement.retirementDate).toLocaleDateString()}
-              </p>
+              <h3 className="text-xs font-medium text-gray-500">Retirement Date</h3>
+              <p className="text-sm text-gray-900">{new Date(selectedRetirement.retirementDate).toLocaleDateString()}</p>
             </div>
             {selectedRetirement.rejectionReason && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-700">Rejection Reason</h3>
+              <div className="rounded-md bg-red-50 p-2">
+                <h3 className="text-xs font-medium text-red-700">Rejection Reason</h3>
                 <p className="text-sm text-red-600">{selectedRetirement.rejectionReason}</p>
               </div>
             )}

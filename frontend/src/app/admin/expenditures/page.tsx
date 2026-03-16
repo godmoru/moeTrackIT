@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
-import { Modal } from "@/components/Modal";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { expendituresApi, expenditureCategoriesApi } from "@/lib/api/expenditure.api";
 import type { Expenditure, ExpenditureCategory } from "@/types/expenditure.types";
 import { DataTable } from "@/components/ui/DataTable";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
 export default function ExpendituresPage() {
   const [expenditures, setExpenditures] = useState<Expenditure[]>([]);
@@ -18,16 +19,10 @@ export default function ExpendituresPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
-
-  const [showNewExpenditure, setShowNewExpenditure] = useState(false);
-  const [savingNewExpenditure, setSavingNewExpenditure] = useState(false);
-  const [newExpenditure, setNewExpenditure] = useState({
-    description: "",
-    amount: "",
-    categoryId: "",
-    date: "",
-    referenceNumber: "",
-  });
+  
+  const { hasRole } = useAuth();
+  const canCreate = hasRole(["super_admin", "admin", "system_admin"]);
+  const canExport = hasRole(["super_admin", "admin", "system_admin", "account_officer"]);
 
   useEffect(() => {
     loadData();
@@ -76,16 +71,45 @@ export default function ExpendituresPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800';
+      case "approved":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      case "submitted":
+        return "bg-blue-100 text-blue-800";
       default:
-        return 'bg-yellow-100 text-yellow-800';
+        return "bg-yellow-100 text-yellow-800";
     }
   };
+  
+  async function handleExport(format: "csv" | "xlsx" | "pdf") {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) throw new Error("Not authenticated");
+
+      const res = await fetch(`${API_BASE}/expenditures/export.${format}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `expenditures-${new Date().toISOString().split("T")[0]}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Export Failed",
+        text: err.message || "Failed to export expenditures",
+      });
+    }
+  }
 
   if (loading) {
     return (
@@ -98,29 +122,43 @@ export default function ExpendituresPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-lg font-semibold text-gray-900">Expenditures</h1>
-          <div className="flex items-center gap-2">
+        <h1 className="text-lg font-semibold text-gray-900">Expenditures</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          {canExport && (
+            <div className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] text-gray-700">
+              <span className="font-semibold text-gray-600">Export:</span>
+              <button
+                type="button"
+                onClick={() => handleExport("csv")}
+                className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
+              >
+                CSV
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("xlsx")}
+                className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
+              >
+                Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("pdf")}
+                className="rounded border border-transparent px-2 py-1 hover:bg-gray-50"
+              >
+                PDF
+              </button>
+            </div>
+          )}
+          {canCreate && (
             <Link
-              href="/admin/expenditures/categories"
-              className="rounded-md border border-blue-600 px-3 py-2 text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+              href="/admin/expenditures/create"
+              className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 transition-colors text-center"
             >
-              Manage Categories
+              + Create Expenditure
             </Link>
-            <Link
-              href="/admin/expenditures/retirements"
-              className="rounded-md border border-purple-600 px-3 py-2 text-xs font-semibold text-purple-600 hover:bg-purple-50 transition-colors"
-            >
-              Retirements
-            </Link>
-          </div>
+          )}
         </div>
-        <Link
-          href="/admin/expenditures/create"
-          className="rounded-md bg-green-700 px-3 py-2 text-xs font-semibold text-white hover:bg-green-800 transition-colors text-center"
-        >
-          + Create Expenditure
-        </Link>
       </div>
 
       {error && (
