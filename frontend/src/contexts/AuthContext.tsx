@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { fetchWithErrorHandling } from '@/lib/apiErrorHandler';
 
-type UserRole = 'super_admin' | 'system_admin' | 'admin' | 'hon_commissioner' | 'perm_secretary' | 'dfa' | 'director' | 'principal' | 'area_education_officer' | 'officer' | 'hq_cashier' | 'cashier' | 'user';
+type UserRole = 'super_admin' | 'system_admin' | 'admin' | 'hon_commissioner' | 'perm_secretary' | 'dfa' | 'director' | 'principal' | 'area_education_officer' | 'officer' | 'hq_cashier' | 'cashier' | 'account_officer' | 'user';
 
 interface User {
   id: string;
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
     // Super admin has all permissions
     if (user.role === 'super_admin') return true;
-    
+
     return user.permissions?.includes(permission) || false;
   };
 

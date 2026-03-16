@@ -18,6 +18,7 @@ interface StatusCount {
 
 interface SummaryResponse {
   totalCollected: number;
+  collectionTarget: number;
   statusCounts: StatusCount[];
 }
 
@@ -226,8 +227,8 @@ export function SuperAdminDashboard() {
             <div className="flex flex-wrap justify-around gap-4">
               <ProgressRing
                 value={totalCollected}
-                max={totalCollected * 1.3}
-                label="Annual Target"
+                max={data?.collectionTarget || totalCollected * 1.3}
+                label={`${Math.round((totalCollected / (data?.collectionTarget || totalCollected * 1.3)) * 100)}% of Target`}
                 color="green"
                 size="lg"
               />

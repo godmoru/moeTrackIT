@@ -14,7 +14,7 @@ export class APIError extends Error {
 
 export const handleApiError = (error: any) => {
   console.error('API Error:', error);
-  
+
   if (error instanceof APIError) {
     // Handle specific error statuses
     switch (error.status) {
@@ -52,11 +52,11 @@ export const handleApiError = (error: any) => {
         // Handle other errors
         toast.error(error.message || 'An error occurred');
     }
-    
+
     // Return the error to be handled by the component if needed
     return error;
   }
-  
+
   // Handle network errors or other unexpected errors
   toast.error('A network error occurred. Please check your connection.');
   return new Error('Network error');
@@ -66,7 +66,7 @@ export const handleApiError = (error: any) => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleResponse = async (response: Response): Promise<any> => {
   const data = await response.json().catch(() => ({}));
-  
+
   if (!response.ok) {
     throw new APIError(
       data.message || `HTTP error! status: ${response.status}`,
@@ -74,7 +74,7 @@ export const handleResponse = async (response: Response): Promise<any> => {
       data
     );
   }
-  
+
   return data;
 };
 
@@ -91,7 +91,7 @@ export const fetchWithErrorHandling = async (
         ...init?.headers,
       },
     });
-    
+
     return await handleResponse(response);
   } catch (error) {
     return handleApiError(error);

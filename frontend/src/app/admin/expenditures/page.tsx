@@ -19,7 +19,7 @@ export default function ExpendituresPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
-  
+
   const { hasRole } = useAuth();
   const canCreate = hasRole(["super_admin", "admin", "system_admin"]);
   const canExport = hasRole(["super_admin", "admin", "system_admin", "account_officer"]);
@@ -81,7 +81,7 @@ export default function ExpendituresPage() {
         return "bg-yellow-100 text-yellow-800";
     }
   };
-  
+
   async function handleExport(format: "csv" | "xlsx" | "pdf") {
     try {
       const token = localStorage.getItem("authToken");
