@@ -38,6 +38,16 @@ async function calculateAssessmentAmount(entityId, incomeSourceId, parameterValu
 
   // Start from default amount
   let amount = Number(incomeSource.defaultAmount || 0);
+  
+  if (incomeSource.amountType === 'population_based') {
+    const population = Number(entity.studentPopulation || 0);
+    amount = amount * population;
+    breakdown.populationBased = { 
+        perStudent: Number(incomeSource.defaultAmount || 0), 
+        population 
+    };
+  }
+  
   breakdown.baseAmount = amount;
 
   // Apply parameters
@@ -111,6 +121,8 @@ async function createAssessmentWithCalculation({
   currency = 'NGN',
   status = 'pending',
   dueDate = null,
+  assessmentYear = null,
+  assessmentTerm = null,
   assessmentPeriod = null,
   createdBy,
   transaction,
@@ -122,11 +134,14 @@ async function createAssessmentWithCalculation({
   );
 
   let finalAssessmentPeriod = assessmentPeriod;
+  let finalYear = assessmentYear || parameterValues.assessmentYear || parameterValues.year || periodYear;
+  let finalTerm = assessmentTerm || parameterValues.assessmentTerm || parameterValues.term || periodTerm;
+
   if (!finalAssessmentPeriod) {
-    if (periodYear && periodTerm) {
-      finalAssessmentPeriod = `${periodYear}-T${periodTerm}`;
-    } else if (periodYear) {
-      finalAssessmentPeriod = `${periodYear}`;
+    if (finalYear && finalTerm) {
+      finalAssessmentPeriod = `${finalYear}-T${finalTerm}`;
+    } else if (finalYear) {
+      finalAssessmentPeriod = `${finalYear}`;
     }
   }
 
@@ -138,6 +153,8 @@ async function createAssessmentWithCalculation({
     status,
     dueDate,
     assessmentPeriod: finalAssessmentPeriod,
+    assessmentYear: finalYear ? Number(finalYear) : null,
+    assessmentTerm: finalTerm ? Number(finalTerm) : null,
     meta: { ...meta, breakdown },
     createdBy,
   }, { transaction });

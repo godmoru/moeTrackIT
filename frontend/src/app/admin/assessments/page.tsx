@@ -40,6 +40,8 @@ interface IncomeSourceParameterOption {
 interface IncomeSourceOption {
   id: number;
   name: string;
+  category?: string;
+  recurrence?: string;
   parameters?: IncomeSourceParameterOption[];
 }
 
@@ -59,12 +61,16 @@ export default function AssessmentsPage() {
     entityId: string;
     incomeSourceId: string;
     assessmentPeriod: string;
+    assessmentYear: string;
+    assessmentTerm: string;
     dueDate: string;
     parameterValues: Record<string, any>;
   }>({
     entityId: "",
     incomeSourceId: "",
     assessmentPeriod: "",
+    assessmentYear: new Date().getFullYear().toString(),
+    assessmentTerm: "",
     dueDate: "",
     parameterValues: {},
   });
@@ -74,12 +80,16 @@ export default function AssessmentsPage() {
   const [bulkForm, setBulkForm] = useState<{
     incomeSourceId: string;
     assessmentPeriod: string;
+    assessmentYear: string;
+    assessmentTerm: string;
     parameterValues: Record<string, any>;
     dueDate: string;
     onlyActive: boolean;
   }>({
     incomeSourceId: "",
     assessmentPeriod: "",
+    assessmentYear: new Date().getFullYear().toString(),
+    assessmentTerm: "",
     parameterValues: {},
     dueDate: "",
     onlyActive: true,
@@ -201,8 +211,14 @@ export default function AssessmentsPage() {
         },
         body: JSON.stringify({
           incomeSourceId,
-          // assessmentPeriod: bulkForm.assessmentPeriod, // Now handled by backend/service
-          parameterValues: bulkForm.parameterValues,
+          assessmentYear: bulkForm.assessmentYear ? Number(bulkForm.assessmentYear) : null,
+          assessmentTerm: bulkForm.assessmentTerm ? Number(bulkForm.assessmentTerm) : null,
+          parameterValues: {
+            ...bulkForm.parameterValues,
+            // Sync with calculation logic expectation if needed
+            year: bulkForm.assessmentYear,
+            term: bulkForm.assessmentTerm,
+          },
           dueDate: bulkForm.dueDate || null,
           entityIds: Array.from(selectedEntityIds),
         }),
@@ -239,6 +255,8 @@ export default function AssessmentsPage() {
       entityId: "",
       incomeSourceId: "",
       assessmentPeriod: "",
+      assessmentYear: new Date().getFullYear().toString(),
+      assessmentTerm: "",
       dueDate: "",
       parameterValues: {},
     });
@@ -248,7 +266,7 @@ export default function AssessmentsPage() {
 
 
   async function submitNewAssessment() {
-    const { entityId, incomeSourceId, assessmentPeriod, dueDate, parameterValues } = newAssessment;
+    const { entityId, incomeSourceId, assessmentYear, assessmentTerm, dueDate, parameterValues } = newAssessment;
 
     if (!entityId || !incomeSourceId) {
       await Swal.fire({
@@ -285,9 +303,14 @@ export default function AssessmentsPage() {
         body: JSON.stringify({
           entityId: entityIdNum,
           incomeSourceId: incomeSourceIdNum,
-          assessmentPeriod: assessmentPeriod || null,
+          assessmentYear: assessmentYear ? Number(assessmentYear) : null,
+          assessmentTerm: assessmentTerm ? Number(assessmentTerm) : null,
           dueDate: dueDate || null,
-          parameterValues: parameterValues,
+          parameterValues: {
+            ...parameterValues,
+            year: assessmentYear,
+            term: assessmentTerm,
+          },
           status: "pending",
         }),
       });
@@ -555,6 +578,8 @@ export default function AssessmentsPage() {
                     setBulkForm({
                       incomeSourceId: "",
                       assessmentPeriod: "",
+                      assessmentYear: new Date().getFullYear().toString(),
+                      assessmentTerm: "",
                       parameterValues: {},
                       dueDate: "",
                       onlyActive: true,
@@ -752,6 +777,59 @@ export default function AssessmentsPage() {
               </select>
             </div>
 
+            {(() => {
+              const selectedSource = incomeSources.find(
+                (s) => String(s.id) === newAssessment.incomeSourceId
+              );
+              if (!selectedSource || selectedSource.recurrence === "none") return null;
+
+              return (
+                <>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Assessment Year <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      value={newAssessment.assessmentYear}
+                      onChange={(e) =>
+                        setNewAssessment((prev) => ({
+                          ...prev,
+                          assessmentYear: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      placeholder="e.g. 2026"
+                    />
+                  </div>
+                  {selectedSource.recurrence === "termly" && (
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Assessment Term <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={newAssessment.assessmentTerm}
+                        onChange={(e) =>
+                          setNewAssessment((prev) => ({
+                            ...prev,
+                            assessmentTerm: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select Term --</option>
+                        <option value="1">1st Term</option>
+                        <option value="2">2nd Term</option>
+                        <option value="3">3rd Term</option>
+                      </select>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+
 
             {/* Dynamic Parameters */}
             {(() => {
@@ -894,6 +972,59 @@ export default function AssessmentsPage() {
                 ))}
               </select>
             </div>
+
+            {(() => {
+              const selectedSource = incomeSources.find(
+                (s) => String(s.id) === bulkForm.incomeSourceId
+              );
+              if (!selectedSource || selectedSource.recurrence === "none") return null;
+
+              return (
+                <>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-gray-700">
+                      Assessment Year <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      value={bulkForm.assessmentYear}
+                      onChange={(e) =>
+                        setBulkForm((prev) => ({
+                          ...prev,
+                          assessmentYear: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      placeholder="e.g. 2026"
+                    />
+                  </div>
+                  {selectedSource.recurrence === "termly" && (
+                    <div className="space-y-1">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Assessment Term <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={bulkForm.assessmentTerm}
+                        onChange={(e) =>
+                          setBulkForm((prev) => ({
+                            ...prev,
+                            assessmentTerm: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select Term --</option>
+                        <option value="1">1st Term</option>
+                        <option value="2">2nd Term</option>
+                        <option value="3">3rd Term</option>
+                      </select>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Dynamic Parameters for Mass Assessment */}
             {(() => {

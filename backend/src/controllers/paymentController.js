@@ -913,7 +913,7 @@ module.exports = {
         generatedRrr = remitaResult.rrr;
         console.log('Remita RRR generated for display:', generatedRrr);
       } catch (rrrError) {
-        console.error('Failed to generate RRR for display, continuing without:', rrrError.message);
+        console.error(`Failed to generate RRR for Assessment ${assessmentId} (Amount: ${amountNum}). Error:`, rrrError.message);
       }
 
       // Create pending payment record

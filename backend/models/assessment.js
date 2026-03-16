@@ -24,6 +24,8 @@ module.exports = (sequelize, DataTypes) => {
     status: DataTypes.STRING,
     dueDate: DataTypes.DATE,
     assessmentPeriod: DataTypes.STRING,
+    assessmentYear: DataTypes.INTEGER,
+    assessmentTerm: DataTypes.INTEGER,
     meta: DataTypes.JSON,
     createdBy: DataTypes.INTEGER
   }, {

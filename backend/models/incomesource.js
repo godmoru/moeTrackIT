@@ -21,6 +21,10 @@ module.exports = (sequelize, DataTypes) => {
     category: DataTypes.STRING,
     recurrence: DataTypes.STRING,
     defaultAmount: DataTypes.DECIMAL,
+    amountType: {
+      type: DataTypes.ENUM('fixed', 'population_based'),
+      defaultValue: 'fixed'
+    },
     active: DataTypes.BOOLEAN
   }, {
     sequelize,

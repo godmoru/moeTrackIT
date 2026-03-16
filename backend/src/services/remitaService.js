@@ -19,7 +19,8 @@ const REMITA_INVOICE_URL = 'https://demo.remita.net/remita/exapp/api/v1/send/api
  * hash = SHA512(merchantId + serviceTypeId + orderId + amount + apiKey)
  */
 function generateHash(orderId, amount) {
-    const data = `${REMITA_MERCHANT_ID}${REMITA_SERVICE_TYPE_ID}${orderId}${amount}${REMITA_API_KEY}`;
+    const formattedAmount = Number(amount).toFixed(2);
+    const data = `${REMITA_MERCHANT_ID}${REMITA_SERVICE_TYPE_ID}${orderId}${formattedAmount}${REMITA_API_KEY}`;
     return crypto.createHash('sha512').update(data).digest('hex');
 }
 
@@ -50,14 +51,17 @@ async function initializePayment({ payerName, payerEmail, payerPhone, descriptio
         throw new Error('Remita configuration is incomplete (MerchantID, APIKey, ServiceTypeID, or PublicKey missing)');
     }
 
+    // Format amount to strictly 2 decimal places for Remita
+    const formattedAmount = Number(amount).toFixed(2);
+
     // Hash = SHA512(merchantId + serviceTypeId + orderId + amount + apiKey)
     const apiHash = crypto.createHash('sha512')
-        .update(`${merchantId}${serviceTypeId}${orderId}${amount}${apiKey}`)
+        .update(`${merchantId}${serviceTypeId}${orderId}${formattedAmount}${apiKey}`)
         .digest('hex');
 
     const payload = {
         serviceTypeId: serviceTypeId,
-        amount: amount,
+        amount: formattedAmount,
         orderId: orderId,
         payerName: payerName.replace(/[^a-zA-Z0-9 ]/g, '').trim(),
         payerEmail: payerEmail,
@@ -80,9 +84,13 @@ async function initializePayment({ payerName, payerEmail, payerPhone, descriptio
 
         // Remita standard invoice sometimes returns JSONP string: "jsonp ({\"statuscode\":\"025\",\"RRR\":\"190799556442\",\"status\":\"Payment Reference generated\"})"
         let data = jsonpStr;
-        if (typeof jsonpStr === 'string' && jsonpStr.startsWith('jsonp (')) {
-            const jsonStr = jsonpStr.replace('jsonp (', '').replace(')$', '').replace(/\)$/, '');
-            data = JSON.parse(jsonStr);
+        if (typeof jsonpStr === 'string' && jsonpStr.includes('jsonp (')) {
+            try {
+                const jsonStr = jsonpStr.substring(jsonpStr.indexOf('(') + 1, jsonpStr.lastIndexOf(')'));
+                data = JSON.parse(jsonStr);
+            } catch (e) {
+                console.error('Failed to parse Remita JSONP response:', e.message);
+            }
         }
 
         console.log('Remita RRR Generation Response:', data);

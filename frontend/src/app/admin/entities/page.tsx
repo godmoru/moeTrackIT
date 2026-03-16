@@ -31,6 +31,7 @@ interface Entity {
   status: string;
   entityType?: EntityType;
   ownershipType?: EntityOwnership;
+  studentPopulation?: number;
 }
 
 export default function EntitiesPage() {
@@ -201,6 +202,10 @@ export default function EntitiesPage() {
               {
                 header: "LGA",
                 cell: (e) => <span className="text-xs">{e.lga || "-"}</span>,
+              },
+              {
+                header: "Population",
+                cell: (e) => <span className="text-xs text-center">{e.studentPopulation || "-"}</span>,
               },
               {
                 header: "Status",

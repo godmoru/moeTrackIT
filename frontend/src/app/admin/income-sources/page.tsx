@@ -15,6 +15,7 @@ interface IncomeSource {
   category: string;
   recurrence: string;
   defaultAmount: string | number;
+  amountType: 'fixed' | 'population_based';
   active: boolean;
 }
 
@@ -31,6 +32,7 @@ export default function IncomeSourcesPage() {
     category: "one_time",
     recurrence: "none",
     defaultAmount: "",
+    amountType: "fixed",
   });
 
   async function load() {
@@ -65,6 +67,7 @@ export default function IncomeSourcesPage() {
       category: "one_time",
       recurrence: "none",
       defaultAmount: "",
+      amountType: "fixed",
     });
     setShowNewSource(true);
   }
@@ -109,6 +112,7 @@ export default function IncomeSourcesPage() {
           category,
           recurrence,
           defaultAmount: defaultAmountNum,
+          amountType: newSource.amountType,
           active: true,
         }),
       });
@@ -182,7 +186,14 @@ export default function IncomeSourcesPage() {
               { header: "Recurrence", cell: (s) => <span className="text-xs capitalize">{s.recurrence}</span> },
               {
                 header: "Default Amount (NGN)",
-                cell: (s) => <span className="text-xs">N{Number(s.defaultAmount || 0).toLocaleString("en-NG")}</span>
+                cell: (s) => (
+                  <div className="text-xs">
+                    <div>N{Number(s.defaultAmount || 0).toLocaleString("en-NG")}</div>
+                    <div className="text-[10px] text-gray-500 italic">
+                      {s.amountType === 'population_based' ? 'Per Student' : 'Fixed Amount'}
+                    </div>
+                  </div>
+                )
               },
               { header: "Active", cell: (s) => <span className="text-xs">{s.active ? 'Yes' : 'No'}</span> },
             ]}
@@ -260,9 +271,25 @@ export default function IncomeSourcesPage() {
               </select>
             </div>
 
-            <div className="space-y-1 md:col-span-2">
+            <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-700">
-                Default Amount (NGN)
+                Amount Type
+              </label>
+              <select
+                value={newSource.amountType}
+                onChange={(e) =>
+                  setNewSource((prev) => ({ ...prev, amountType: e.target.value as any }))
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="fixed">Fixed (Constant Amount)</option>
+                <option value="population_based">Population Based (Multiplied by Student Population)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                {newSource.amountType === 'population_based' ? 'Amount Per Student (NGN)' : 'Default Amount (NGN)'}
               </label>
               <input
                 value={newSource.defaultAmount}
@@ -275,7 +302,7 @@ export default function IncomeSourcesPage() {
                 type="number"
                 min={0}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="Enter default amount"
+                placeholder={newSource.amountType === 'population_based' ? "e.g. 50" : "e.g. 5000"}
               />
             </div>
           </div>

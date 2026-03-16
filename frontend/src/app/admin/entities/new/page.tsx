@@ -43,6 +43,7 @@ export default function NewEntityPage() {
   const [code, setCode] = useState("");
   const [category, setCategory] = useState("");
   const [address, setAddress] = useState("");
+  const [studentPopulation, setStudentPopulation] = useState("");
 
   useEffect(() => {
     async function loadLookups() {
@@ -158,6 +159,7 @@ export default function NewEntityPage() {
           code: code || null,
           category: category || null,
           address: address || null,
+          studentPopulation: studentPopulation ? Number(studentPopulation) : null,
         }),
       });
 
@@ -308,6 +310,20 @@ export default function NewEntityPage() {
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
               rows={2}
               placeholder="Street, town, landmarks, etc."
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-[11px] font-medium text-gray-700">
+              Student Population
+            </label>
+            <input
+              value={studentPopulation}
+              onChange={(e) => setStudentPopulation(e.target.value)}
+              type="number"
+              min={0}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              placeholder="e.g. 500"
             />
           </div>
 

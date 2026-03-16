@@ -58,6 +58,8 @@ async function createAssessment(req, res) {
       currency = 'NGN',
       status = 'pending',
       dueDate,
+      assessmentYear,
+      assessmentTerm,
       assessmentPeriod,
       createdBy,
     } = req.body;
@@ -69,8 +71,10 @@ async function createAssessment(req, res) {
       currency,
       status,
       dueDate,
+      assessmentYear,
+      assessmentTerm,
       assessmentPeriod,
-      createdBy,
+      createdBy: createdBy || req.user?.id || null,
       transaction: t,
     });
 
@@ -116,6 +120,9 @@ async function bulkCreate(req, res) {
   try {
     const {
       incomeSourceId,
+      assessmentYear,
+      assessmentTerm,
+      // assessmentPeriod,
       parameterValues = {},
       dueDate = null,
       lgaNames,
@@ -171,22 +178,26 @@ async function bulkCreate(req, res) {
     });
 
     let assessmentPeriod = null;
+
+    // 1. Try calculation result
     if (periodYear && periodTerm) {
       assessmentPeriod = `${periodYear}-T${periodTerm}`;
     } else if (periodYear) {
       assessmentPeriod = `${periodYear}`;
     }
 
+    // 2. Try explicit top-level fields
     if (!assessmentPeriod) {
-      // Fallback to manual string if provided (legacy)
-      assessmentPeriod = req.body.assessmentPeriod;
+      if (assessmentYear && assessmentTerm) {
+        assessmentPeriod = `${assessmentYear}-T${assessmentTerm}`;
+      } else if (assessmentYear) {
+        assessmentPeriod = `${assessmentYear}`;
+      }
     }
 
+    // 3. Fallback to manual string if provided (legacy)
     if (!assessmentPeriod) {
-      await t.rollback();
-      return res.status(400).json({
-        message: "Could not determine assessment period from parameters. Please ensure Year/Term are provided."
-      });
+      assessmentPeriod = req.body.assessmentPeriod;
     }
 
     const foundEntityIds = entities.map((e) => e.id);
@@ -222,9 +233,11 @@ async function bulkCreate(req, res) {
         parameterValues, // Pass the dynamic parameters
         status: "pending",
         dueDate,
+        assessmentYear: assessmentYear ? Number(assessmentYear) : (periodYear ? Number(periodYear) : null),
+        assessmentTerm: assessmentTerm ? Number(assessmentTerm) : (periodTerm ? Number(periodTerm) : null),
         // assessmentPeriod will be re-generated inside, but passing strict one ensures consistency
         assessmentPeriod,
-        createdBy: req.user?.id || null,
+        createdBy: req.user?.id || req.body.createdBy || null,
         transaction: t,
       });
 
