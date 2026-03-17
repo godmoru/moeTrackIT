@@ -5,6 +5,46 @@ const db = require('../../models');
 const emailService = require('../services/emailService');
 const { User, Role, UserRole, UserLga, Lga, Entity, sequelize } = db;
 
+// Configure multer for file upload
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure upload directory exists
+const uploadDir = path.join(__dirname, '../../uploads/profiles');
+console.log('📂 Upload directory:', uploadDir);
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log('✅ Created upload directory');
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'user-' + req.params.id + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+  fileFilter: function (req, file, cb) {
+    // Accept only images
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
+    }
+    cb(null, true);
+  }
+});
+
+// Export multer middleware for routes
+const uploadProfileImageMiddleware = upload.single('profileImage');
+
 async function createUser(req, res) {
   try {
     const { name, email, password, role = 'officer', status = 'active', lgaId, entityId } = req.body;
@@ -157,7 +197,8 @@ async function listUsers(req, res) {
     const users = await User.findAll({
       where,
       order: [['createdAt', 'DESC']],
-      attributes: ['id', 'name', 'email', 'role', 'status', 'createdAt'],
+      attributes: ['id', 'name', 'email', 'role', 'status', 'profileImage', 'createdAt'],
+
       include: [
         {
           model: Lga,
@@ -232,8 +273,48 @@ async function updateUser(req, res) {
   }
 }
 
+async function uploadProfileImage(req, res) {
+  try {
+    const { id } = req.params;
+
+    // Find the user
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file uploaded' });
+    }
+
+    // Delete old image if exists
+    if (user.profileImage) {
+      const oldImagePath = path.join(uploadDir, path.basename(user.profileImage));
+      if (fs.existsSync(oldImagePath)) {
+        fs.unlinkSync(oldImagePath);
+      }
+    }
+
+    // Store the relative path to the image
+    const imageUrl = `/uploads/profiles/${req.file.filename}`;
+    user.profileImage = imageUrl;
+    await user.save();
+
+    res.json({
+      message: 'Profile image uploaded successfully',
+      profileImage: imageUrl,
+    });
+  } catch (err) {
+    console.error('Error uploading profile image:', err);
+    res.status(500).json({ message: 'Failed to upload profile image' });
+  }
+}
+
 module.exports = {
   createUser,
   updateUser,
   listUsers,
+  uploadProfileImage,
+  uploadProfileImageMiddleware,
 };

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { StatusBarChart } from "@/components/Charts";
 import Link from "next/link";
+import { OwnershipPerformance } from "./OwnershipPerformance";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
@@ -177,6 +178,8 @@ export function AEODashboard() {
               <StatusBarChart title="" data={statusData} />
             </div>
           )}
+
+          <OwnershipPerformance title="Your LGA Performance by Ownership" />
 
           {/* Recent payments */}
           <div className="rounded-lg bg-white p-4 shadow-sm">

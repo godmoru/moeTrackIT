@@ -8,11 +8,13 @@ interface UserHeaderProps {
   userName?: string;
   userEmail?: string;
   userRole?: string;
+  profileImage?: string;
 }
 
-export function UserHeader({ userName, userEmail, userRole }: UserHeaderProps) {
+export function UserHeader({ userName, userEmail, userRole, profileImage }: UserHeaderProps) {
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -67,8 +69,17 @@ export function UserHeader({ userName, userEmail, userRole }: UserHeaderProps) {
         className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-100 transition-colors"
       >
         {/* Avatar */}
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-xs font-semibold text-white">
-          {initials}
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-700 text-xs font-semibold text-white overflow-hidden">
+          {profileImage && !imageError ? (
+            <img
+              src={profileImage}
+              alt={userName || "User"}
+              className="h-full w-full object-cover"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            initials
+          )}
         </div>
         {/* User info (hidden on mobile) */}
         <div className="hidden text-left sm:block">

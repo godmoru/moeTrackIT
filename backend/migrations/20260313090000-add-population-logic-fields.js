@@ -4,19 +4,23 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     // Add studentPopulation to Entities
-    await queryInterface.addColumn('Entities', 'studentPopulation', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-    });
+    const entitiesInfo = await queryInterface.describeTable('Entities');
+    if (!entitiesInfo.studentPopulation) {
+      await queryInterface.addColumn('Entities', 'studentPopulation', {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+      });
+    }
 
     // Add amountType to IncomeSources
-    // Note: Creating ENUM type in Postgres can be tricky in migrations if it already exists, 
-    // but here we are adding a new column with a new enum type.
-    await queryInterface.addColumn('IncomeSources', 'amountType', {
-      type: Sequelize.ENUM('fixed', 'population_based'),
-      defaultValue: 'fixed',
-      allowNull: false,
-    });
+    const incomeSourcesInfo = await queryInterface.describeTable('IncomeSources');
+    if (!incomeSourcesInfo.amountType) {
+      await queryInterface.addColumn('IncomeSources', 'amountType', {
+        type: Sequelize.ENUM('fixed', 'population_based'),
+        defaultValue: 'fixed',
+        allowNull: false,
+      });
+    }
   },
 
   async down(queryInterface, Sequelize) {

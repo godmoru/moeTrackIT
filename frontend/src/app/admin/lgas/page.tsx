@@ -85,9 +85,9 @@ export default function LgasPage() {
         const paymentsBody = await paymentsRes.json();
 
         setItems(lgasBody);
-        setEntities(entitiesBody);
-        setAssessments(assessmentsBody);
-        setPayments(paymentsBody);
+        setEntities(entitiesBody.items || entitiesBody);
+        setAssessments(assessmentsBody.items || assessmentsBody);
+        setPayments(paymentsBody.items || paymentsBody);
       } catch (err: any) {
         setError(err.message || "Failed to load LGAs");
       } finally {

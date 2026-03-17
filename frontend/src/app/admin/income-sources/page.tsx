@@ -35,6 +35,19 @@ export default function IncomeSourcesPage() {
     amountType: "fixed",
   });
 
+  const [showEditSource, setShowEditSource] = useState(false);
+  const [savingEditSource, setSavingEditSource] = useState(false);
+  const [editingSource, setEditingSource] = useState<IncomeSource | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    code: "",
+    category: "",
+    recurrence: "",
+    defaultAmount: "",
+    amountType: "fixed",
+    active: true,
+  });
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -143,6 +156,81 @@ export default function IncomeSourcesPage() {
     }
   }
 
+  function handleEdit(source: IncomeSource) {
+    setEditingSource(source);
+    setEditForm({
+      name: source.name,
+      code: source.code,
+      category: source.category,
+      recurrence: source.recurrence,
+      defaultAmount: String(source.defaultAmount),
+      amountType: source.amountType,
+      active: source.active,
+    });
+    setShowEditSource(true);
+  }
+
+  async function submitEditSource() {
+    if (!editingSource) return;
+    const { name, code, category, recurrence, defaultAmount, amountType, active } = editForm;
+
+    if (!name || !code) {
+      await Swal.fire({
+        icon: "error",
+        title: "Missing fields",
+        text: "Name and code are required.",
+        confirmButtonColor: "#b91c1c",
+      });
+      return;
+    }
+
+    setSavingEditSource(true);
+    try {
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+      const res = await fetch(`${API_BASE}/income-sources/${editingSource.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name,
+          code,
+          category,
+          recurrence,
+          defaultAmount: Number(defaultAmount),
+          amountType,
+          active,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to update income source");
+      }
+
+      await Swal.fire({
+        icon: "success",
+        title: "Updated",
+        text: "Income source updated successfully.",
+        confirmButtonColor: "#15803d",
+      });
+
+      setShowEditSource(false);
+      await load();
+    } catch (err: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to update income source",
+        confirmButtonColor: "#b91c1c",
+      });
+    } finally {
+      setSavingEditSource(false);
+    }
+  }
+
   useEffect(() => {
     load();
   }, []);
@@ -196,6 +284,25 @@ export default function IncomeSourcesPage() {
                 )
               },
               { header: "Active", cell: (s) => <span className="text-xs">{s.active ? 'Yes' : 'No'}</span> },
+              {
+                header: "Actions",
+                cell: (s) => (
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/income-sources/${s.id}`}
+                      className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-green-700 transition-colors"
+                    >
+                      View
+                    </Link>
+                    <button
+                      onClick={() => handleEdit(s)}
+                      className="rounded-md border border-gray-300 bg-blue px-2 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )
+              },
             ]}
           />
         </div>
@@ -324,6 +431,148 @@ export default function IncomeSourcesPage() {
               className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70"
             >
               {savingNewSource ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showEditSource}
+        onClose={() => {
+          if (!savingEditSource) setShowEditSource(false);
+        }}
+        title="Edit Income Source"
+        size="lg"
+      >
+        <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Name
+              </label>
+              <input
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Code
+              </label>
+              <input
+                value={editForm.code}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, code: e.target.value }))
+                }
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Category
+              </label>
+              <select
+                value={editForm.category}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, category: e.target.value }))
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="one_time">One-time</option>
+                <option value="recurring">Recurring</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Recurrence
+              </label>
+              <select
+                value={editForm.recurrence}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, recurrence: e.target.value }))
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="none">None</option>
+                <option value="yearly">Yearly</option>
+                <option value="termly">Termly</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Amount Type
+              </label>
+              <select
+                value={editForm.amountType}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, amountType: e.target.value as any }))
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="fixed">Fixed (Constant Amount)</option>
+                <option value="population_based">Population Based (Multiplied by Student Population)</option>
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                {editForm.amountType === 'population_based' ? 'Amount Per Student (NGN)' : 'Default Amount (NGN)'}
+              </label>
+              <input
+                value={editForm.defaultAmount}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    defaultAmount: e.target.value,
+                  }))
+                }
+                type="number"
+                min={0}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-700">
+                Status
+              </label>
+              <select
+                value={editForm.active ? "true" : "false"}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, active: e.target.value === "true" }))
+                }
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+              >
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                if (!savingEditSource) setShowEditSource(false);
+              }}
+              className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitEditSource}
+              disabled={savingEditSource}
+              className="rounded-md bg-green-700 px-3 py-1 text-xs font-semibold text-white hover:bg-green-800 disabled:opacity-70"
+            >
+              {savingEditSource ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>

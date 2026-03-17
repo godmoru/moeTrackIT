@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { useAuth } from "@/contexts/AuthContext";
+import { Pagination } from "@/components/ui/Pagination";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -17,6 +18,7 @@ interface IncomeSource {
   category: string;
   recurrence: string;
   defaultAmount: string | number;
+  amountType: 'fixed' | 'population_based';
   active: boolean;
 }
 
@@ -39,6 +41,7 @@ export default function IncomeSourceDetailPage() {
   const [category, setCategory] = useState("one_time");
   const [recurrence, setRecurrence] = useState("none");
   const [defaultAmount, setDefaultAmount] = useState("");
+  const [amountType, setAmountType] = useState<'fixed' | 'population_based'>("fixed");
   const [active, setActive] = useState(true);
 
   const canEdit = hasRole(['super_admin', 'system_admin']);
@@ -75,6 +78,7 @@ export default function IncomeSourceDetailPage() {
         setCategory(data.category || "one_time");
         setRecurrence(data.recurrence || "none");
         setDefaultAmount(data.defaultAmount?.toString() || "");
+        setAmountType(data.amountType || "fixed");
         setActive(data.active ?? true);
       } catch (err: any) {
         setError(err.message || "Failed to load income source");
@@ -126,6 +130,7 @@ export default function IncomeSourceDetailPage() {
           category,
           recurrence,
           defaultAmount: defaultAmountNum,
+          amountType,
           active,
         }),
       });
@@ -167,9 +172,45 @@ export default function IncomeSourceDetailPage() {
     setCategory(source.category || "one_time");
     setRecurrence(source.recurrence || "none");
     setDefaultAmount(source.defaultAmount?.toString() || "");
+    setAmountType(source.amountType || "fixed");
     setActive(source.active ?? true);
     setIsEditing(false);
   }
+
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [loadingAssessments, setLoadingAssessments] = useState(false);
+  const [assessmentPage, setAssessmentPage] = useState(1);
+  const [assessmentTotal, setAssessmentTotal] = useState(0);
+  const assessmentLimit = 10;
+
+  useEffect(() => {
+    if (!id) return;
+
+    async function loadAssessments() {
+      setLoadingAssessments(true);
+      try {
+        const token =
+          typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+        const res = await fetch(`${API_BASE}/assessments?incomeSourceId=${id}&limit=${assessmentLimit}&page=${assessmentPage}`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAssessments(data.items || []);
+          setAssessmentTotal(data.total || data.items?.length || 0);
+        }
+      } catch (err) {
+        console.error("Failed to load assessments", err);
+      } finally {
+        setLoadingAssessments(false);
+      }
+    }
+
+    loadAssessments();
+  }, [id, assessmentPage]);
 
   if (loading) {
     return (
@@ -237,7 +278,13 @@ export default function IncomeSourceDetailPage() {
               <dd className="mt-1 capitalize text-gray-900">{source.recurrence}</dd>
             </div>
             <div>
-              <dt className="font-medium text-gray-700">Default Amount (NGN)</dt>
+              <dt className="font-medium text-gray-700">Amount Type</dt>
+              <dd className="mt-1 text-gray-900 capitalize">
+                {source.amountType === 'population_based' ? 'Population Based' : 'Fixed'}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-gray-700">{source.amountType === 'population_based' ? 'Amount Per Student (NGN)' : 'Default Amount (NGN)'}</dt>
               <dd className="mt-1 text-gray-900">
                 ₦{Number(source.defaultAmount || 0).toLocaleString("en-NG")}
               </dd>
@@ -320,7 +367,21 @@ export default function IncomeSourceDetailPage() {
 
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-gray-700">
-                  Default Amount (NGN)
+                  Amount Type
+                </label>
+                <select
+                  value={amountType}
+                  onChange={(e) => setAmountType(e.target.value as any)}
+                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                >
+                  <option value="fixed">Fixed (Constant Amount)</option>
+                  <option value="population_based">Population Based (Multiplied by Student Population)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-gray-700">
+                  {amountType === 'population_based' ? 'Amount Per Student (NGN)' : 'Default Amount (NGN)'}
                 </label>
                 <input
                   value={defaultAmount}
@@ -328,7 +389,7 @@ export default function IncomeSourceDetailPage() {
                   type="number"
                   min={0}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                  placeholder="Enter default amount"
+                  placeholder="Enter amount"
                 />
               </div>
 
@@ -379,6 +440,84 @@ export default function IncomeSourceDetailPage() {
           </div>
         )}
       </div>
+
+      {!isEditing && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Assessments using "{source.name}"</h2>
+            <p className="text-[11px] text-gray-500">
+              Showing {(assessmentPage - 1) * assessmentLimit + 1} to {Math.min(assessmentPage * assessmentLimit, assessmentTotal)} of {assessmentTotal}
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-lg bg-white shadow-sm border border-gray-100">
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
+                <tr>
+                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Institution</th>
+                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Period</th>
+                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Amount</th>
+                  <th className="px-4 py-3 font-semibold uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 font-semibold uppercase tracking-wider text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {loadingAssessments && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 animate-pulse">
+                      Loading assessments...
+                    </td>
+                  </tr>
+                )}
+                {!loadingAssessments && assessments.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 italic">
+                      No assessments found for this income source.
+                    </td>
+                  </tr>
+                )}
+                {assessments.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {a.entity?.name || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 font-medium">
+                      {a.assessmentPeriod || "N/A"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-900 font-bold italic">
+                      ₦{Number(a.amountAssessed || 0).toLocaleString("en-NG")}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ring-1 ring-inset ${
+                        a.status === 'paid' || a.status === 'confirmed' ? "bg-green-50 text-green-700 ring-green-600/20" : "bg-gray-50 text-gray-700 ring-gray-600/20"
+                      }`}>
+                        {a.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/admin/assessments/${a.id}`}
+                        className="text-green-700 hover:text-green-900 font-bold underline decoration-green-700/30 underline-offset-4"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {assessmentTotal > assessmentLimit && (
+            <Pagination
+              currentPage={assessmentPage}
+              totalPages={Math.ceil(assessmentTotal / assessmentLimit)}
+              onPageChange={setAssessmentPage}
+              totalItems={assessmentTotal}
+              itemsPerPage={assessmentLimit}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

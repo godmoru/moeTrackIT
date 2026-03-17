@@ -103,6 +103,14 @@ module.exports = {
         createdAt: now,
         updatedAt: now,
       },
+      {
+        name: 'Account Officer',
+        slug: 'account_officer',
+        description: 'Account officer with access to expenditures and financial reports',
+        isSystem: true,
+        createdAt: now,
+        updatedAt: now,
+      },
     ]);
 
     // Insert permissions for scoped roles
@@ -279,7 +287,7 @@ module.exports = {
 
     // Fetch role and permission IDs to link them
     const [roles] = await queryInterface.sequelize.query(
-      `SELECT id, slug FROM "Roles" WHERE slug IN ('super_admin', 'system_admin', 'admin', 'hon_commissioner', 'perm_secretary', 'director', 'hq_cashier', 'officer', 'principal', 'area_education_officer')`
+      `SELECT id, slug FROM "Roles" WHERE slug IN ('super_admin', 'system_admin', 'admin', 'hon_commissioner', 'perm_secretary', 'director', 'hq_cashier', 'officer', 'principal', 'area_education_officer', 'account_officer')`
     );
     const [permissions] = await queryInterface.sequelize.query(
       `SELECT id, code FROM "Permissions" WHERE code IN (
@@ -311,7 +319,7 @@ module.exports = {
     ];
 
     // Assign to roles
-    ['super_admin', 'system_admin', 'admin', 'hon_commissioner', 'perm_secretary', 'director', 'hq_cashier', 'officer'].forEach(roleSlug => {
+    ['super_admin', 'system_admin', 'admin', 'hon_commissioner', 'perm_secretary', 'director', 'hq_cashier', 'officer', 'account_officer'].forEach(roleSlug => {
       if (roleMap[roleSlug]) {
         adminPermissions.forEach(code => {
           if (permMap[code]) {

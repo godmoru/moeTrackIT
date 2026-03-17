@@ -9,7 +9,7 @@ import {
     TableHead,
     TableCell,
 } from "./Table";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Pagination } from "./Pagination";
 
 export interface ColumnDef<T> {
     header: React.ReactNode;
@@ -120,74 +120,13 @@ export function DataTable<T extends { id?: number | string }>({
             </div>
 
             {totalPages > 0 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 sm:px-6">
-                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p className="text-sm text-gray-700">
-                                Showing <span className="font-medium">{filteredData.length > 0 ? startIndex + 1 : 0}</span> to <span className="font-medium">{Math.min(startIndex + ITEMS_PER_PAGE, filteredData.length)}</span> of <span className="font-medium">{filteredData.length}</span> results
-                            </p>
-                        </div>
-                        <div>
-                            <nav className="relative z-0 inline-flex shadow-sm -space-x-px" aria-label="Pagination">
-                                <button
-                                    onClick={() => setCurrentPage(1)}
-                                    disabled={currentPage === 1}
-                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-                                >
-                                    <span className="sr-only">First</span>
-                                    <ChevronsLeft className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-                                >
-                                    <span className="sr-only">Previous</span>
-                                    <ChevronLeft className="h-4 w-4" />
-                                </button>
-                                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                                    Page {currentPage} of {Math.max(1, totalPages)}
-                                </span>
-                                <button
-                                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-                                >
-                                    <span className="sr-only">Next</span>
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage(totalPages)}
-                                    disabled={currentPage === totalPages}
-                                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-                                >
-                                    <span className="sr-only">Last</span>
-                                    <ChevronsRight className="h-4 w-4" />
-                                </button>
-                            </nav>
-                        </div>
-                    </div>
-                    {/* Mobile View */}
-                    <div className="flex items-center justify-between sm:hidden w-full">
-                        <button
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-                        >
-                            Previous
-                        </button>
-                        <span className="text-sm text-gray-700">
-                            Page {currentPage} of {Math.max(1, totalPages)}
-                        </span>
-                        <button
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredData.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                />
             )}
         </div>
     );

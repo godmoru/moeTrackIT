@@ -23,6 +23,13 @@ router.get(
 );
 
 router.get(
+  "/performance-by-ownership",
+  authMiddleware,
+  requireRole("super_admin", "officer", "area_education_officer", "hq_cashier", "hon_commissioner", "dfa", "permanent_secretary"),
+  reportController.performanceByOwnership,
+);
+
+router.get(
   "/remittance-by-lga.csv",
   authMiddleware,
   requireRole("super_admin", "officer", "area_education_officer", "hq_cashier"),

@@ -7,8 +7,7 @@ module.exports = {
     // Check if the constraint already exists
     const [results] = await queryInterface.sequelize.query(
       `SELECT * FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
-       WHERE TABLE_SCHEMA = '${queryInterface.sequelize.config.database}' 
-       AND TABLE_NAME = 'Users' 
+       WHERE TABLE_NAME = 'Users' 
        AND COLUMN_NAME = 'mdaId' 
        AND CONSTRAINT_NAME = 'Users_mdaId_fkey'`,
       { transaction }

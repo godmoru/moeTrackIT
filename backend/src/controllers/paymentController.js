@@ -14,28 +14,62 @@ const {
 } = require('../services/paystackService');
 const remitaService = require('../services/remitaService');
 const emailService = require('../services/emailService');
+const paymentService = require('../services/paymentService');
 
 async function listPayments(req, res) {
   try {
+    const { status, lgaId, entityId, page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
     // Apply scope filtering for principals (own entity) and AEOs (assigned LGA)
     const scopeWhere = getPaymentScopeWhere(req.user);
 
-    const payments = await Payment.findAll({
-      where: scopeWhere,
+    const where = { ...scopeWhere };
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (entityId) {
+      where['$assessment.entityId$'] = entityId;
+    }
+
+    const assessmentWhere = {};
+    const entityWhere = {};
+    if (lgaId) {
+      entityWhere.lgaId = lgaId;
+    }
+
+    const { count, rows: payments } = await Payment.findAndCountAll({
+      where,
       order: [["paymentDate", "DESC"]],
       include: [
         {
           model: Assessment,
           as: "assessment",
+          required: Object.keys(entityWhere).length > 0 || !!scopeWhere['$assessment.entity.lgaId$'],
           include: [
-            { model: Entity, as: "entity" },
+            {
+              model: Entity,
+              as: "entity",
+              where: Object.keys(entityWhere).length > 0 ? entityWhere : undefined,
+              required: Object.keys(entityWhere).length > 0 || !!scopeWhere['$assessment.entity.lgaId$']
+            },
             { model: IncomeSource, as: "incomeSource" },
           ],
         },
         { model: User, as: "recorder" },
       ],
+      limit: Number(limit),
+      offset: offset,
+      distinct: true,
+      subQuery: false,
     });
-    res.json(payments);
+
+    res.json({
+      items: payments,
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to fetch payments" });
@@ -108,7 +142,10 @@ async function createPayment(req, res) {
       else if (totalPaid < assessed) newStatus = 'part_paid';
       else newStatus = 'paid';
 
-      await assessment.update({ status: newStatus }, { transaction: t });
+      await payment.update({ status: newStatus }, { transaction: t });
+
+      // Use shared service for status update
+      await paymentService.updateAssessmentStatus(assessmentId, t);
     }
 
     await t.commit();
@@ -595,7 +632,8 @@ async function verifyOnlinePayment(req, res) {
         if (totalPaid >= assessed) newStatus = 'paid';
         else if (totalPaid > 0) newStatus = 'part_paid';
 
-        await assessment.update({ status: newStatus }, { transaction: t });
+        // Use shared service for status update
+        await paymentService.updateAssessmentStatus(payment.assessmentId, t);
       }
 
       await t.commit();
@@ -704,7 +742,8 @@ async function paystackWebhook(req, res) {
             if (totalPaid >= assessed) newStatus = 'paid';
             else if (totalPaid > 0) newStatus = 'part_paid';
 
-            await assessment.update({ status: newStatus }, { transaction: t });
+            // Use shared service for status update
+            await paymentService.updateAssessmentStatus(payment.assessmentId, t);
           }
 
           await t.commit();
@@ -757,7 +796,6 @@ async function paystackWebhook(req, res) {
 async function getMyAssessments(req, res) {
   try {
     const user = req.user;
-    const { Op } = require('sequelize');
 
     let assessments;
 
@@ -775,7 +813,7 @@ async function getMyAssessments(req, res) {
           { model: IncomeSource, as: 'incomeSource' },
           { model: Payment, as: 'payments' },
         ],
-        order: [['createdAt', 'DESC']],
+        order: [['id', 'DESC']],
       });
     } else if (user.role === 'area_education_officer') {
       // AEO can see assessments for ALL entities in their assigned LGAs
@@ -805,7 +843,7 @@ async function getMyAssessments(req, res) {
         ],
         order: [
           [{ model: Entity, as: 'entity' }, 'name', 'ASC'],
-          ['createdAt', 'DESC'],
+          ['id', 'DESC'],
         ],
       });
     } else {
@@ -843,7 +881,7 @@ async function getMyAssessments(req, res) {
     res.json(result);
   } catch (err) {
     console.error('Failed to get assessments:', err);
-    res.status(500).json({ message: 'Failed to fetch assessments' });
+    res.status(500).json({ message: 'Failed to fetch assessments: ' + err.message });
   }
 }
 
@@ -1053,7 +1091,8 @@ module.exports = {
           if (totalPaid >= assessed) newStatus = 'paid';
           else if (totalPaid > 0) newStatus = 'part_paid';
 
-          await assessment.update({ status: newStatus }, { transaction: t });
+          // Use shared service for status update
+          await paymentService.updateAssessmentStatus(payment.assessmentId, t);
         }
 
         await t.commit();
@@ -1120,16 +1159,26 @@ module.exports = {
                 }
               });
               if (payment && payment.status !== 'confirmed') {
-                // Update payment and assessment (Reuse logic or extract to service)
-                // For brevity, duping logic for now or rely on user clicking "Verify" in UI
-                // But typically webhooks are for background updates.
+                const t = await sequelize.transaction();
+                try {
+                  await payment.update({
+                    status: 'confirmed',
+                    channel: 'remita',
+                    gatewayResponse: JSON.stringify(verification.raw),
+                    paymentDate: verification.paymentDate ? new Date(verification.paymentDate) : new Date(),
+                    amountPaid: Number(verification.amount || payment.amountPaid),
+                    rrr: verification.rrr || idToVerify
+                  }, { transaction: t });
 
-                // Actually, updating the payment here is good.
-                // Skipping full implementation to avoid huge duplication in this single tool call,
-                // assume Verify Endpoint will be hit by users mostly.
-                // Logging for now.
-                console.log(`Remita Webhook: Verified RRR ${rrr} as Successful`);
-                // Logic to update DB would go here.
+                  // Use shared service for status update
+                  await paymentService.updateAssessmentStatus(payment.assessmentId, t);
+
+                  await t.commit();
+                  console.log(`Remita Webhook: Verified and updated RRR ${rrr} / Order ${orderId}`);
+                } catch (updateErr) {
+                  await t.rollback();
+                  console.error(`Error updating payment from webhook for ${rrr}`, updateErr);
+                }
               }
             }
           } catch (e) {

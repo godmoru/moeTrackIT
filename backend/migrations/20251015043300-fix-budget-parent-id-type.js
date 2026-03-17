@@ -1,12 +1,12 @@
-export default {
+module.exports = {
   async up(queryInterface, Sequelize) {
     // First, remove the foreign key constraint if it exists
     await queryInterface.sequelize.query(
-      'ALTER TABLE `budgets` DROP FOREIGN KEY IF EXISTS `budgets_parent_id_foreign_idx`;'
+      'ALTER TABLE "Budgets" DROP CONSTRAINT IF EXISTS "budgets_parent_id_foreign_idx";'
     );
 
     // Change the parent_id column type to match the id column type (INTEGER)
-    await queryInterface.changeColumn('budgets', 'parent_id', {
+    await queryInterface.changeColumn('Budgets', 'parent_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
@@ -21,13 +21,12 @@ export default {
   async down(queryInterface, Sequelize) {
     // Revert the change if needed
     await queryInterface.sequelize.query(
-      'ALTER TABLE `budgets` DROP FOREIGN KEY IF EXISTS `budgets_parent_id_foreign_idx`;'
+      'ALTER TABLE "Budgets" DROP CONSTRAINT IF EXISTS "budgets_parent_id_foreign_idx";'
     );
     
-    await queryInterface.changeColumn('budgets', 'parent_id', {
-      type: Sequelize.CHAR(36).BINARY,
+    await queryInterface.changeColumn('Budgets', 'parent_id', {
+      type: Sequelize.CHAR(36),
       allowNull: true
     });
   }
-}
 };

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { YearlyRevenueBar, RevenueBySourcePie } from "@/components/Charts";
+import { OwnershipPerformance } from "@/components/dashboards/OwnershipPerformance";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
@@ -46,8 +47,24 @@ export default function LgaProfilePage() {
   const [activeTab, setActiveTab] = useState<"revenue" | "entities" | "years">("revenue");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
+    // Extract user role from token
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        try {
+          const parts = token.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1]));
+            setUserRole(payload.role || null);
+          }
+        } catch (e) {
+          console.error("Failed to decode token", e);
+        }
+      }
+    }
     if (!lgaId || Number.isNaN(lgaId)) {
       setError("Invalid LGA id");
       setLoading(false);
@@ -68,19 +85,19 @@ export default function LgaProfilePage() {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/institutions`, {
+          fetch(`${API_BASE}/institutions?lgaId=${lgaId}&limit=5000`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/assessments`, {
+          fetch(`${API_BASE}/assessments?lgaId=${lgaId}&limit=5000`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }),
-          fetch(`${API_BASE}/payments`, {
+          fetch(`${API_BASE}/payments?lgaId=${lgaId}&limit=5000`, {
             headers: {
               "Content-Type": "application/json",
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -93,10 +110,15 @@ export default function LgaProfilePage() {
           throw new Error(body.message || "Failed to load LGA profile data");
         }
 
-        const lgasBody: Lga[] = await lgasRes.json();
-        const entitiesBody: Entity[] = await entitiesRes.json();
-        const assessmentsBody: AssessmentLite[] = await assessmentsRes.json();
-        const paymentsBody: PaymentLite[] = await paymentsRes.json();
+        const lgasBodyFull = await lgasRes.json();
+        const entitiesBodyFull = await entitiesRes.json();
+        const assessmentsBodyFull = await assessmentsRes.json();
+        const paymentsBodyFull = await paymentsRes.json();
+
+        const lgasBody: Lga[] = lgasBodyFull.items || lgasBodyFull;
+        const entitiesBody: Entity[] = entitiesBodyFull.items || entitiesBodyFull;
+        const assessmentsBody: AssessmentLite[] = assessmentsBodyFull.items || assessmentsBodyFull;
+        const paymentsBody: PaymentLite[] = paymentsBodyFull.items || paymentsBodyFull;
 
         const currentLga = lgasBody.find((x) => x.id === lgaId) || null;
         if (!currentLga) {
@@ -125,15 +147,15 @@ export default function LgaProfilePage() {
     );
   }
 
-  const lgaEntities = entities.filter(
-    (e) => (e.lga || "").toLowerCase() === (lga?.name || "").toLowerCase(),
-  );
+  // Since we fetch with lgaId filter, data is mostly pre-filtered.
+  // We keep the filter logic to ensure local consistency.
+  const lgaEntities = entities;
   const lgaEntityIds = new Set(lgaEntities.map((e) => e.id));
 
-  const lgaAssessments = assessments.filter((a) => lgaEntityIds.has(a.entityId));
+  const lgaAssessments = assessments;
   const lgaAssessmentIds = new Set(lgaAssessments.map((a) => a.id));
 
-  const lgaPayments = payments.filter((p) => lgaAssessmentIds.has(p.assessmentId));
+  const lgaPayments = payments;
 
   const totalRevenue = lgaPayments.reduce((sum, p) => sum + Number(p.amountPaid || 0), 0);
 
@@ -210,33 +232,30 @@ export default function LgaProfilePage() {
             <button
               type="button"
               onClick={() => setActiveTab("revenue")}
-              className={`border-b-2 px-3 py-2 font-medium ${
-                activeTab === "revenue"
-                  ? "border-green-700 text-green-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`border-b-2 px-3 py-2 font-medium ${activeTab === "revenue"
+                ? "border-green-700 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               Revenue
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("entities")}
-              className={`border-b-2 px-3 py-2 font-medium ${
-                activeTab === "entities"
-                  ? "border-green-700 text-green-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`border-b-2 px-3 py-2 font-medium ${activeTab === "entities"
+                ? "border-green-700 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               Institutions
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("years")}
-              className={`border-b-2 px-3 py-2 font-medium ${
-                activeTab === "years"
-                  ? "border-green-700 text-green-700"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`border-b-2 px-3 py-2 font-medium ${activeTab === "years"
+                ? "border-green-700 text-green-700"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               Yearly Remittances
             </button>
@@ -273,21 +292,29 @@ export default function LgaProfilePage() {
                 </div>
               </div>
 
-              {yearlyLabels.length > 0 && (
-                <div className="mt-4 rounded-lg bg-white p-4 shadow-sm">
-                  <YearlyRevenueBar labels={yearlyLabels} values={yearlyValues} />
-                </div>
-              )}
+              <div className="mt-4 grid gap-4 lg:grid-cols-12">
+                {["super_admin", "admin", "system_admin"].includes(userRole || "") && (
+                  <div className="lg:col-span-5">
+                    {revenueBySourceLabels.length > 0 ? (
+                      <div className="rounded-lg bg-white p-4 shadow-sm h-full border border-gray-100">
+                        <RevenueBySourcePie
+                          title="Revenue by Income Source"
+                          labels={revenueBySourceLabels}
+                          values={revenueBySourceValues}
+                        />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg bg-white p-4 shadow-sm h-full border border-gray-100 flex items-center justify-center text-gray-400 text-xs">
+                        No revenue source data available
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {revenueBySourceLabels.length > 0 && (
-                <div className="mt-4 rounded-lg bg-white p-4 shadow-sm">
-                  <RevenueBySourcePie
-                    title="Revenue by Income Source"
-                    labels={revenueBySourceLabels}
-                    values={revenueBySourceValues}
-                  />
+                <div className={["super_admin", "admin", "system_admin"].includes(userRole || "") ? "lg:col-span-7" : "lg:col-span-12"}>
+                  <OwnershipPerformance lgaId={lgaId} title="Ownership Breakdown" />
                 </div>
-              )}
+              </div>
             </>
           )}
 
@@ -354,8 +381,8 @@ export default function LgaProfilePage() {
                               <td key={year} className="px-3 py-2 text-xs">
                                 {sums[year]
                                   ? `₦${sums[year].toLocaleString("en-NG", {
-                                      maximumFractionDigits: 2,
-                                    })}`
+                                    maximumFractionDigits: 2,
+                                  })}`
                                   : "-"}
                               </td>
                             ))}

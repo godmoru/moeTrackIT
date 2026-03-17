@@ -150,20 +150,42 @@ export default function UsersPage() {
           columns={[
             {
               header: "Name",
-              cell: (user) => (
-                <div className="flex items-center">
-                  <div className="h-10 w-10 flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <UserIcon className="h-6 w-6 text-gray-500" />
+              cell: (user) => {
+                const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000/api/v1';
+                const baseUrl = API_BASE.split('/api/v1')[0];
+                const fullImageUrl = user.profileImage 
+                  ? user.profileImage.startsWith('http') 
+                    ? user.profileImage 
+                    : `${baseUrl}${user.profileImage}`
+                  : null;
+
+                return (
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 flex-shrink-0">
+                      {fullImageUrl ? (
+                        <img 
+                          src={fullImageUrl} 
+                          alt="" 
+                          className="h-10 w-10 rounded-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = ''; // Clear on error
+                          }}
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                          <UserIcon className="h-6 w-6 text-gray-500" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-4">
+                      <div className="font-medium text-gray-900">{user.name}</div>
+                      <div className="text-gray-500 text-xs">{user.email}</div>
                     </div>
                   </div>
-                  <div className="ml-4">
-                    <div className="font-medium text-gray-900">{user.name}</div>
-                    <div className="text-gray-500 text-xs">{user.email}</div>
-                  </div>
-                </div>
-              ),
+                );
+              },
             },
+
             {
               header: "Role",
               cell: (user) => (

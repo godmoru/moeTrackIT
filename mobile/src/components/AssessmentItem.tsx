@@ -11,6 +11,9 @@ interface AssessmentItemProps {
 
 export function AssessmentItem({ assessment, onPress }: AssessmentItemProps) {
   const statusColors = getStatusColor(assessment.status);
+  
+  // Find successful payment to get RRR and date paid
+  const successfulPayment = assessment.payments?.find(p => p.status === 'paid' || p.status === 'confirmed');
 
   return (
     <TouchableOpacity
@@ -41,8 +44,22 @@ export function AssessmentItem({ assessment, onPress }: AssessmentItemProps) {
           </Text>
         </View>
         <View style={styles.dateContainer}>
-          <Ionicons name="calendar-outline" size={14} color="#9ca3af" />
-          <Text style={styles.dueDate}>Due: {formatDate(assessment.dueDate)}</Text>
+          {assessment.status === 'paid' && successfulPayment ? (
+            <View style={styles.paidInfo}>
+              {successfulPayment.rrr && (
+                <Text style={styles.rrrText}>RRR: {successfulPayment.rrr}</Text>
+              )}
+              <View style={styles.dateRow}>
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text style={styles.paidDate}>Paid: {formatDate(successfulPayment.paymentDate)}</Text>
+              </View>
+            </View>
+          ) : (
+            <>
+              <Ionicons name="calendar-outline" size={14} color="#9ca3af" />
+              <Text style={styles.dueDate}>Due: {formatDate(assessment.dueDate)}</Text>
+            </>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -118,6 +135,25 @@ const styles = StyleSheet.create({
   dueDate: {
     fontSize: 12,
     color: '#6b7280',
+    marginLeft: 4,
+  },
+  paidInfo: {
+    alignItems: 'flex-end',
+  },
+  rrrText: {
+    fontSize: 11,
+    color: '#3b82f6',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paidDate: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '600',
     marginLeft: 4,
   },
 });

@@ -12,7 +12,7 @@ module.exports = {
       "SELECT id, code FROM \"IncomeSources\" WHERE code IN ('NSR','ALR')"
     );
     const [userRows] = await queryInterface.sequelize.query(
-      "SELECT id, email FROM \"Users\" WHERE email = 'admin@benue-edu.gov'"
+      "SELECT id, email FROM \"Users\" WHERE email = 'admin@edu.be.gov.ng'"
     );
 
     const makurdi = entityRows.find((e) => e.name === 'Makurdi Government Secondary School');
@@ -32,7 +32,7 @@ module.exports = {
         status: 'paid',
         dueDate: now,
         assessmentPeriod: '2025',
-        meta: { notes: 'Initial registration' },
+        meta: JSON.stringify({ notes: 'Initial registration' }),
         createdBy: admin.id,
         createdAt: now,
         updatedAt: now,
@@ -48,7 +48,7 @@ module.exports = {
         status: 'part_paid',
         dueDate: now,
         assessmentPeriod: '2025',
-        meta: { notes: 'Annual license renewal' },
+        meta: JSON.stringify({ notes: 'Annual license renewal' }),
         createdBy: admin.id,
         createdAt: now,
         updatedAt: now,
@@ -60,7 +60,7 @@ module.exports = {
     await queryInterface.bulkInsert('Assessments', assessments, {});
 
     const [assRows] = await queryInterface.sequelize.query(
-      "SELECT id, amountAssessed, status FROM \"Assessments\" WHERE assessmentPeriod = '2025'"
+      "SELECT id, \"amountAssessed\", status FROM \"Assessments\" WHERE \"assessmentPeriod\" = '2025'"
     );
 
     const payments = [];

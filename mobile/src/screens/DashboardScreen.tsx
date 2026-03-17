@@ -209,7 +209,7 @@ export function DashboardScreen() {
             value={totalAssessments}
             icon="document-text-outline"
             color="blue"
-            trend={8.2}
+            // trend={8.2}
           />
         </View>
         <View style={styles.statItem}>
@@ -239,7 +239,7 @@ export function DashboardScreen() {
             color="blue"
           />
           <ProgressRing
-            value={78}
+            value={totalAssessments > 0 ? Math.round((Number(paidCount) / totalAssessments) * 100) : 0}
             max={100}
             label="Efficiency"
             color="orange"

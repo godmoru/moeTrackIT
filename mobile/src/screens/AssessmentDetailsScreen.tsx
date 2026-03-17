@@ -60,6 +60,10 @@ export function AssessmentDetailsScreen({ route, navigation }: Props) {
     };
 
     const statusStyle = getStatusColor(assessment.status);
+    
+    // Find successful payment to get RRR and date paid
+    const successfulPayment = assessment.payments?.find(p => p.status === 'paid' || p.status === 'confirmed');
+    const successfulRrr = successfulPayment?.rrr;
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
@@ -70,6 +74,12 @@ export function AssessmentDetailsScreen({ route, navigation }: Props) {
                         {formatCurrency(assessment.amountAssessed)}
                     </Text>
                 </View>
+                {assessment.status === 'paid' && successfulPayment?.rrr && (
+                    <View style={styles.prominentRrrContainer}>
+                        <Text style={styles.prominentRrrLabel}>REMITA RRR</Text>
+                        <Text style={styles.prominentRrrValue}>{successfulRrr}</Text>
+                    </View>
+                )}
                 <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
                     <Text style={[styles.statusText, { color: statusStyle.text }]}>
                         {assessment.status}
@@ -102,11 +112,37 @@ export function AssessmentDetailsScreen({ route, navigation }: Props) {
                 </View>
 
                 <View style={styles.row}>
+                    <Text style={styles.label}>Period</Text>
+                    <Text style={styles.value}>
+                        {assessment.assessmentPeriod || (assessment.assessmentYear ? `${assessment.assessmentTerm ? `Term ${assessment.assessmentTerm}, ` : ''}${assessment.assessmentYear}` : '-')}
+                    </Text>
+                </View>
+
+                <View style={styles.row}>
                     <Text style={styles.label}>Due Date</Text>
                     <Text style={styles.value}>
                         {new Date(assessment.dueDate).toLocaleDateString()}
                     </Text>
                 </View>
+
+                {assessment.status === 'paid' && successfulPayment && (
+                    <>
+                        {successfulPayment.rrr && (
+                            <View style={styles.row}>
+                                <Text style={styles.label}>RRR</Text>
+                                <Text style={[styles.value, { color: '#3b82f6' }]}>
+                                    {successfulPayment.rrr}
+                                </Text>
+                            </View>
+                        )}
+                        <View style={styles.row}>
+                            <Text style={styles.label}>Date Paid</Text>
+                            <Text style={[styles.value, { color: '#059669' }]}>
+                                {new Date(successfulPayment.paymentDate).toLocaleDateString()}
+                            </Text>
+                        </View>
+                    </>
+                )}
             </View>
 
             <View style={styles.section}>
@@ -179,6 +215,29 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         textTransform: 'capitalize',
+    },
+    prominentRrrContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+        backgroundColor: '#eff6ff',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#bfdbfe',
+    },
+    prominentRrrLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#1d4ed8',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
+    prominentRrrValue: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#2563eb',
+        letterSpacing: 2,
     },
     section: {
         backgroundColor: '#fff',

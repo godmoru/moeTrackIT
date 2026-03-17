@@ -113,13 +113,13 @@ export default function RevenuePage() {
         throw new Error("Failed to load entities or assessments");
       }
 
-      const entitiesData = await entitiesRes.json();
-      const assessmentsData = await assessmentsRes.json();
-      const incomeSourceData = await incomeSourceRes.json();
+      const entitiesDataFull = await entitiesRes.json();
+      const assessmentsDataFull = await assessmentsRes.json();
+      const incomeSourceDataFull = await incomeSourceRes.json();
 
-      setEntities(entitiesData);
-      setAssessments(assessmentsData);
-      setIncomeSources(incomeSourceData);
+      setEntities(entitiesDataFull.items || entitiesDataFull);
+      setAssessments(assessmentsDataFull.items || assessmentsDataFull);
+      setIncomeSources(incomeSourceDataFull.items || incomeSourceDataFull);
     } catch (err) {
       console.error(err);
     }

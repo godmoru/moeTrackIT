@@ -12,13 +12,16 @@ interface User {
   email: string;
   role: UserRole;
   name: string;
+  profileImage?: string; // Added
   permissions?: string[];
   entityId?: string;
   lgaId?: string;
+  lga?: string;
 }
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void; // Added
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -26,6 +29,7 @@ interface AuthContextType {
   hasRole: (roles: UserRole | UserRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
 }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -54,8 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
           if (userData) {
+            // Construct full profile image URL
+            const baseUrl = API_BASE.split('/api/v1')[0];
+            if (userData.profileImage && !userData.profileImage.startsWith('http')) {
+              userData.profileImage = `${baseUrl}${userData.profileImage}`;
+            }
             setUser(userData);
           } else {
+
             // Invalid token, clear it
             localStorage.removeItem('authToken');
           }
@@ -86,7 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('authToken', data.token);
 
         // Set the user
+        const baseUrl = API_BASE.split('/api/v1')[0];
+        if (data.user && data.user.profileImage && !data.user.profileImage.startsWith('http')) {
+          data.user.profileImage = `${baseUrl}${data.user.profileImage}`;
+        }
         setUser(data.user);
+
 
         // Redirect to dashboard or intended URL
         router.push('/dashboard');
@@ -127,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     user,
+    setUser, // Added
     loading,
     login,
     logout,
@@ -134,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hasRole,
     hasPermission,
   };
+
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

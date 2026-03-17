@@ -7,6 +7,7 @@ const router = express.Router();
 
 // Apply authentication to all routes
 router.use(authMiddleware);
+router.use(requireRole('super_admin', 'admin', 'system_admin', 'account_officer', 'officer'));
 
 // Validation rules
 const createExpenditureValidation = [

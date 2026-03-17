@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+
+
 import { ReactNode, useEffect, useState } from "react";
 import { UserHeader } from "@/components/UserHeader";
 
@@ -13,9 +16,9 @@ const REVENUE_ROLES = ["super_admin", "admin", "officer", "cashier", "account_of
 // Navigation items with role-based visibility
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", title: "Overview", roles: ALL_ROLES },
-  { href: "/admin/income", label: "Income", title: "Income management", roles: ALL_ROLES, hasSubmenu: true },
+  { href: "/admin/income", label: "Income", title: "Income management", roles: REVENUE_ROLES, hasSubmenu: true },
   { href: "/admin/institutions", label: "Institutions", title: "Institution directory", roles: ALL_ROLES },
-  { href: "/admin/expenditures", label: "Expenditures", title: "Expenditure management", roles: ADMIN_ROLES, hasSubmenu: true },
+  { href: "/admin/expenditures", label: "Expenditures", title: "Expenditure management", roles: ADMIN_ROLES.concat(["account_officer", "officer"]), hasSubmenu: true },
   { href: "/admin/payments", label: "Payments", title: "Payments list", roles: ALL_ROLES },
   { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas", roles: ADMIN_ROLES.concat(["officer", "area_education_officer"]) },
   { href: "/admin/reports", label: "Reports", title: "Reporting and analytics", roles: ALL_ROLES },
@@ -25,16 +28,16 @@ const navItems = [
 // Income sub-menu items
 const incomeSubItems = [
   { href: "/admin/assessments", label: "Assessments", title: "Assessments management" },
-  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources" },
+  { href: "/admin/income-sources", label: "Income Sources", title: "Manage income sources", roles: ADMIN_ROLES },
 ];
 
 // Expenditure sub-menu items
 const expenditureSubItems = [
-  { href: "/admin/expenditures", label: "All Expenditures", title: "View all expenditures" },
-  { href: "/admin/expenditures/categories", label: "Categories", title: "Manage expenditure categories" },
-  { href: "/admin/expenditures/retirements", label: "Retirements", title: "Expenditure retirements" },
-  { href: "/admin/budgets", label: "Budget", title: "Manage expenditure budget" },
-  { href: "/admin/budget-line-items", label: "Budget Line Items", title: "Manage budget line items" },
+  { href: "/admin/expenditures", label: "All Expenditures", title: "View all expenditures", roles: ADMIN_ROLES.concat(["account_officer", "officer"]) },
+  { href: "/admin/expenditures/categories", label: "Categories", title: "Manage expenditure categories", roles: ADMIN_ROLES },
+  { href: "/admin/expenditures/retirements", label: "Retirements", title: "Expenditure retirements", roles: ADMIN_ROLES.concat(["account_officer", "officer"]) },
+  { href: "/admin/budgets", label: "Budget", title: "Manage expenditure budget", roles: ADMIN_ROLES },
+  { href: "/admin/budget-line-items", label: "Budget Line Items", title: "Manage budget line items", roles: ADMIN_ROLES },
 ];
 
 function NavIcon({ href }: { href: string }) {
@@ -158,52 +161,59 @@ interface UserInfo {
   name: string;
   email: string;
   role: string;
+  profileImage?: string;
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, loading: authLoading } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [incomeExpanded, setIncomeExpanded] = useState(false);
   const [expendituresExpanded, setExpendituresExpanded] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+
+  // Derived state from AuthContext
+  const userRole = user?.role || null;
+  const userPermissions = user?.permissions || null;
+  const userInfo = user ? {
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    profileImage: user.profileImage
+  } : null;
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const token = localStorage.getItem("authToken");
-    if (!token) {
+    if (authLoading) return;
+    if (!user) {
       router.replace("/login");
-      return;
+    }
+  }, [user, authLoading, router]);
+
+
+
+  function canSeeNavItem(item: any): boolean {
+    if (!userRole) return true;
+
+    // Super admin sees everything
+    if (userRole === "super_admin") return true;
+
+    // If specific permission is required, check it
+    if (item.permission) {
+      if (!userPermissions) return false; // Hide if we have permission required but haven't loaded them
+      return userPermissions.includes(item.permission);
     }
 
-    // Decode JWT payload to extract user info for UI
-    try {
-      const parts = token.split(".");
-      if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1]));
-        if (payload) {
-          setUserRole(payload.role || null);
-          setUserInfo({
-            name: payload.name || payload.email?.split("@")[0] || "User",
-            email: payload.email || "",
-            role: payload.role || "user",
-          });
-        }
-      }
-    } catch {
-      // If decoding fails, keep userRole as null and rely on backend auth for protection
+    // Default to role-based check if roles provided
+    if (item.roles) {
+      return item.roles.includes(userRole);
     }
-  }, [router]);
 
-  function canSeeNavItem(item: typeof navItems[0]): boolean {
-    if (!userRole) return true; // Show all if role not loaded yet
-    return item.roles.includes(userRole);
+    return true;
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="hidden w-60 flex-col bg-green-800 p-4 text-sm text-green-50 md:flex">
+      <aside className="sticky top-0 h-screen hidden w-60 flex-col bg-green-800 p-4 text-sm text-green-50 md:flex">
         <div className="mb-6">
           <div className="flex items-center gap-3">
             <img className="h-12 w-12 rounded-full" src="/benue.png" alt="Benue State" />
@@ -211,7 +221,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <div className="text-xs font-semibold uppercase tracking-wide text-green-100">
                 Benue State
               </div>
-              <div className="text-[11px] text-green-100">Education Revenue</div>
+              <div className="text-[11px] text-green-100">Education Revenue Management System</div>
             </div>
           </div>
         </div>
@@ -220,7 +230,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             const active = pathname.startsWith(item.href);
             const isIncome = item.href === "/admin/income";
             const isExpenditures = item.href === "/admin/expenditures";
-            
+
             return (
               <div key={item.href}>
                 <Link
@@ -243,10 +253,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <NavIcon href={item.href} />
                     <span>{item.label}</span>
                     {(isIncome || isExpenditures) && (
-                      <svg 
-                        className={`ml-auto h-3 w-3 transition-transform ${(isIncome ? incomeExpanded : expendituresExpanded) ? "rotate-180" : ""}`} 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
+                      <svg
+                        className={`ml-auto h-3 w-3 transition-transform ${(isIncome ? incomeExpanded : expendituresExpanded) ? "rotate-180" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
                         stroke="currentColor"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -257,7 +267,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 {/* Income Sub-menu */}
                 {isIncome && incomeExpanded && (
                   <div className="ml-4 mt-1 space-y-1 border-l border-green-700 pl-3">
-                    {incomeSubItems.map((subItem) => {
+                    {incomeSubItems.filter(sub => canSeeNavItem(sub)).map((subItem) => {
                       const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                       return (
                         <Link
@@ -276,7 +286,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 {/* Expenditures Sub-menu */}
                 {isExpenditures && expendituresExpanded && (
                   <div className="ml-4 mt-1 space-y-1 border-l border-green-700 pl-3">
-                    {expenditureSubItems.map((subItem) => {
+                    {expenditureSubItems.filter(sub => canSeeNavItem(sub)).map((subItem) => {
                       const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                       return (
                         <Link
@@ -317,7 +327,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         )}
       </aside>
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="border-b bg-white px-4 py-2 text-sm">
+        <header className="sticky top-0 z-20 border-b bg-white px-4 py-2 text-sm">
+
           <div className="flex items-center justify-between md:hidden">
             <button
               type="button"
@@ -331,6 +342,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               userName={userInfo?.name}
               userEmail={userInfo?.email}
               userRole={userInfo?.role}
+              profileImage={userInfo?.profileImage}
             />
           </div>
           <div className="hidden items-center justify-between md:flex">
@@ -339,6 +351,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               userName={userInfo?.name}
               userEmail={userInfo?.email}
               userRole={userInfo?.role}
+              profileImage={userInfo?.profileImage}
             />
           </div>
           {mobileNavOpen && (
@@ -352,8 +365,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <Link
                       href={item.href}
                       className={`block rounded-md px-3 py-2 font-medium transition-colors ${active
-                          ? "bg-green-100 text-green-800"
-                          : "text-gray-700 hover:bg-gray-50"
+                        ? "bg-green-100 text-green-800"
+                        : "text-gray-700 hover:bg-gray-50"
                         }`}
                       onClick={(e) => {
                         if (isIncome || isExpenditures) {
@@ -373,10 +386,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                         <NavIcon href={item.href} />
                         <span>{item.label}</span>
                         {(isIncome || isExpenditures) && (
-                          <svg 
-                            className={`ml-auto h-3 w-3 transition-transform ${(isIncome ? incomeExpanded : expendituresExpanded) ? "rotate-180" : ""}`} 
-                            fill="none" 
-                            viewBox="0 0 24 24" 
+                          <svg
+                            className={`ml-auto h-3 w-3 transition-transform ${(isIncome ? incomeExpanded : expendituresExpanded) ? "rotate-180" : ""}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
                             stroke="currentColor"
                           >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -387,7 +400,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     {/* Mobile Income Sub-menu */}
                     {isIncome && incomeExpanded && (
                       <div className="ml-4 mt-1 space-y-1 border-l border-gray-200 pl-3">
-                        {incomeSubItems.map((subItem) => {
+                        {incomeSubItems.filter(sub => canSeeNavItem(sub)).map((subItem) => {
                           const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                           return (
                             <Link
@@ -407,7 +420,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     {/* Mobile Expenditures Sub-menu */}
                     {isExpenditures && expendituresExpanded && (
                       <div className="ml-4 mt-1 space-y-1 border-l border-gray-200 pl-3">
-                        {expenditureSubItems.map((subItem) => {
+                        {expenditureSubItems.filter(sub => canSeeNavItem(sub)).map((subItem) => {
                           const subActive = pathname === subItem.href || pathname.startsWith(subItem.href + "/");
                           return (
                             <Link
@@ -437,7 +450,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {/* Main quick links */}
           {[
             { label: "Dashboard", href: "/admin/dashboard" },
-            { label: "Income", href: "/admin/income" },
+            { label: "Income", href: "/admin/assessments" },
             { label: "Payments", href: "/admin/payments" },
           ].map((link) => {
             const active = pathname.startsWith(link.href);

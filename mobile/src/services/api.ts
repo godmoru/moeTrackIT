@@ -202,6 +202,7 @@ class ApiService {
     endDate?: string;
     lgaId?: number;
     entityId?: number;
+    status?: string;
   }): Promise<{ items: Payment[]; total: number }> {
     const query = new URLSearchParams();
     if (params?.page) query.set('page', params.page.toString());
@@ -210,6 +211,7 @@ class ApiService {
     if (params?.endDate) query.set('endDate', params.endDate);
     if (params?.lgaId) query.set('lgaId', params.lgaId.toString());
     if (params?.entityId) query.set('entityId', params.entityId.toString());
+    if (params?.status) query.set('status', params.status);
 
     const res = await fetch(`${API_BASE}/payments?${query}`, {
       headers: await this.getHeaders(),

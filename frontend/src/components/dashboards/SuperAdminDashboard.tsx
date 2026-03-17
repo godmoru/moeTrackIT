@@ -8,6 +8,7 @@ import {
   ProgressRing,
 } from "@/components/Charts";
 import Link from "next/link";
+import { OwnershipPerformance } from "./OwnershipPerformance";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
 
@@ -197,12 +198,24 @@ export function SuperAdminDashboard() {
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Assessment Status Donut */}
             {data?.statusCounts?.length ? (
-              <div className="rounded-xl bg-white p-5 shadow-sm">
-                <DonutChart
-                  data={data.statusCounts}
-                  title="Assessments by Status"
-                  centerLabel="Total"
-                />
+              <div className="rounded-xl bg-white p-5 shadow-sm border border-gray-100">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <DonutChart
+                    data={data.statusCounts}
+                    title="Assessments by Status"
+                    centerLabel="Total"
+                  />
+                  <div className="flex flex-col justify-center space-y-4">
+                    <div className="text-xs font-medium text-gray-500 uppercase">Status Breakdown</div>
+                    <ComparisonBarChart
+                      title=""
+                      data={data.statusCounts.map(s => ({
+                        label: s.status.charAt(0).toUpperCase() + s.status.slice(1),
+                        value: Number(s.count)
+                      }))}
+                    />
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -221,6 +234,9 @@ export function SuperAdminDashboard() {
             ) : null}
           </div>
 
+          {/* Ownership Performance */}
+          <OwnershipPerformance from={from} to={to} />
+
           {/* Progress Indicators */}
           <div className="rounded-xl bg-white p-5 shadow-sm">
             <div className="text-sm font-semibold text-gray-700 mb-4">Collection Targets</div>
@@ -233,7 +249,7 @@ export function SuperAdminDashboard() {
                 size="lg"
               />
               <ProgressRing
-                value={data?.statusCounts?.find(s => s.status === "paid")?.count as number || 0}
+                value={Number(data?.statusCounts?.find(s => s.status.toLowerCase() === "paid")?.count || 0)}
                 max={data?.statusCounts?.reduce((sum, s) => sum + Number(s.count), 0) || 1}
                 label="Paid Assessments"
                 color="blue"

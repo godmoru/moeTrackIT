@@ -43,6 +43,7 @@ module.exports = (sequelize, DataTypes) => {
       entityId: DataTypes.INTEGER,
       resetToken: DataTypes.STRING,
       resetTokenExpiry: DataTypes.DATE,
+      profileImage: DataTypes.STRING,
     },
     {
       sequelize,

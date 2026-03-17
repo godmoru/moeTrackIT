@@ -16,6 +16,8 @@ import { formatCurrency } from '../utils/format';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+const STATUS_FILTERS = ['all', 'pending', 'confirmed', 'paid', 'failed'];
+
 export function PaymentsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -24,10 +26,15 @@ export function PaymentsScreen() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const loadPayments = useCallback(async (pageNum: number, refresh = false) => {
     try {
-      const res = await api.getPayments({ page: pageNum, limit: 20 });
+      const res = await api.getPayments({
+        page: pageNum,
+        limit: 20,
+        status: statusFilter === 'all' ? undefined : statusFilter
+      });
       const items = res.items || [];
 
       if (refresh) {
@@ -47,8 +54,10 @@ export function PaymentsScreen() {
   }, []);
 
   useEffect(() => {
+    setLoading(true);
+    setPage(1);
     loadPayments(1, true);
-  }, [loadPayments]);
+  }, [loadPayments, statusFilter]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -83,14 +92,31 @@ export function PaymentsScreen() {
       </View>
 
       <View style={styles.filterRow}>
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="filter-outline" size={18} color="#6b7280" />
-          <Text style={styles.filterText}>Filter</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterButton}>
-          <Ionicons name="calendar-outline" size={18} color="#6b7280" />
-          <Text style={styles.filterText}>Date Range</Text>
-        </TouchableOpacity>
+        <FlatList
+          horizontal
+          data={STATUS_FILTERS}
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                statusFilter === item && styles.filterChipActive,
+              ]}
+              onPress={() => setStatusFilter(item)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  statusFilter === item && styles.filterChipTextActive,
+                ]}
+              >
+                {item.charAt(0).toUpperCase() + item.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.filterList}
+        />
       </View>
     </View>
   );
@@ -199,16 +225,29 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 10,
   },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingVertical: 8,
+  filterList: {
+    gap: 8,
+  },
+  filterChip: {
+    paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    gap: 6,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  filterChipActive: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  filterChipTextActive: {
+    color: '#fff',
   },
   filterText: {
     fontSize: 13,

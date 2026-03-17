@@ -643,7 +643,7 @@ async function exportRemittanceByLgaPdf(req, res) {
     const lineHeight = 16;
 
     items.forEach((item) => {
-      if (y > doc.page.height - 60) {
+      if (y > doc.page.height - 150) { // Safety margin for last-page signature cards
         doc.addPage();
         y = 60;
       }
@@ -785,6 +785,65 @@ async function exportAssessmentsExcel(req, res) {
   }
 }
 
+async function performanceByOwnership(req, res) {
+  try {
+    const { from, to, lga, lgaId } = req.query;
+    const { getPaymentScopeWhere } = require('../middleware/scope');
+    const paymentScope = getPaymentScopeWhere(req.user);
+
+    const wherePayments = {
+      ...paymentScope,
+      status: { [Op.in]: ['confirmed', 'paid'] }
+    };
+
+    if (from) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [Op.gte]: from };
+    if (to) wherePayments.paymentDate = { ...(wherePayments.paymentDate || {}), [Op.lte]: to };
+
+    const entityWhere = {};
+    if (lga) entityWhere.lga = lga;
+    if (lgaId) entityWhere.lgaId = lgaId;
+
+    const hasLgaFilter = Object.keys(entityWhere).length > 0;
+
+    const items = await Payment.findAll({
+      attributes: [
+        [sequelize.col('assessment.entity.ownership'), 'ownership'],
+        [sequelize.fn('SUM', sequelize.col('amountPaid')), 'totalAmount'],
+        [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('assessment.entity.id'))), 'schoolCount'],
+      ],
+      where: wherePayments,
+      include: [
+        {
+          model: Assessment,
+          as: 'assessment',
+          attributes: [],
+          required: hasLgaFilter || !!paymentScope['$assessment.entity.lgaId$'],
+          include: [{
+            model: Entity,
+            as: 'entity',
+            attributes: [],
+            where: hasLgaFilter ? entityWhere : undefined,
+            required: hasLgaFilter || !!paymentScope['$assessment.entity.lgaId$']
+          }]
+        }
+      ],
+      group: ['assessment.entity.ownership'],
+      raw: true,
+    });
+
+    res.json({
+      items: items.map(item => ({
+        ownership: item.ownership || 'Other',
+        totalAmount: Number(item.totalAmount || 0),
+        schoolCount: Number(item.schoolCount || 0)
+      }))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to generate ownership performance report' });
+  }
+}
+
 async function exportAssessmentsPdf(req, res) {
   try {
     const {
@@ -846,7 +905,8 @@ async function exportAssessmentsPdf(req, res) {
     const doc = new PDFDocument({
       margin: 40,
       layout: 'landscape',
-      size: 'A4'
+      size: 'A4',
+      bufferPages: true
     });
 
     res.setHeader("Content-Type", "application/pdf");
@@ -870,9 +930,9 @@ async function exportAssessmentsPdf(req, res) {
       console.warn("Logo not found at", logoPath, "- skipping logo in PDF");
     }
 
-    doc.fontSize(14).font('Helvetica-Bold').text("Benue State Ministry of Education & Knowledge Management", { align: "center" });
+    doc.fontSize(15).font('Helvetica-Bold').text("BENUE STATE MINISTRY OF EDUCATION AND KNOWLEDGE MANAGEMENT", { align: "center" });
     doc.moveDown(0.2);
-    doc.fontSize(10).font('Helvetica').text("Education Revenue Remitancee & Management System", { align: "center" });
+    doc.fontSize(12).font('Helvetica').text("Education Revenue Remitancee & Management System", { align: "center" });
     doc.moveDown(1.5);
 
     doc.fontSize(18).font('Helvetica-Bold').text("ASSESSMENT REPORT", { align: "center" });
@@ -928,7 +988,7 @@ async function exportAssessmentsPdf(req, res) {
       doc.text(a.entity?.lga || "-", 225, y, { width: 80 });
       doc.text(a.incomeSource?.name.slice(0, 30) || "-", 310, y, { width: 120 });
       doc.text(a.assessmentPeriod || "-", 435, y, { width: 60 });
-      doc.text(amount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), 500, y, { width: 80, align: 'right' });
+      doc.text(`NGN ${amount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`, 500, y, { width: 80, align: 'right' });
       doc.text((a.status || "-").toUpperCase(), 590, y, { width: 60 });
       doc.text(rrr, 655, y, { width: 80 });
       doc.text(paidAt, 740, y, { width: 80 });
@@ -942,32 +1002,52 @@ async function exportAssessmentsPdf(req, res) {
     y += 10;
     doc.fontSize(10).font('Helvetica-Bold');
     doc.text("TOTAL", 40, y);
-    doc.text(totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 }), 500, y, { width: 80, align: 'right' });
+    doc.text(`NGN ${totalAmount.toLocaleString('en-NG', { minimumFractionDigits: 2 })}`, 500, y, { width: 80, align: 'right' });
 
-    // Add signatures at opposite edges of the page
-    const signatureY = doc.page.height - 100;
-    const signatureLineWidth = 180; // Width for each signature section
+    // Finalize footer and page numbers
+    const range = doc.bufferedPageRange();
     const pageWidth = doc.page.width;
-    const leftMargin = 40;
-    const rightMargin = 40;
+    const pageHeight = doc.page.height;
+    const footerTop = pageHeight - 120;
+    const margin = 40;
+    const boxWidth = 220;
+    const boxHeight = 60;
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
 
-    // Generated by at left edge at timee and date on it 
-    doc.fontSize(10).font('Helvetica').text(`Generated by: ${req.user.name}`, leftMargin, signatureY);
-    doc.moveTo(leftMargin, signatureY + 10).lineTo(leftMargin + signatureLineWidth, signatureY + 10).stroke();
-    doc.fontSize(10).font('Helvetica').text(`Generated on: ${new Date().toLocaleString()}`, leftMargin, signatureY + 20);
+      /*
+      // Page Numbering at bottom center
+      doc.fontSize(8).font('Helvetica').fillColor('#666666').text(
+        `Page ${i + 1} of ${range.count}`,
+        0,
+        pageHeight - 30,
+        { align: 'center', width: pageWidth }
+      );
+      */
 
-    // Vetted by at right edge
-    const vettedByX = pageWidth - rightMargin - signatureLineWidth;
-    doc.fontSize(10).font('Helvetica').text(`Vetted by:`, vettedByX, signatureY);
-    doc.moveTo(vettedByX, signatureY + 10).lineTo(vettedByX + signatureLineWidth, signatureY + 10).stroke();
-    // doc.fontSize(10).font('Helvetica').text(`Vetted on: ${new Date().toLocaleString()}`, vettedByX, signatureY + 20);
+      // Signatory cards ONLY on the last page
+      if (i === range.start + range.count - 1) {
+        // Reset alignment/font for boxes
+        doc.lineWidth(0.5).strokeColor('#cccccc');
 
-    // //Add footer with date and page number at the bottom of the page
-    doc.moveDown(1);
-    // // Add page number at the bottom right
-    // doc.fontSize(8).font('Helvetica').text(`Page ${doc.page.number}`, doc.page.width - 40, doc.page.height - 30, { align: 'right' });
-    // // Add generated on at the bottom left
-    // doc.fontSize(8).font('Helvetica').text(`Generated on: ${new Date().toLocaleString()}`, 40, doc.page.height - 30);
+        // Left Box: Generated Info
+        const leftX = margin;
+        doc.rect(leftX, footerTop, boxWidth, boxHeight).stroke();
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#444444').text("PREPARED BY:", leftX + 5, footerTop + 5);
+        doc.fontSize(10).font('Helvetica').fillColor('#000000').text(req.user.name, leftX + 5, footerTop + 20);
+        doc.fontSize(8).text(`Date: ${new Date().toLocaleString()}`, leftX + 5, footerTop + boxHeight - 12);
+
+        // Right Box: Vetted Info
+        const rightX = pageWidth - margin - boxWidth;
+        doc.rect(rightX, footerTop, boxWidth, boxHeight).stroke();
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#444444').text("VETTED BY:", rightX + 5, footerTop + 5);
+        doc.fontSize(8).fillColor('#888888').text("(Signature & Date)", rightX + 5, footerTop + 40);
+
+        // Bottom Stamp Area (Center)
+        const centerX = (pageWidth / 2) - 50;
+        doc.fontSize(8).font('Helvetica-Oblique').fillColor('#999999').text("Official Stamp", centerX, footerTop + boxHeight + 5);
+      }
+    }
 
     doc.end();
   } catch (err) {
@@ -991,4 +1071,5 @@ module.exports = {
   exportAssessmentsExcel,
   exportAssessmentsPdf,
   exportEntitySummaryPdf,
+  performanceByOwnership,
 };

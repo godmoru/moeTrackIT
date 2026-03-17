@@ -40,11 +40,17 @@ function formatAmount(value) {
 
 async function listEntities(req, res) {
   try {
+    const { lgaId, type, status } = req.query;
     // Apply scope filtering for principals (own entity) and AEOs (assigned LGA)
     const scopeWhere = getEntityScopeWhere(req.user);
 
+    const where = { ...scopeWhere };
+    if (lgaId) where.lgaId = lgaId;
+    if (type) where.type = type;
+    if (status) where.status = status;
+
     const entities = await Entity.findAll({
-      where: scopeWhere,
+      where,
       include: [
         { model: EntityType, as: 'entityType' },
         { model: EntityOwnership, as: 'ownershipType' },

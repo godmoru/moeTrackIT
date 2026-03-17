@@ -2,13 +2,19 @@ const { v4: uuidv4 } = require('uuid');
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const adminUser = await queryInterface.sequelize.query(
+      "SELECT id FROM \"Users\" WHERE email = 'admin@edu.be.gov.ng' LIMIT 1",
+      { type: queryInterface.sequelize.QueryTypes.SELECT }
+    );
+    const adminId = adminUser[0] ? adminUser[0].id : 1;
+
     const categories = [
       {
         reference: 'CAT-202501-0001',
         cat_name: 'Personnel Costs',
         description: 'Salaries, wages, and benefits for employees',
         status: 'active',
-        createdBy: 1, // Assuming admin user has ID 1
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -17,7 +23,7 @@ module.exports = {
         cat_name: 'Office Supplies',
         description: 'Office stationery and supplies',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -26,7 +32,7 @@ module.exports = {
         cat_name: 'Travel & Transportation',
         description: 'Local and international travel expenses',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -35,7 +41,7 @@ module.exports = {
         cat_name: 'Training & Development',
         description: 'Staff training and capacity building',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -44,7 +50,7 @@ module.exports = {
         cat_name: 'Maintenance',
         description: 'Equipment and facility maintenance',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -53,7 +59,7 @@ module.exports = {
         cat_name: 'Utilities',
         description: 'Electricity, water, internet, and other utilities',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -62,7 +68,7 @@ module.exports = {
         cat_name: 'Capital Expenditure',
         description: 'Purchase of fixed assets and equipment',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -71,7 +77,7 @@ module.exports = {
         cat_name: 'Consultancy Services',
         description: 'Professional and consultancy services',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -80,7 +86,7 @@ module.exports = {
         cat_name: 'Grants & Contributions',
         description: 'Grants and contributions to other organizations',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       },
@@ -89,7 +95,7 @@ module.exports = {
         cat_name: 'Other Expenses',
         description: 'Miscellaneous expenses not covered by other categories',
         status: 'active',
-        createdBy: 1,
+        createdBy: adminId,
         createdAt: new Date(),
         updatedAt: new Date()
       }

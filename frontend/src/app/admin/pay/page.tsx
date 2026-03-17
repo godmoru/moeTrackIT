@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api/v1";
@@ -29,7 +30,10 @@ interface Assessment {
   createdAt: string;
 }
 
-export default function PayPage() {
+function PayPageContent() {
+  const searchParams = useSearchParams();
+  const assessmentIdParam = searchParams.get("assessmentId");
+  
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +92,25 @@ export default function PayPage() {
   }
 
   useEffect(() => {
-    loadAssessments();
-  }, []);
+    loadAssessments().then(() => {
+      if (assessmentIdParam && assessments.length > 0) {
+        const found = assessments.find(a => a.id === Number(assessmentIdParam));
+        if (found) {
+          handleSelectAssessment(found);
+        }
+      }
+    });
+  }, [assessmentIdParam]);
+
+  // Second effect to handle case where assessments might load after param is already there
+  useEffect(() => {
+    if (assessmentIdParam && assessments.length > 0 && !selectedAssessment) {
+      const found = assessments.find(a => a.id === Number(assessmentIdParam));
+      if (found) {
+        handleSelectAssessment(found);
+      }
+    }
+  }, [assessments, assessmentIdParam, selectedAssessment]);
 
   function handleSelectAssessment(assessment: Assessment) {
     setSelectedAssessment(assessment);
@@ -329,7 +350,7 @@ export default function PayPage() {
         await Swal.fire({
           icon: 'success',
           title: 'Payment Successful',
-          text: 'Your payment has been confirmed provided.',
+          text: 'Your payment has been confirmed.',
           confirmButtonColor: '#15803d'
         });
         loadAssessments();
@@ -755,5 +776,13 @@ export default function PayPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PayPage() {
+  return (
+    <Suspense fallback={<div>Loading payment page...</div>}>
+      <PayPageContent />
+    </Suspense>
   );
 }

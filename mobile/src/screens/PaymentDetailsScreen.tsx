@@ -204,6 +204,13 @@ export function PaymentDetailsScreen({ route, navigation }: Props) {
                         {payment.assessment?.incomeSource?.name || '-'}
                     </Text>
                 </View>
+
+                <View style={styles.row}>
+                    <Text style={styles.label}>Period</Text>
+                    <Text style={styles.value}>
+                        {payment.assessment?.assessmentPeriod || (payment.assessment?.assessmentYear ? `${payment.assessment?.assessmentTerm ? `Term ${payment.assessment?.assessmentTerm}, ` : ''}${payment.assessment?.assessmentYear}` : '-')}
+                    </Text>
+                </View>
             </View>
 
             <View style={styles.footer}>

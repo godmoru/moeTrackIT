@@ -6,20 +6,55 @@ const { getAssessmentScopeWhere } = require('../middleware/scope');
 
 async function listAssessments(req, res) {
   try {
+    const { status, lgaId, entityId, incomeSourceId, page = 1, limit = 20 } = req.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
     // Apply scope filtering for principals (own entity) and AEOs (assigned LGA)
     const scopeWhere = getAssessmentScopeWhere(req.user);
 
+    const where = { ...scopeWhere };
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+    if (entityId) {
+      where.entityId = entityId;
+    }
+
+    const entityWhere = {};
+    if (lgaId) {
+      entityWhere.lgaId = lgaId;
+    }
+
+    if (incomeSourceId) {
+      where.incomeSourceId = incomeSourceId;
+    }
+
     // For AEO scope we need the entity include to filter by lgaId
-    const assessments = await Assessment.findAll({
-      where: scopeWhere,
+    const { count, rows: assessments } = await Assessment.findAndCountAll({
+      where,
       include: [
-        { model: Entity, as: 'entity' },
+        { 
+          model: Entity, 
+          as: 'entity',
+          where: Object.keys(entityWhere).length > 0 ? entityWhere : undefined,
+          required: Object.keys(entityWhere).length > 0 || !!scopeWhere['$entity.lgaId$']
+        },
         { model: IncomeSource, as: 'incomeSource' },
         { model: Payment, as: 'payments' },
       ],
       order: [['createdAt', 'DESC']],
+      limit: Number(limit),
+      offset: offset,
+      distinct: true, // Required when using includes with limit/offset
+      subQuery: false,
     });
-    res.json(assessments);
+
+    res.json({
+      items: assessments,
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch assessments' });
@@ -33,7 +68,10 @@ async function getAssessmentById(req, res) {
 
     // For AEO scope we need the entity include to filter by lgaId
     const assessment = await Assessment.findOne({
-      where: scopeWhere,
+      where: {
+        id: req.params.id,
+        ...scopeWhere
+      },
       include: [
         { model: Entity, as: 'entity' },
         { model: IncomeSource, as: 'incomeSource' },
@@ -61,25 +99,38 @@ async function createAssessment(req, res) {
       assessmentYear,
       assessmentTerm,
       assessmentPeriod,
+      assessmentYears, // Array support
+      assessmentTerms, // Array support
       createdBy,
     } = req.body;
 
-    const assessment = await createAssessmentWithCalculation({
-      entityId,
-      incomeSourceId,
-      parameterValues,
-      currency,
-      status,
-      dueDate,
-      assessmentYear,
-      assessmentTerm,
-      assessmentPeriod,
-      createdBy: createdBy || req.user?.id || null,
-      transaction: t,
-    });
+    const years = assessmentYears || (assessmentYear ? [assessmentYear] : [null]);
+    const terms = assessmentTerms || (assessmentTerm ? [assessmentTerm] : [null]);
+
+    const createdAssessments = [];
+
+    for (const year of years) {
+      for (const term of terms) {
+        const assessment = await createAssessmentWithCalculation({
+          entityId,
+          incomeSourceId,
+          parameterValues,
+          currency,
+          status,
+          dueDate,
+          assessmentYear: year,
+          assessmentTerm: term,
+          assessmentPeriod,
+          createdBy: createdBy || req.user?.id || null,
+          transaction: t,
+        });
+        createdAssessments.push(assessment);
+      }
+    }
 
     await t.commit();
-    res.status(201).json(assessment);
+    res.status(201).json(createdAssessments.length === 1 ? createdAssessments[0] : { items: createdAssessments, count: createdAssessments.length });
+
   } catch (err) {
     console.error(err);
     await t.rollback();
@@ -122,7 +173,8 @@ async function bulkCreate(req, res) {
       incomeSourceId,
       assessmentYear,
       assessmentTerm,
-      // assessmentPeriod,
+      assessmentYears, // Array support
+      assessmentTerms, // Array support
       parameterValues = {},
       dueDate = null,
       lgaNames,
@@ -130,6 +182,7 @@ async function bulkCreate(req, res) {
       entityIds,
       onlyActive = true,
     } = req.body || {};
+
 
     if (!incomeSourceId) {
       return res.status(400).json({
@@ -201,48 +254,64 @@ async function bulkCreate(req, res) {
     }
 
     const foundEntityIds = entities.map((e) => e.id);
-
-    const existingAssessments = await Assessment.findAll({
-      where: {
-        entityId: foundEntityIds,
-        incomeSourceId,
-        assessmentPeriod,
-      },
-      transaction: t,
-    });
-
-    const alreadyAssessedEntityIds = new Set(
-      existingAssessments.map((a) => a.entityId),
-    );
+    const years = assessmentYears || (assessmentYear ? [assessmentYear] : [null]);
+    const terms = assessmentTerms || (assessmentTerm ? [assessmentTerm] : [null]);
 
     const created = [];
     const skipped = [];
 
-    for (const entity of entities) {
-      if (alreadyAssessedEntityIds.has(entity.id)) {
-        skipped.push({
-          entityId: entity.id,
-          reason: "Already has assessment for this income source and period",
+    for (const year of years) {
+      for (const term of terms) {
+        // Calculate period string for duplicate checking
+        let currentPeriod = null;
+        if (year && term) {
+          currentPeriod = `${year}-T${term}`;
+        } else if (year) {
+          currentPeriod = `${year}`;
+        }
+
+        const existingAssessments = await Assessment.findAll({
+          where: {
+            entityId: foundEntityIds,
+            incomeSourceId,
+            assessmentPeriod: currentPeriod,
+          },
+          transaction: t,
         });
-        continue;
+
+        const alreadyAssessedEntityIds = new Set(
+          existingAssessments.map((a) => a.entityId),
+        );
+
+        for (const entity of entities) {
+          if (alreadyAssessedEntityIds.has(entity.id)) {
+            skipped.push({
+              entityId: entity.id,
+              year,
+              term,
+              reason: "Already has assessment for this income source and period",
+            });
+            continue;
+          }
+
+          const assessment = await createAssessmentWithCalculation({
+            entityId: entity.id,
+            incomeSourceId,
+            parameterValues,
+            status: "pending",
+            dueDate,
+            assessmentYear: year,
+            assessmentTerm: term,
+            assessmentPeriod: currentPeriod,
+            createdBy: req.user?.id || req.body.createdBy || null,
+            transaction: t,
+          });
+
+          created.push(assessment);
+        }
       }
-
-      const assessment = await createAssessmentWithCalculation({
-        entityId: entity.id,
-        incomeSourceId,
-        parameterValues, // Pass the dynamic parameters
-        status: "pending",
-        dueDate,
-        assessmentYear: assessmentYear ? Number(assessmentYear) : (periodYear ? Number(periodYear) : null),
-        assessmentTerm: assessmentTerm ? Number(assessmentTerm) : (periodTerm ? Number(periodTerm) : null),
-        // assessmentPeriod will be re-generated inside, but passing strict one ensures consistency
-        assessmentPeriod,
-        createdBy: req.user?.id || req.body.createdBy || null,
-        transaction: t,
-      });
-
-      created.push(assessment);
     }
+
 
     await t.commit();
 

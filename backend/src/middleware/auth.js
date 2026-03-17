@@ -76,20 +76,23 @@ async function authMiddleware(req, res, next) {
 
         if (user?.role === 'area_education_officer') {
           try {
-            // AEO must have exactly one LGA.
-            // We use user.lgaId as primary, or fallback to first active assignment in UserLga
-            if (!req.user.lgaId) {
-              const userLga = await UserLga.findOne({
-                where: { userId: user.id, isCurrent: true },
-                attributes: ['lgaId'],
-              });
-              if (userLga) {
-                req.user.lgaId = userLga.lgaId;
-              }
+            // Fetch all assigned LGAs for this AEO
+            const assignedLgas = await UserLga.findAll({
+              where: { userId: user.id },
+              attributes: ['lgaId'],
+              raw: true
+            });
+            req.user.assignedLgaIds = assignedLgas.map(al => al.lgaId);
+            
+            // Still set primary lgaId for backward compatibility
+            if (!req.user.lgaId && req.user.assignedLgaIds.length > 0) {
+              req.user.lgaId = req.user.assignedLgaIds[0];
             }
-            console.log(`AEO Scope for User ${user.id}: LGA ${req.user.lgaId}`);
+            
+            console.log(`AEO Scope for User ${user.id}: LGAs [${req.user.assignedLgaIds.join(', ')}]`);
           } catch (lgaErr) {
-            console.error('Failed to load user LGA assignment:', lgaErr);
+            console.error('Failed to load user LGA assignments:', lgaErr);
+            req.user.assignedLgaIds = [];
           }
         }
       } catch (loadErr) {

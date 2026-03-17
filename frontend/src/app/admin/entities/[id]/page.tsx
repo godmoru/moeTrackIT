@@ -146,8 +146,11 @@ export default function EntityProfilePage() {
                 }
 
                 const entityBody: EntityDetail = await entityRes.json();
-                const assessmentsBody: AssessmentLite[] = await assessmentsRes.json();
-                const paymentsBody: PaymentLite[] = await paymentsRes.json();
+                const assessmentsBodyFull = await assessmentsRes.json();
+                const paymentsBodyFull = await paymentsRes.json();
+
+                const assessmentsBody: AssessmentLite[] = assessmentsBodyFull.items || assessmentsBodyFull;
+                const paymentsBody: PaymentLite[] = paymentsBodyFull.items || paymentsBodyFull;
 
                 setEntity(entityBody);
                 setAssessments(assessmentsBody);

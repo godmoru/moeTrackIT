@@ -5,3 +5,4 @@ export { OfficerDashboard } from "./OfficerDashboard";
 export { CashierDashboard } from "./CashierDashboard";
 export { AEODashboard } from "./AEODashboard";
 export { PrincipalDashboard } from "./PrincipalDashboard";
+export { OwnershipPerformance } from "./OwnershipPerformance";

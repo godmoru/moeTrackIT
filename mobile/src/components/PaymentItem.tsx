@@ -35,6 +35,9 @@ export function PaymentItem({ payment, onPress }: PaymentItemProps) {
         <Text style={styles.source} numberOfLines={1}>
           {payment.assessment?.incomeSource?.name || 'Unknown Source'}
         </Text>
+        {payment.rrr && (
+          <Text style={styles.rrrText}>RRR: {payment.rrr}</Text>
+        )}
         <Text style={styles.date}>{formatDate(payment.paymentDate)}</Text>
       </View>
       <View style={styles.amountContainer}>
@@ -93,7 +96,13 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 11,
     color: '#9ca3af',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  rrrText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#3b82f6',
+    marginTop: 2,
   },
   amountContainer: {
     alignItems: 'flex-end',

@@ -35,8 +35,12 @@ export interface Assessment {
   status: 'pending' | 'partial' | 'paid' | 'overdue';
   dueDate: string;
   createdAt: string;
+  assessmentPeriod?: string;
+  assessmentYear?: number;
+  assessmentTerm?: number;
   entity?: Entity;
   incomeSource?: IncomeSource;
+  payments?: Payment[];
 }
 
 export interface Payment {

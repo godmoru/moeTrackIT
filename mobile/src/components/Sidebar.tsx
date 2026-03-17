@@ -63,12 +63,22 @@ export function Sidebar(props: DrawerContentComponentProps) {
                         <Text style={styles.menuText}>Dashboard</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Income')}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Assessments')}>
                         <Ionicons name="card-outline" size={22} color="#4b5563" />
                         <Text style={styles.menuText}>Income</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Expenditures')}>
+                    <TouchableOpacity style={styles.subMenuItem} onPress={() => navigateTo('Assessments')}>
+                        <Ionicons name="document-text-outline" size={20} color="#6b7280" />
+                        <Text style={styles.subMenuText}>Assessments</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.subMenuItem} onPress={() => navigateTo('IncomeSources')}>
+                        <Ionicons name="wallet-outline" size={20} color="#6b7280" />
+                        <Text style={styles.subMenuText}>Income Sources</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Reports')}>
                         <Ionicons name="cash-outline" size={22} color="#4b5563" />
                         <Text style={styles.menuText}>Expenditures</Text>
                     </TouchableOpacity>
@@ -208,6 +218,20 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#374151',
         fontWeight: '500',
+    },
+    subMenuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 6,
+        backgroundColor: '#f9fafb',
+    },
+    subMenuText: {
+        marginLeft: 12,
+        fontSize: 14,
+        color: '#6b7280',
+        fontWeight: '400',
     },
     footer: {
         padding: 20,

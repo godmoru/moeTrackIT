@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const multer = require('multer');
 const userController = require('../controllers/userController');
 const userLgaController = require('../controllers/userLgaController');
 const { authMiddleware, requireRole } = require('../middleware/auth');
@@ -29,6 +30,29 @@ router.put(
   authMiddleware,
   requireRole('super_admin'),
   userController.updateUser,
+);
+
+// Upload profile image - any authenticated user can upload their own image
+// or super_admin can upload for any user
+router.post(
+  '/:id/profile-image',
+  authMiddleware,
+  (req, res, next) => {
+    userController.uploadProfileImageMiddleware(req, res, (err) => {
+      if (err) {
+        console.error('Multer error:', err);
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ message: 'File too large. Max size is 5MB.' });
+          }
+          return res.status(400).json({ message: `Upload error: ${err.message}` });
+        }
+        return res.status(400).json({ message: err.message || 'Failed to upload file' });
+      }
+      next();
+    });
+  },
+  userController.uploadProfileImage,
 );
 
 // --- AEO-LGA Assignment Management ---

@@ -3,7 +3,7 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
   // First remove the existing foreign key constraint
   await queryInterface.sequelize.query(
-    'ALTER TABLE `Budgets` DROP FOREIGN KEY `budgets_ibfk_1`;'
+    'ALTER TABLE "Budgets" DROP CONSTRAINT IF EXISTS "budgets_ibfk_1";'
   );
   
   // Then modify the mdaId column to allow null
@@ -22,7 +22,7 @@ module.exports = {
   down: async (queryInterface, Sequelize) => {
   // Revert the changes if needed
   await queryInterface.sequelize.query(
-    'ALTER TABLE `Budgets` DROP FOREIGN KEY `budgets_ibfk_1`;'
+    'ALTER TABLE "Budgets" DROP CONSTRAINT IF EXISTS "budgets_ibfk_1";'
   );
   
   await queryInterface.changeColumn('Budgets', 'mdaId', {

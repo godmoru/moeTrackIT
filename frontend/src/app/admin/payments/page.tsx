@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Modal } from "@/components/Modal";
 import { DataTable } from "@/components/ui/DataTable";
 
@@ -51,8 +52,8 @@ export default function PaymentsPage() {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.message || "Failed to load payments");
         }
-        const body: Payment[] = await res.json();
-        setPayments(body);
+        const body = await res.json();
+        setPayments(body.items || body);
       } catch (err: any) {
         setError(err.message || "Failed to load payments");
       } finally {
@@ -264,12 +265,18 @@ export default function PaymentsPage() {
                           Verify
                         </button>
                       )}
+                      <Link
+                        href={`/admin/payments/${p.id}`}
+                        className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        View
+                      </Link>
                       <button
                         type="button"
                         onClick={() => handleViewInvoice(p.id)}
                         className="rounded-md border border-gray-300 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
                       >
-                        View Invoice
+                        Invoice
                       </button>
                     </div>
                   )

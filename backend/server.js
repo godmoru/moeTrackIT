@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
+const path = require('path');
 require('dotenv').config();
 
 const { sequelize } = require('./models');
@@ -29,6 +30,15 @@ app.use(compression());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory with CORS headers
+const uploadsPath = path.join(__dirname, 'uploads');
+console.log('📁 Serving static files from:', uploadsPath);
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(uploadsPath));
 
 // Health check
 app.get('/api/v1/health', (_, res) => {

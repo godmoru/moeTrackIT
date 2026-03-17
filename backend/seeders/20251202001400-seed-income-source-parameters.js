@@ -1,6 +1,4 @@
-`'use strict';
-
-const { options } = require('../src/routes/auth');
+'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {

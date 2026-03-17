@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const { User } = require('../../models');
+const { User, Lga, Role, Permission } = require('../../models');
 const { Op } = require('sequelize');
 const { sendPasswordResetEmail, sendPasswordChangedEmail } = require('../services/emailService');
 
@@ -22,8 +22,6 @@ async function login(req, res) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Load roles and permissions
-    const { Role, Permission } = require('../../models');
     const userWithRoles = await User.findByPk(user.id, {
       include: [
         {
@@ -31,6 +29,7 @@ async function login(req, res) {
           as: 'Roles',
           include: [{ model: Permission, as: 'permissions' }],
         },
+        { model: Lga, as: 'primaryLga' },
       ],
     });
 
@@ -58,6 +57,7 @@ async function login(req, res) {
       role: user.role,
       lgaId: user.lgaId,
       entityId: user.entityId,
+      profileImage: user.profileImage,
       permissions: Array.from(permissionCodes),
     };
 
@@ -74,6 +74,8 @@ async function login(req, res) {
         role: user.role,
         entityId: user.entityId,
         lgaId: user.lgaId,
+        lga: userWithRoles?.primaryLga?.name || null,
+        profileImage: user.profileImage,
         permissions: payload.permissions,
       },
     });
@@ -334,7 +336,9 @@ async function getMe(req, res) {
     }
 
     // Refresh user from DB to ensure latest role/status
-    const freshUser = await User.findByPk(user.id);
+    const freshUser = await User.findByPk(user.id, {
+      include: [{ model: Lga, as: 'primaryLga' }]
+    });
     if (!freshUser) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -344,9 +348,12 @@ async function getMe(req, res) {
       name: freshUser.name,
       email: freshUser.email,
       role: freshUser.role,
+      profileImage: freshUser.profileImage, // Added
       entityId: freshUser.entityId,
       lgaId: user.lgaId || freshUser.lgaId,
+      lga: freshUser.primaryLga?.name || null,
       permissions: user.permissions || [],
+
     });
   } catch (err) {
     console.error(err);
