@@ -9,13 +9,14 @@ import { ReactNode, useEffect, useState } from "react";
 import { UserHeader } from "@/components/UserHeader";
 
 // All supported roles
-const ALL_ROLES = ["super_admin", "admin", "system_admin", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
+const ALL_ROLES = ["super_admin", "admin", "system_admin", "hon_commissioner", "perm_secretary", "dfa", "director", "hq_cashier", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
 const ADMIN_ROLES = ["super_admin", "admin", "system_admin"];
-const REVENUE_ROLES = ["super_admin", "admin", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
+const REVENUE_ROLES = ["super_admin", "admin", "hon_commissioner", "perm_secretary", "dfa", "director", "hq_cashier", "officer", "cashier", "account_officer", "area_education_officer", "principal"];
 
 // Navigation items with role-based visibility
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", title: "Overview", roles: ALL_ROLES },
+  { href: "/admin/revenue", label: "Revenue", title: "Revenue tracking", roles: REVENUE_ROLES },
   { href: "/admin/income", label: "Income", title: "Income management", roles: REVENUE_ROLES, hasSubmenu: true },
   { href: "/admin/institutions", label: "Institutions", title: "Institution directory", roles: ALL_ROLES },
   { href: "/admin/expenditures", label: "Expenditures", title: "Expenditure management", roles: ADMIN_ROLES.concat(["account_officer", "officer"]), hasSubmenu: true },

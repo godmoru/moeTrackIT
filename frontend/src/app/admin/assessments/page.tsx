@@ -61,17 +61,15 @@ export default function AssessmentsPage() {
   const [newAssessment, setNewAssessment] = useState<{
     entityId: string;
     incomeSourceId: string;
-    assessmentPeriod: string;
-    assessmentYears: string[];
-    assessmentTerms: string[];
+    assessmentYear: string;
+    assessmentTerm: string;
     dueDate: string;
     parameterValues: Record<string, any>;
   }>({
     entityId: "",
     incomeSourceId: "",
-    assessmentPeriod: "",
-    assessmentYears: [new Date().getFullYear().toString()],
-    assessmentTerms: [],
+    assessmentYear: new Date().getFullYear().toString(),
+    assessmentTerm: "",
     dueDate: "",
     parameterValues: {},
   });
@@ -81,17 +79,15 @@ export default function AssessmentsPage() {
   const [savingBulkLicense, setSavingBulkLicense] = useState(false);
   const [bulkForm, setBulkForm] = useState<{
     incomeSourceId: string;
-    assessmentPeriod: string;
-    assessmentYears: string[];
-    assessmentTerms: string[];
+    assessmentYear: string;
+    assessmentTerm: string;
     parameterValues: Record<string, any>;
     dueDate: string;
     onlyActive: boolean;
   }>({
     incomeSourceId: "",
-    assessmentPeriod: "",
-    assessmentYears: [new Date().getFullYear().toString()],
-    assessmentTerms: [],
+    assessmentYear: new Date().getFullYear().toString(),
+    assessmentTerm: "",
     parameterValues: {},
     dueDate: "",
     onlyActive: true,
@@ -215,8 +211,8 @@ export default function AssessmentsPage() {
         },
         body: JSON.stringify({
           incomeSourceId,
-          assessmentYears: bulkForm.assessmentYears.map(Number),
-          assessmentTerms: bulkForm.assessmentTerms.map(Number),
+          assessmentYear: Number(bulkForm.assessmentYear),
+          assessmentTerm: bulkForm.assessmentTerm ? Number(bulkForm.assessmentTerm) : null,
           parameterValues: {
             ...bulkForm.parameterValues,
           },
@@ -256,8 +252,8 @@ export default function AssessmentsPage() {
     setNewAssessment({
       entityId: "",
       incomeSourceId: "",
-      assessmentYears: [new Date().getFullYear().toString()],
-      assessmentTerms: [],
+      assessmentYear: new Date().getFullYear().toString(),
+      assessmentTerm: "",
       dueDate: "",
       parameterValues: {},
     });
@@ -305,8 +301,8 @@ export default function AssessmentsPage() {
         body: JSON.stringify({
           entityId: entityIdNum,
           incomeSourceId: incomeSourceIdNum,
-          assessmentYears: newAssessment.assessmentYears.map(Number),
-          assessmentTerms: newAssessment.assessmentTerms.map(Number),
+          assessmentYear: Number(newAssessment.assessmentYear),
+          assessmentTerm: newAssessment.assessmentTerm ? Number(newAssessment.assessmentTerm) : null,
           dueDate: dueDate || null,
           parameterValues: {
             ...parameterValues,
@@ -694,9 +690,8 @@ export default function AssessmentsPage() {
                   onClick={() => {
                     setBulkForm({
                       incomeSourceId: "",
-                      assessmentPeriod: "",
-                      assessmentYears: [new Date().getFullYear().toString()],
-                      assessmentTerms: [],
+                      assessmentYear: new Date().getFullYear().toString(),
+                      assessmentTerm: "",
                       parameterValues: {},
                       dueDate: "",
                       onlyActive: true,
@@ -901,92 +896,47 @@ export default function AssessmentsPage() {
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700">
-                Period <span className="text-red-500">*</span>
-              </label>
-              <input
-                required
-                type="text"
-                value={newAssessment.assessmentPeriod}
-                onChange={(e) =>
-                  setNewAssessment((prev) => ({
-                    ...prev,
-                    assessmentPeriod: e.target.value,
-                  }))
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                placeholder="e.g. 2026/Q1"
-              />
-            </div>
-
             {(() => {
               const selectedSource = incomeSources.find(
                 (s) => String(s.id) === newAssessment.incomeSourceId
               );
-              if (!selectedSource || selectedSource.recurrence === "none") return null;
 
               return (
                 <>
-                  <div className="space-y-1 md:col-span-2">
+                  <div className="space-y-1 md:col-span-1">
                     <label className="block text-xs font-medium text-gray-700">
-                      Assessment Years <span className="text-red-500">*</span>
+                      Assessment Year <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {[2024, 2025, 2026, 2027].map((year) => {
-                        const yStr = String(year);
-                        const isSelected = newAssessment.assessmentYears.includes(yStr);
-                        return (
-                          <label key={yStr} className="flex cursor-pointer items-center gap-1 rounded-md border border-gray-200 px-2 py-1 hover:bg-gray-50">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const newYears = e.target.checked
-                                  ? [...newAssessment.assessmentYears, yStr]
-                                  : newAssessment.assessmentYears.filter((y) => y !== yStr);
-                                setNewAssessment((prev) => ({ ...prev, assessmentYears: newYears }));
-                              }}
-                              className="h-3 w-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-[11px] text-gray-700">{year}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <select
+                      value={newAssessment.assessmentYear}
+                      onChange={(e) => setNewAssessment(prev => ({ ...prev, assessmentYear: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                    >
+                      {[2024, 2025, 2026, 2027].map((year) => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
                   </div>
-                  {selectedSource.recurrence === "termly" && (
-                    <div className="space-y-1 md:col-span-2">
+                  {selectedSource?.recurrence === "termly" && (
+                    <div className="space-y-1 md:col-span-1">
                       <label className="block text-xs font-medium text-gray-700">
-                        Assessment Terms <span className="text-red-500">*</span>
+                        Assessment Term <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex flex-wrap gap-4 pt-1">
-                        {[
-                          { label: "1st Term", value: "1" },
-                          { label: "2nd Term", value: "2" },
-                          { label: "3rd Term", value: "3" },
-                        ].map((term) => (
-                          <label key={term.value} className="flex cursor-pointer items-center gap-1.5">
-                            <input
-                              type="checkbox"
-                              checked={newAssessment.assessmentTerms.includes(term.value)}
-                              onChange={(e) => {
-                                const newTerms = e.target.checked
-                                  ? [...newAssessment.assessmentTerms, term.value]
-                                  : newAssessment.assessmentTerms.filter((t) => t !== term.value);
-                                setNewAssessment((prev) => ({ ...prev, assessmentTerms: newTerms }));
-                              }}
-                              className="h-3 w-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-[11px] text-gray-700">{term.label}</span>
-                          </label>
-                        ))}
-                      </div>
+                      <select
+                        required
+                        value={newAssessment.assessmentTerm}
+                        onChange={(e) => setNewAssessment(prev => ({ ...prev, assessmentTerm: e.target.value }))}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select Term --</option>
+                        <option value="1">1st Term</option>
+                        <option value="2">2nd Term</option>
+                        <option value="3">3rd Term</option>
+                      </select>
                     </div>
                   )}
                 </>
               );
-
             })()}
 
 
@@ -1136,69 +1086,43 @@ export default function AssessmentsPage() {
               const selectedSource = incomeSources.find(
                 (s) => String(s.id) === bulkForm.incomeSourceId
               );
-              if (!selectedSource || selectedSource.recurrence === "none") return null;
 
               return (
                 <>
-                  <div className="space-y-1 md:col-span-2">
+                  <div className="space-y-1 md:col-span-1">
                     <label className="block text-xs font-medium text-gray-700">
-                      Assessment Years <span className="text-red-500">*</span>
+                      Assessment Year <span className="text-red-500">*</span>
                     </label>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {[2024, 2025, 2026, 2027].map((year) => {
-                        const yStr = String(year);
-                        const isSelected = bulkForm.assessmentYears.includes(yStr);
-                        return (
-                          <label key={yStr} className="flex cursor-pointer items-center gap-1 rounded-md border border-gray-200 px-2 py-1 hover:bg-gray-50">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const newYears = e.target.checked
-                                  ? [...bulkForm.assessmentYears, yStr]
-                                  : bulkForm.assessmentYears.filter((y) => y !== yStr);
-                                setBulkForm((prev) => ({ ...prev, assessmentYears: newYears }));
-                              }}
-                              className="h-3 w-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-[11px] text-gray-700">{year}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <select
+                      value={bulkForm.assessmentYear}
+                      onChange={(e) => setBulkForm(prev => ({ ...prev, assessmentYear: e.target.value }))}
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                    >
+                      {[2024, 2025, 2026, 2027].map((year) => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
                   </div>
-                  {selectedSource.recurrence === "termly" && (
-                    <div className="space-y-1 md:col-span-2">
+                  {selectedSource?.recurrence === "termly" && (
+                    <div className="space-y-1 md:col-span-1">
                       <label className="block text-xs font-medium text-gray-700">
-                        Assessment Terms <span className="text-red-500">*</span>
+                        Assessment Term <span className="text-red-500">*</span>
                       </label>
-                      <div className="flex flex-wrap gap-4 pt-1">
-                        {[
-                          { label: "1st Term", value: "1" },
-                          { label: "2nd Term", value: "2" },
-                          { label: "3rd Term", value: "3" },
-                        ].map((term) => (
-                          <label key={term.value} className="flex cursor-pointer items-center gap-1.5">
-                            <input
-                              type="checkbox"
-                              checked={bulkForm.assessmentTerms.includes(term.value)}
-                              onChange={(e) => {
-                                const newTerms = e.target.checked
-                                  ? [...bulkForm.assessmentTerms, term.value]
-                                  : bulkForm.assessmentTerms.filter((t) => t !== term.value);
-                                setBulkForm((prev) => ({ ...prev, assessmentTerms: newTerms }));
-                              }}
-                              className="h-3 w-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                            />
-                            <span className="text-[11px] text-gray-700">{term.label}</span>
-                          </label>
-                        ))}
-                      </div>
+                      <select
+                        required
+                        value={bulkForm.assessmentTerm}
+                        onChange={(e) => setBulkForm(prev => ({ ...prev, assessmentTerm: e.target.value }))}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select Term --</option>
+                        <option value="1">1st Term</option>
+                        <option value="2">2nd Term</option>
+                        <option value="3">3rd Term</option>
+                      </select>
                     </div>
                   )}
                 </>
               );
-
             })()}
 
             {/* Dynamic Parameters for Mass Assessment */}
