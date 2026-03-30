@@ -16,10 +16,10 @@ const REVENUE_ROLES = ["super_admin", "admin", "hon_commissioner", "perm_secreta
 // Navigation items with role-based visibility
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", title: "Overview", roles: ALL_ROLES },
-  { href: "/admin/revenue", label: "Revenue", title: "Revenue tracking", roles: REVENUE_ROLES },
   { href: "/admin/income", label: "Income", title: "Income management", roles: REVENUE_ROLES, hasSubmenu: true },
   { href: "/admin/institutions", label: "Institutions", title: "Institution directory", roles: ALL_ROLES },
   { href: "/admin/expenditures", label: "Expenditures", title: "Expenditure management", roles: ADMIN_ROLES.concat(["account_officer", "officer"]), hasSubmenu: true },
+  { href: "/admin/revenue", label: "Revenue", title: "Revenue tracking", roles: REVENUE_ROLES },
   { href: "/admin/payments", label: "Payments", title: "Payments list", roles: ALL_ROLES },
   { href: "/admin/lgas", label: "LGAs", title: "Local Government Areas", roles: ADMIN_ROLES.concat(["officer", "area_education_officer"]) },
   { href: "/admin/reports", label: "Reports", title: "Reporting and analytics", roles: ALL_ROLES },
