@@ -920,21 +920,24 @@ export default function AssessmentsPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-1 md:col-span-1">
-                    <label className="block text-xs font-medium text-gray-700">
-                      Assessment Term
-                    </label>
-                    <select
-                      value={newAssessment.assessmentTerm}
-                      onChange={(e) => setNewAssessment(prev => ({ ...prev, assessmentTerm: e.target.value }))}
-                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                    >
-                      <option value="">-- Select Term --</option>
-                      <option value="1">First Term</option>
-                      <option value="2">Second Term</option>
-                      <option value="3">Third Term</option>
-                    </select>
-                  </div>
+                  {selectedSource?.recurrence !== "yearly" && (
+                    <div className="space-y-1 md:col-span-1">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Assessment Term <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={newAssessment.assessmentTerm}
+                        onChange={(e) => setNewAssessment(prev => ({ ...prev, assessmentTerm: e.target.value }))}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select Term --</option>
+                        <option value="1">First Term</option>
+                        <option value="2">Second Term</option>
+                        <option value="3">Third Term</option>
+                      </select>
+                    </div>
+                  )}
                 </>
               );
             })()}
@@ -947,7 +950,13 @@ export default function AssessmentsPage() {
               );
               if (!selectedSource || !selectedSource.parameters) return null;
 
-              return selectedSource.parameters.map((param) => {
+              return selectedSource.parameters
+                .filter(p => {
+                  const keyLow = p.key.toLowerCase();
+                  const labelLow = p.label.toLowerCase();
+                  return !keyLow.includes('year') && !labelLow.includes('year') && !keyLow.includes('term') && !labelLow.includes('term');
+                })
+                .map((param) => {
                 let optionsData: any = null;
                 if (param.options) {
                   try {
@@ -986,46 +995,6 @@ export default function AssessmentsPage() {
                             {val}
                           </option>
                         ))}
-                      </select>
-                    ) : param.key.toLowerCase().includes('year') || param.label.toLowerCase().includes('year') ? (
-                      <select
-                        required={param.required}
-                        value={newAssessment.parameterValues[param.key] || ""}
-                        onChange={(e) =>
-                          setNewAssessment((prev) => ({
-                            ...prev,
-                            parameterValues: {
-                              ...prev.parameterValues,
-                              [param.key]: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                      >
-                        <option value="">-- Select Year --</option>
-                        {DYNAMIC_YEARS.map((year) => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    ) : param.key.toLowerCase().includes('term') || param.label.toLowerCase().includes('term') ? (
-                      <select
-                        required={param.required}
-                        value={newAssessment.parameterValues[param.key] || ""}
-                        onChange={(e) =>
-                          setNewAssessment((prev) => ({
-                            ...prev,
-                            parameterValues: {
-                              ...prev.parameterValues,
-                              [param.key]: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                      >
-                        <option value="">-- Select Term --</option>
-                        <option value="1">First Term</option>
-                        <option value="2">Second Term</option>
-                        <option value="3">Third Term</option>
                       </select>
                     ) : (
                       <input
@@ -1143,21 +1112,24 @@ export default function AssessmentsPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-1 md:col-span-1">
-                    <label className="block text-xs font-medium text-gray-700">
-                      Assessment Term
-                    </label>
-                    <select
-                      value={bulkForm.assessmentTerm}
-                      onChange={(e) => setBulkForm(prev => ({ ...prev, assessmentTerm: e.target.value }))}
-                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                    >
-                      <option value="">-- Select Term --</option>
-                      <option value="1">First Term</option>
-                      <option value="2">Second Term</option>
-                      <option value="3">Third Term</option>
-                    </select>
-                  </div>
+                  {selectedSource?.recurrence !== "yearly" && (
+                    <div className="space-y-1 md:col-span-1">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Assessment Term <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={bulkForm.assessmentTerm}
+                        onChange={(e) => setBulkForm(prev => ({ ...prev, assessmentTerm: e.target.value }))}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
+                      >
+                        <option value="">-- Select Term --</option>
+                        <option value="1">First Term</option>
+                        <option value="2">Second Term</option>
+                        <option value="3">Third Term</option>
+                      </select>
+                    </div>
+                  )}
                 </>
               );
             })()}
@@ -1169,7 +1141,13 @@ export default function AssessmentsPage() {
               );
               if (!selectedSource || !selectedSource.parameters) return null;
 
-              return selectedSource.parameters.map((param) => {
+              return selectedSource.parameters
+                .filter(p => {
+                  const keyLow = p.key.toLowerCase();
+                  const labelLow = p.label.toLowerCase();
+                  return !keyLow.includes('year') && !labelLow.includes('year') && !keyLow.includes('term') && !labelLow.includes('term');
+                })
+                .map((param) => {
                 let optionsData: any = null;
                 if (param.options) {
                   try {
@@ -1208,46 +1186,6 @@ export default function AssessmentsPage() {
                             {val}
                           </option>
                         ))}
-                      </select>
-                    ) : param.key.toLowerCase().includes('year') || param.label.toLowerCase().includes('year') ? (
-                      <select
-                        required={param.required}
-                        value={bulkForm.parameterValues[param.key] || ""}
-                        onChange={(e) =>
-                          setBulkForm((prev) => ({
-                            ...prev,
-                            parameterValues: {
-                              ...prev.parameterValues,
-                              [param.key]: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                      >
-                        <option value="">-- Select Year --</option>
-                        {DYNAMIC_YEARS.map((year) => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
-                      </select>
-                    ) : param.key.toLowerCase().includes('term') || param.label.toLowerCase().includes('term') ? (
-                      <select
-                        required={param.required}
-                        value={bulkForm.parameterValues[param.key] || ""}
-                        onChange={(e) =>
-                          setBulkForm((prev) => ({
-                            ...prev,
-                            parameterValues: {
-                              ...prev.parameterValues,
-                              [param.key]: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600"
-                      >
-                        <option value="">-- Select Term --</option>
-                        <option value="1">First Term</option>
-                        <option value="2">Second Term</option>
-                        <option value="3">Third Term</option>
                       </select>
                     ) : (
                       <input
